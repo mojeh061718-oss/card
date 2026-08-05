@@ -79,6 +79,18 @@ const stills = await page.evaluate(async () => {
     const sport = rt.def.sport;
     if (!out[sport] && photoFor(sport, name)) {
       out[sport] = { name, url: snapshotCard(world.specFor(c), 700) };
+      if (sport === 'football') {
+        // Prove foil + auto composite over the photo template.
+        const spec = world.specFor(c);
+        const foil = rt.def.ladder.find(p => p.finish !== 'none' && p.numberedTo) ?? spec.parallel;
+        out['football-refractor-auto'] = {
+          name: `${name} (${foil.name} auto)`,
+          url: snapshotCard({
+            ...spec, parallel: foil, serial: 7,
+            auto: { ink: 'blue', sticker: false },
+          }, 700),
+        };
+      }
     }
     if (out.football && out.baseball) break;
   }

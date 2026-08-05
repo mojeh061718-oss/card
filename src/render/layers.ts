@@ -124,23 +124,50 @@ function drawPhotoStage(
  * downscaled alpha channel instead: a real cutout goes transparent at the
  * corners and rails. Blob-URL images are same-origin, so no tainting.
  */
-const cutoutCache = new WeakMap<HTMLImageElement, boolean>();
-function isCutout(img: HTMLImageElement): boolean {
+interface CutoutInfo {
+  cut: boolean;
+  /** Opaque-content bounding box in natural pixels. */
+  bbox: [number, number, number, number];
+}
+const cutoutCache = new WeakMap<HTMLImageElement, CutoutInfo>();
+function cutoutInfo(img: HTMLImageElement): CutoutInfo {
   const hit = cutoutCache.get(img);
-  if (hit !== undefined) return hit;
-  let cut = false;
+  if (hit) return hit;
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  let info: CutoutInfo = { cut: false, bbox: [0, 0, nw, nh] };
   try {
+    const S = 48;
     const c = document.createElement('canvas');
-    c.width = 8; c.height = 8;
+    c.width = S; c.height = S;
     const cctx = c.getContext('2d')!;
-    cctx.drawImage(img, 0, 0, 8, 8);
-    const d = cctx.getImageData(0, 0, 8, 8).data;
-    let clear = 0;
-    for (let i = 3; i < d.length; i += 4) if (d[i] < 16) clear++;
-    cut = clear >= 6;
+    cctx.drawImage(img, 0, 0, S, S);
+    const d = cctx.getImageData(0, 0, S, S).data;
+    let clear = 0, minX = S, minY = S, maxX = -1, maxY = -1;
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const a = d[(y * S + x) * 4 + 3];
+        if (a < 16) { clear++; continue; }
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX >= 0) {
+      info = {
+        cut: clear >= S * S * 0.09,
+        bbox: [
+          (minX / S) * nw, (minY / S) * nh,
+          ((maxX - minX + 1) / S) * nw, ((maxY - minY + 1) / S) * nh,
+        ],
+      };
+    }
   } catch { /* decode hiccup — treat as opaque */ }
-  cutoutCache.set(img, cut);
-  return cut;
+  cutoutCache.set(img, info);
+  return info;
+}
+function isCutout(img: HTMLImageElement): boolean {
+  return cutoutInfo(img).cut;
 }
 
 function drawPhotoSubject(
@@ -150,14 +177,16 @@ function drawPhotoSubject(
   primary: string, accent: string,
 ): void {
   if (isCutout(photo)) {
-    // Transparent busts stage like a broadcast graphic — rim glow, big
-    // scale, bottom edge tucked under the lockup.
-    const maxW = w * 0.96, maxH = h * 0.62;
-    const scale = Math.min(maxW / photo.naturalWidth, maxH / photo.naturalHeight);
-    const dw = photo.naturalWidth * scale, dh = photo.naturalHeight * scale;
-    const dx = (w - dw) / 2, dy = h * 0.865 - dh;
+    // Transparent busts stage like a broadcast graphic. Crop to the
+    // opaque content and scale so the HEAD owns the middle of the card —
+    // shoulders are allowed to bleed off both edges, like real premium
+    // photo cards. Bottom edge tucks under the lockup.
+    const [bx, by, bw, bh] = cutoutInfo(photo).bbox;
+    const scale = Math.min((w * 1.22) / bw, (h * 0.68) / bh);
+    const dw = bw * scale, dh = bh * scale;
+    const dx = (w - dw) / 2, dy = h * 0.872 - dh;
 
-    const rim = ctx.createRadialGradient(w / 2, dy + dh * 0.55, dw * 0.1, w / 2, dy + dh * 0.55, dw * 0.62);
+    const rim = ctx.createRadialGradient(w / 2, dy + dh * 0.5, w * 0.08, w / 2, dy + dh * 0.5, w * 0.62);
     rim.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.5), 0.5));
     rim.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = rim;
@@ -167,7 +196,7 @@ function drawPhotoSubject(
     ctx.shadowColor = 'rgba(0,0,0,0.55)';
     ctx.shadowBlur = w * 0.045;
     ctx.shadowOffsetY = h * 0.014;
-    ctx.drawImage(photo, dx, dy, dw, dh);
+    ctx.drawImage(photo, bx, by, bw, bh, dx, dy, dw, dh);
     ctx.restore();
     return;
   }
@@ -1216,7 +1245,8 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   if (spec.auto) {
     const sig = buildSignature(player.signatureSeed, player.first, player.last, player.jersey);
     const sw = w * 0.62, sh = sw * 0.4 * 0.55;
-    const sx0 = w * 0.19, sy0 = h * 0.615;
+    // Photo cards sign across the jersey, never the face.
+    const sx0 = w * 0.19, sy0 = photo ? h * 0.665 : h * 0.615;
     drawSignature(ctx, sig, spec.auto.ink, sx0, sy0, sw, sh, spec.auto.sticker);
   }
 
