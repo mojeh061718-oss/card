@@ -187,6 +187,14 @@ export interface CardGL {
   }): void;
   /** Re-upload layer textures only when the card changes. */
   setLayers(print: TexImageSource, foilMask: TexImageSource): void;
+  /**
+   * Draw using the caller's already-set gl.viewport instead of the full
+   * canvas, and without clearing. Lets one fixed-size context serve stills
+   * at many sizes — resizing a WebGL canvas leaks on iOS Safari.
+   */
+  drawInViewport(opts: Parameters<CardGL['draw']>[0]): void;
+  /** True while the GPU context is gone; draws are no-ops until restored. */
+  isLost(): boolean;
   destroy(): void;
 }
 
@@ -200,6 +208,14 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
   return sh;
 }
 
+/**
+ * Build a card compositor bound to `canvas`.
+ *
+ * iOS Safari drops the WebGL context whenever the app is backgrounded, so
+ * every GPU object here is rebuilt from scratch on `webglcontextrestored`.
+ * Between loss and restore, draws are no-ops rather than throws — the card
+ * simply holds its last painted frame until the GPU comes back.
+ */
 export function createCardGL(canvas: HTMLCanvasElement): CardGL {
   const gl = canvas.getContext('webgl2', {
     alpha: true,
@@ -209,20 +225,19 @@ export function createCardGL(canvas: HTMLCanvasElement): CardGL {
   });
   if (!gl) throw new Error('WebGL2 unavailable');
 
-  const prog = gl.createProgram()!;
-  gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
-  gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    throw new Error(`Program link failed: ${gl.getProgramInfoLog(prog)}`);
+  interface GpuState {
+    prog: WebGLProgram;
+    quad: WebGLBuffer;
+    printTex: WebGLTexture;
+    foilTex: WebGLTexture;
+    u: Record<string, WebGLUniformLocation | null>;
   }
-  gl.useProgram(prog);
+  let gpu: GpuState | null = null;
+  let lost = false;
 
-  const quad = gl.createBuffer()!;
-  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(0);
-  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  let layersDirty = true;
+  let pendingPrint: TexImageSource | null = null;
+  let pendingFoil: TexImageSource | null = null;
 
   function makeTex(unit: number): WebGLTexture {
     const tex = gl!.createTexture()!;
@@ -234,24 +249,54 @@ export function createCardGL(canvas: HTMLCanvasElement): CardGL {
     gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
     return tex;
   }
-  const printTex = makeTex(0);
-  const foilTex = makeTex(1);
 
-  const u = {
-    print: gl.getUniformLocation(prog, 'uPrint'),
-    foil: gl.getUniformLocation(prog, 'uFoil'),
-    finish: gl.getUniformLocation(prog, 'uFinish'),
-    tilt: gl.getUniformLocation(prog, 'uTilt'),
-    time: gl.getUniformLocation(prog, 'uTime'),
-    tint: gl.getUniformLocation(prog, 'uTint'),
-    aspect: gl.getUniformLocation(prog, 'uAspect'),
+  function buildGpu(): GpuState {
+    const prog = gl!.createProgram()!;
+    gl!.attachShader(prog, compile(gl!, gl!.VERTEX_SHADER, VERT));
+    gl!.attachShader(prog, compile(gl!, gl!.FRAGMENT_SHADER, FRAG));
+    gl!.linkProgram(prog);
+    if (!gl!.getProgramParameter(prog, gl!.LINK_STATUS)) {
+      throw new Error(`Program link failed: ${gl!.getProgramInfoLog(prog)}`);
+    }
+    gl!.useProgram(prog);
+
+    const quad = gl!.createBuffer()!;
+    gl!.bindBuffer(gl!.ARRAY_BUFFER, quad);
+    gl!.bufferData(gl!.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl!.STATIC_DRAW);
+    gl!.enableVertexAttribArray(0);
+    gl!.vertexAttribPointer(0, 2, gl!.FLOAT, false, 0, 0);
+
+    const u = {
+      print: gl!.getUniformLocation(prog, 'uPrint'),
+      foil: gl!.getUniformLocation(prog, 'uFoil'),
+      finish: gl!.getUniformLocation(prog, 'uFinish'),
+      tilt: gl!.getUniformLocation(prog, 'uTilt'),
+      time: gl!.getUniformLocation(prog, 'uTime'),
+      tint: gl!.getUniformLocation(prog, 'uTint'),
+      aspect: gl!.getUniformLocation(prog, 'uAspect'),
+    };
+    gl!.uniform1i(u.print, 0);
+    gl!.uniform1i(u.foil, 1);
+
+    return { prog, quad, printTex: makeTex(0), foilTex: makeTex(1), u };
+  }
+
+  gpu = buildGpu();
+
+  // preventDefault on loss is what makes the browser fire a restore at all.
+  const onLost = (e: Event) => {
+    e.preventDefault();
+    lost = true;
+    gpu = null;
   };
-  gl.uniform1i(u.print, 0);
-  gl.uniform1i(u.foil, 1);
-
-  let layersDirty = true;
-  let pendingPrint: TexImageSource | null = null;
-  let pendingFoil: TexImageSource | null = null;
+  const onRestored = () => {
+    gpu = buildGpu();
+    lost = false;
+    // Textures died with the context; re-upload on the next draw.
+    layersDirty = true;
+  };
+  canvas.addEventListener('webglcontextlost', onLost);
+  canvas.addEventListener('webglcontextrestored', onRestored);
 
   function upload(unit: number, tex: WebGLTexture, src: TexImageSource): void {
     gl!.activeTexture(gl!.TEXTURE0 + unit);
@@ -267,7 +312,19 @@ export function createCardGL(canvas: HTMLCanvasElement): CardGL {
       pendingFoil = foilMask;
       layersDirty = true;
     },
-    draw({ print, foilMask, finish, tintHex, tiltX, tiltY, timeSec, aspect }) {
+    isLost() {
+      return lost || gl.isContextLost();
+    },
+    draw(opts) {
+      if (lost || !gpu) return;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      this.drawInViewport(opts);
+    },
+    drawInViewport({ print, foilMask, finish, tintHex, tiltX, tiltY, timeSec, aspect }) {
+      if (lost || !gpu) return;
+      const { u, printTex, foilTex } = gpu;
       if (layersDirty || pendingPrint !== print) {
         upload(0, printTex, print);
         upload(1, foilTex, foilMask);
@@ -276,9 +333,6 @@ export function createCardGL(canvas: HTMLCanvasElement): CardGL {
         layersDirty = false;
       }
       void pendingFoil;
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1i(u.finish, finishId(finish));
       gl.uniform2f(u.tilt, tiltX, tiltY);
       gl.uniform1f(u.time, timeSec);
@@ -288,10 +342,15 @@ export function createCardGL(canvas: HTMLCanvasElement): CardGL {
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
     destroy() {
-      gl.deleteTexture(printTex);
-      gl.deleteTexture(foilTex);
-      gl.deleteBuffer(quad);
-      gl.deleteProgram(prog);
+      canvas.removeEventListener('webglcontextlost', onLost);
+      canvas.removeEventListener('webglcontextrestored', onRestored);
+      if (gpu) {
+        gl.deleteTexture(gpu.printTex);
+        gl.deleteTexture(gpu.foilTex);
+        gl.deleteBuffer(gpu.quad);
+        gl.deleteProgram(gpu.prog);
+        gpu = null;
+      }
     },
   };
 }
