@@ -168,7 +168,7 @@ export function statLine(player: Player, day: number, up: boolean): string {
     ])
     : rng.pick([
       `is now ${rng.range(1, 4)} for the last ${rng.range(28, 44)}`,
-      `gets pulled in the ${rng.range(2, 4)}th after ${rng.range(6, 9)} earned`,
+      `gets pulled in the ${['2nd', '3rd', '4th'][rng.range(0, 2)]} after ${rng.range(6, 9)} earned`,
       `sits again with the injury lingering`,
     ]);
 }

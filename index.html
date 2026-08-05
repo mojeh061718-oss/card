@@ -20,7 +20,9 @@
       html, body { background: #0c0c10; color: #f4f2ec; height: 100%; overscroll-behavior: none; }
       body {
         font-family: -apple-system, "Helvetica Neue", sans-serif;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        /* NO safe-area padding here — the app shell consumes the top inset
+           and the nav consumes the bottom one. Padding both places doubles
+           the insets: huge dead band up top, nav pushed below the fold. */
         -webkit-user-select: none; user-select: none;
       }
       #root { height: 100%; }
