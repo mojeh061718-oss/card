@@ -20,7 +20,8 @@ import { buildSignature, drawSignature, type InkKind } from './signature';
 import type { Condition } from '../engine/condition/condition';
 import { drawSkyline, drawBase } from './skyline';
 import { INSERT_SETS } from '../engine/cards/series';
-import { heroPhoto } from './photodb';
+import { heroPhoto, tcgScan } from './photodb';
+import { renderPokeCard, type PokeCardSpec } from './pokecard';
 
 /**
  * REALISM CONCEPT hero: a real player photo takes the figure's place.
@@ -194,6 +195,8 @@ export interface CardRenderSpec {
   condition?: Condition | null;
   /** Named illustrated insert — swaps in a bespoke layout. */
   insertName?: string | null;
+  /** TCG concept card — routes to the TCG press instead of the sports one. */
+  tcg?: { setKey: string; chase: boolean; poke: PokeCardSpec };
 }
 
 export interface CardLayers {
@@ -480,8 +483,57 @@ function drawTeamBadge(
   ctx.restore();
 }
 
+/**
+ * A TCG card whose REAL SCAN has been imported: the scan IS the card.
+ * Holos still get foil through the GL compositor, tuned subtle so the
+ * authentic artwork carries the frame.
+ */
+function renderScanCard(
+  scan: HTMLImageElement, holo: boolean, widthPx: number,
+): CardLayers {
+  const w = widthPx;
+  const h = Math.round(widthPx / CARD_ASPECT);
+  const print = document.createElement('canvas');
+  print.width = w; print.height = h;
+  const ctx = print.getContext('2d')!;
+  const foilMask = document.createElement('canvas');
+  foilMask.width = w; foilMask.height = h;
+  const fctx = foilMask.getContext('2d')!;
+  fctx.fillStyle = '#000';
+  fctx.fillRect(0, 0, w, h);
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(0, 0, w, h, w * 0.045);
+  ctx.clip();
+  const cover = Math.max(w / scan.naturalWidth, h / scan.naturalHeight);
+  const dw = scan.naturalWidth * cover, dh = scan.naturalHeight * cover;
+  ctx.drawImage(scan, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  ctx.restore();
+  if (holo) {
+    fctx.save();
+    fctx.beginPath();
+    (fctx as unknown as CanvasRenderingContext2D).roundRect(0, 0, w, h, w * 0.045);
+    fctx.clip();
+    // Gentle full-card shimmer, hotter over the art window band.
+    fctx.fillStyle = 'rgb(70,70,70)';
+    fctx.fillRect(0, 0, w, h);
+    fctx.fillStyle = 'rgb(150,150,150)';
+    fctx.fillRect(w * 0.08, h * 0.1, w * 0.84, h * 0.42);
+    fctx.restore();
+  }
+  return { print, foilMask, widthPx: w, heightPx: h };
+}
+
 /** Render the complete card front at `widthPx` resolution. */
 export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayers {
+  if (spec.tcg) {
+    // Imported real scan wins; otherwise the procedural TCG concept frame.
+    const scan = tcgScan(spec.tcg.setKey, spec.tcg.poke.num);
+    const holo = spec.tcg.chase || spec.tcg.poke.rarity === 'holo';
+    if (scan) return renderScanCard(scan, holo, widthPx);
+    const l = renderPokeCard(spec.tcg.poke, widthPx);
+    return { print: l.print, foilMask: l.foilMask, widthPx: l.widthPx, heightPx: l.heightPx };
+  }
   const w = widthPx;
   const h = Math.round(widthPx / CARD_ASPECT);
   const { dna, team, player, parallel } = spec;

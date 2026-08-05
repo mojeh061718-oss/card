@@ -28,6 +28,14 @@ import { intrinsicValue, generateComps, compValue, type Comp } from '../engine/e
 import { COMPANIES, type GradeResult } from '../engine/condition/grading';
 import { releasesThrough, SHELF_LIFE_DAYS, type Release } from '../engine/cards/calendar';
 import { playerForm, hotMovers, statLine, type Mover } from '../engine/world/career';
+import {
+  TCG_SETS, TCG_RUNGS, tcgClasses, tcgPopulation, tcgCardOf, tcgGradeMultiplier,
+  openTcgPack, openTcgBox, tcgProducts, TCG_CARDS_PER_PACK, TCG_PACKS_PER_BOX,
+  type TcgSetData, type TcgClasses,
+} from '../engine/cards/tcg';
+import { LADDER_ARCHETYPES, type ParallelDef } from '../engine/cards/parallels';
+import { childSeedN } from '../engine/rng';
+import type { CardDef } from '../engine/cards/series';
 
 export interface SeriesRuntime {
   def: SeriesDef;
@@ -118,6 +126,121 @@ class World {
       .filter(r => r.releaseDay > day);
   }
 
+  // -------------------------------------------------------------------------
+  // TCG sets — the vintage-market game, enabled by the realism one-tap.
+  // Registered as shim-compatible SeriesRuntimes so every generic path
+  // (populations, saves, condition, comps, binder) just works; the
+  // TCG-specific bits (pack structure, authored values) branch on isTcg.
+  // -------------------------------------------------------------------------
+  private tcgExtra = new Map<string, { set: TcgSetData; classes: TcgClasses }>();
+
+  isTcg(seriesId: string): boolean {
+    return seriesId.startsWith('tcg-');
+  }
+
+  get tcgEnabled(): boolean {
+    return this.tcgExtra.size > 0;
+  }
+
+  get tcgIds(): string[] {
+    return [...this.tcgExtra.keys()];
+  }
+
+  enableTcg(): void {
+    if (this.tcgEnabled) return;
+    for (const set of TCG_SETS) {
+      const seed = childSeed(WORLD_SEED, `tcg:${set.id}`);
+      const isVintage = set.id === 'tcg-base';
+      const ladder: ParallelDef[] = TCG_RUNGS.map((r, i) => ({
+        id: i,
+        name: r === 'holo' ? 'Holo Rare' : r === 'chase' ? 'Illustration Rare'
+          : r[0].toUpperCase() + r.slice(1),
+        numberedTo: null,
+        printRun: r === 'common' ? 200000 : r === 'uncommon' ? 100000
+          : r === 'rare' ? 50000 : r === 'holo' ? 20000 : 1500,
+        finish: r === 'holo' ? (isVintage ? 'disco' : 'refractor')
+          : r === 'chase' ? 'refractor' : 'none',
+        colorHex: null,
+        desirability: 1,
+      }));
+      const checklist: CardDef[] = set.cards.map((c, index) => ({
+        index,
+        playerId: index,
+        cardNumber: `${c.num}/${c.outOf ?? set.size}`,
+        isRookie: false, isAuto: false, autoInk: null, autoSticker: false,
+        insertName: null,
+      }));
+      const players: Player[] = set.cards.map((c, i) => ({
+        id: i, sport: 'football', teamId: 0,
+        first: c.name, last: '',
+        position: c.type.toUpperCase(), jersey: c.num,
+        bornYear: set.year, debutYear: set.year, talent: 50,
+        appearanceSeed: childSeedN(seed, i),
+        signatureSeed: childSeedN(seed, 9000 + i),
+      }));
+      const teams: Team[] = [{
+        id: 0, sport: 'football', city: set.name, nickname: 'TCG', abbrev: 'TCG',
+        primary: isVintage ? '#2a5caa' : '#c0392b', secondary: '#e8c86a',
+        logoSeed: seed,
+      }];
+      const def: SeriesDef = {
+        id: set.id, seed, year: set.year,
+        brand: isVintage ? 'Base Set' : 'Pokemon',
+        line: isVintage ? '1st Edition' : '151',
+        sport: 'football', name: set.name,
+        archetype: LADDER_ARCHETYPES[0],
+        ladder, checklist,
+        slotCount: checklist.length * ladder.length,
+      };
+      this.series.set(set.id, {
+        def,
+        dna: deriveDna(seed, def.line),
+        pop: tcgPopulation(set, WORLD_SEED),
+        classes: classifySlots(def),
+        players, teams,
+        press: pressProfile(seed),
+      });
+      this.releaseDays.set(set.id, 1);
+      this.tcgExtra.set(set.id, { set, classes: tcgClasses(set) });
+    }
+  }
+
+  private tcgSet(seriesId: string): TcgSetData {
+    const x = this.tcgExtra.get(seriesId);
+    if (!x) throw new Error(`TCG not enabled: ${seriesId}`);
+    return x.set;
+  }
+
+  /** Shelf rows for the vintage case, with real-market pricing. */
+  tcgShelf(day: number): {
+    seriesId: string; productKey: string; name: string;
+    price: number; left: number; blurb: string;
+  }[] {
+    const rows: {
+      seriesId: string; productKey: string; name: string;
+      price: number; left: number; blurb: string;
+    }[] = [];
+    for (const [seriesId, { set }] of this.tcgExtra) {
+      const isVintage = seriesId === 'tcg-base';
+      for (const p of tcgProducts(set)) {
+        const rng = Rng.from(this.get(seriesId).def.seed, `tcg-alloc:${p.key}:${day}`);
+        const left = isVintage
+          ? (p.key === 'tcg-pack' ? rng.range(0, 2) : (rng.chance(0.3) ? 1 : 0))
+          : (p.key === 'tcg-pack' ? rng.range(4, 12) : rng.range(1, 2));
+        rows.push({
+          seriesId, productKey: p.key,
+          name: `${p.name} · ${set.name}`,
+          price: this.waxPrice(seriesId, p.key, day),
+          left,
+          blurb: p.key === 'tcg-pack'
+            ? `${TCG_CARDS_PER_PACK} cards · 1 rare slot${isVintage ? ' · holo 1:3' : ' · chase 1:150'}`
+            : `${TCG_PACKS_PER_BOX} packs · sealed ${isVintage ? 'vintage' : 'box'}`,
+        });
+      }
+    }
+    return rows;
+  }
+
   /** Is this product still on the distributor sheet? */
   onShelf(seriesId: string, day: number): boolean {
     const rel = this.releaseDay(seriesId);
@@ -165,7 +288,9 @@ class World {
       };
     }
     // Series runtimes hold their own roster references; repoint them.
+    // TCG runtimes own their synthetic rosters — never repoint those.
     for (const rt of this.series.values()) {
+      if (this.isTcg(rt.def.id)) continue;
       const lg = this.leagues[rt.def.sport];
       rt.players = lg.players;
       rt.teams = lg.teams;
@@ -215,6 +340,13 @@ class World {
    */
   openProduct(seriesId: string, productKey: string): PulledCard[][] {
     const rt = this.get(seriesId);
+    if (this.isTcg(seriesId)) {
+      const { set, classes } = this.tcgExtra.get(seriesId)!;
+      this.supplyRevision++;
+      return productKey === 'tcg-box'
+        ? openTcgBox(set, rt.pop, classes, this.packRng)
+        : [openTcgPack(set, rt.pop, classes, this.packRng)];
+    }
     const product = PRODUCTS.find(p => p.key === productKey);
     if (!product) throw new Error(`Unknown product ${productKey}`);
     this.supplyRevision++;
@@ -225,6 +357,15 @@ class World {
   }
 
   product(key: string): ProductConfig {
+    if (key === 'tcg-pack' || key === 'tcg-box') {
+      return {
+        key: 'hobbyPack', // shape-compat; callers only read the fields below
+        name: key === 'tcg-pack' ? 'Booster Pack' : 'Booster Box',
+        cardsPerPack: TCG_CARDS_PER_PACK,
+        packs: key === 'tcg-pack' ? 1 : TCG_PACKS_PER_BOX,
+        guaranteedAutos: 0, guaranteedNumbered: 0, msrp: 0,
+      };
+    }
     const p = PRODUCTS.find(x => x.key === key);
     if (!p) throw new Error(`Unknown product ${key}`);
     return p;
@@ -241,6 +382,14 @@ class World {
    */
   waxPrice(seriesId: string, productKey: string, day: number): number {
     const rt = this.get(seriesId);
+    if (this.isTcg(seriesId)) {
+      const set = this.tcgSet(seriesId);
+      const msrp = tcgProducts(set).find(p => p.key === productKey)?.msrp ?? set.packPrice;
+      const openedFraction = 1 - rt.pop.totalRemaining / rt.pop.totalPrinted;
+      // Vintage supply drying up is THE price story.
+      const lift = 1 + Math.pow(openedFraction, 1.4) * 3.5;
+      return Math.round(msrp * lift * 100) / 100;
+    }
     const product = this.product(productKey);
     const openedFraction = 1 - rt.pop.totalRemaining / rt.pop.totalPrinted;
     // Supply drying up lifts the price of what's left, superlinearly at the end.
@@ -270,7 +419,7 @@ class World {
   }
 
   get seriesIds(): string[] {
-    return [...this.series.keys()];
+    return [...this.series.keys()].filter(id => !this.isTcg(id));
   }
 
   lotOffers(day: number): LotOffer[] {
@@ -321,6 +470,34 @@ class World {
 
   specFor(pull: PulledCard): CardRenderSpec {
     const rt = this.get(pull.seriesId);
+    if (this.isTcg(pull.seriesId)) {
+      const set = this.tcgSet(pull.seriesId);
+      const card = tcgCardOf(set, pull.cardIndex);
+      return {
+        condition: this.conditionOf(pull),
+        player: rt.players[pull.cardIndex],
+        team: rt.teams[0],
+        dna: rt.dna,
+        parallel: rt.def.ladder[pull.parallelId],
+        serial: null,
+        seriesName: set.name,
+        cardNumber: `${card.num}/${card.outOf ?? set.size}`,
+        isRookie: false,
+        auto: null,
+        insertName: null,
+        artSeed: artSeedFor(rt.def.seed, pull.cardIndex),
+        tcg: {
+          setKey: set.id === 'tcg-base' ? 'base' : '151',
+          chase: card.rarity === 'chase',
+          poke: {
+            name: card.name, type: card.type,
+            rarity: card.rarity === 'chase' ? 'holo' : card.rarity,
+            hp: card.hp, kind: card.kind, num: card.num,
+            setName: set.name, setSize: card.outOf ?? set.size, setYear: set.year,
+          },
+        },
+      };
+    }
     const { player, team, card, parallel } = renderInputs(rt.def, pull, rt.players, rt.teams);
     return {
       condition: this.conditionOf(pull),
@@ -349,6 +526,15 @@ class World {
     pull: PulledCard,
     grade?: { companyKey: string; result: GradeResult } | null,
   ): number {
+    if (this.isTcg(pull.seriesId)) {
+      const card = tcgCardOf(this.tcgSet(pull.seriesId), pull.cardIndex);
+      let v = card.value;
+      if (grade) {
+        const co = COMPANIES.find(c => c.key === grade.companyKey);
+        v *= tcgGradeMultiplier(grade.result.overall, co?.premium ?? 1);
+      }
+      return v;
+    }
     const rt = this.get(pull.seriesId);
     const card = rt.def.checklist[pull.cardIndex];
     const player = rt.players[card.playerId];
@@ -411,6 +597,10 @@ class World {
 
   /** Market interest 0..1 — drives auction crowd size. */
   interest(pull: PulledCard): number {
+    if (this.isTcg(pull.seriesId)) {
+      const v = tcgCardOf(this.tcgSet(pull.seriesId), pull.cardIndex).value;
+      return Math.min(1, Math.log10(v + 1) / 4.2);
+    }
     const rt = this.get(pull.seriesId);
     const card = rt.def.checklist[pull.cardIndex];
     const player = rt.players[card.playerId];
@@ -419,6 +609,9 @@ class World {
   }
 
   printRunOf(pull: PulledCard): number {
+    if (this.isTcg(pull.seriesId)) {
+      return tcgCardOf(this.tcgSet(pull.seriesId), pull.cardIndex).printRun;
+    }
     const rt = this.get(pull.seriesId);
     const card = rt.def.checklist[pull.cardIndex];
     if (card.insertName) {
@@ -429,11 +622,27 @@ class World {
   }
 
   heat(pull: PulledCard): number {
+    if (this.isTcg(pull.seriesId)) {
+      // log2 of value: $12 common ~3.7 (quiet), $800 holo ~9.6 (hot),
+      // $22k Charizard ~14.4 (takeover-grade glow).
+      return Math.log2(1 + tcgCardOf(this.tcgSet(pull.seriesId), pull.cardIndex).value);
+    }
     const rt = this.get(pull.seriesId);
     return rankOf(rt.def, pull);
   }
 
   displayName(pull: PulledCard): { player: string; tier: string; series: string } {
+    if (this.isTcg(pull.seriesId)) {
+      const set = this.tcgSet(pull.seriesId);
+      const card = tcgCardOf(set, pull.cardIndex);
+      const rung = this.get(pull.seriesId).def.ladder[pull.parallelId];
+      return {
+        player: card.name,
+        tier: `${rung.name} · ${card.num}/${card.outOf ?? set.size}` +
+          (set.id === 'tcg-base' ? ' · 1st Edition' : ''),
+        series: set.name,
+      };
+    }
     const rt = this.get(pull.seriesId);
     const card = rt.def.checklist[pull.cardIndex];
     const player = rt.players[card.playerId];
@@ -461,6 +670,7 @@ class World {
     const surfaced: { pull: PulledCard; seriesId: string }[] = [];
     this.supplyRevision++;
     for (const [seriesId, rt] of this.series) {
+      if (this.isTcg(seriesId)) continue; // player-driven supply only
       const P = rt.def.ladder.length;
       // Unreleased product is still in the warehouse — nobody rips it.
       const ageDays = day - this.releaseDay(seriesId);

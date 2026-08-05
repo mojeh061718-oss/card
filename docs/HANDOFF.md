@@ -331,6 +331,38 @@ Measure before adding work to the rip or binder-scroll paths.
 
 ---
 
+## 7.5 The TCG layer (realism concept)
+
+Two collectible TCG sets ride the same engine as shim `SeriesRuntime`s:
+`tcg-base` (1999 Base Set, priced as 1st Edition vintage — $3.5k packs,
+$110k boxes, $22k raw holo Charizard) and `tcg-151` (modern, $5 packs with
+a 1:150 secret-rare chase). Sharp edges:
+
+- **Everything generic just works** (populations, saves, condition, comps,
+  binder) because `world.enableTcg()` registers real runtimes. TCG-specific
+  semantics branch on `world.isTcg(id)`: pack structure (11 cards, 7/3/1,
+  holo 1:3), authored per-card values × `tcgGradeMultiplier`, vintage wax
+  pricing, heat = log2(value). `seriesIds` EXCLUDES tcg ids (sports-only
+  callers: shelf, lots, Top 50, ripWorld); use `world.tcgIds` to reach them.
+- **`Population` requires dense slot ids.** `tcgPopulation` emits every
+  (card × rung) slot with zero copies off the card's native rung. Don't
+  "simplify" to sparse slots — the constructor throws.
+- **Enable order on hydrate:** `world.enableTcg()` must run BEFORE
+  `world.restorePopulations`, or the tcg draw states are dropped. The
+  persisted `tcgEnabled` flag in the save drives this.
+- **Scans win.** `renderCardLayers` branches on `spec.tcg`: an official
+  scan from the provider (`src/render/photodb.ts`, fed by IndexedDB
+  `poke-art-cache`, keys `base:${num}` / `151:${num}`) renders full-bleed;
+  otherwise the procedural concept frame draws. `loadCachedScans()` at boot
+  makes it all work offline.
+- **The realism one-tap** (`src/app/realism.ts`) is the whole pipeline:
+  names → photos → scans → `enableTcg` → decode → revision bump. It lives
+  on the CareerSetup welcome screen; the EDIT-tab variant additionally
+  calls `resetToWelcome()` (fresh career, assets survive).
+- Verify with `node tools/tcg-e2e.mjs` (loop on concept frames) and
+  `SCAN_DIR=<dir> node tools/tcg-scan-check.mjs` (scan-wins proof; see the
+  script header for how scans get seeded in-sandbox).
+
 ## 8. Where to start
 
 If you want the highest-value work first, in order (items 1–4 of the

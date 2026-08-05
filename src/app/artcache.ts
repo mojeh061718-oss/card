@@ -17,7 +17,7 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
-import { setPhotoProvider } from '../render/photodb';
+import { setPhotoProvider, setScanProvider } from '../render/photodb';
 
 function makeDb(name: string): () => Promise<IDBPDatabase> {
   let p: Promise<IDBPDatabase> | null = null;
@@ -76,6 +76,42 @@ export async function loadArtUrls(setKey: string, nums: number[]): Promise<Recor
     if (blob) out[num] = URL.createObjectURL(blob as Blob);
   }
   return out;
+}
+
+/** In-memory decoded scans the card press reads synchronously. */
+const scanMap = new Map<string, HTMLImageElement>();
+
+export function scanFor(setKey: string, num: number): HTMLImageElement | null {
+  const img = scanMap.get(`${setKey}:${num}`);
+  return img && img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+// The card press pulls official scans through the render-layer seam.
+setScanProvider(scanFor);
+
+export function scanCount(): number {
+  return scanMap.size;
+}
+
+/** Decode every cached scan into memory at boot. Returns how many. */
+export async function loadCachedScans(): Promise<number> {
+  const db = await pokeDb();
+  const keys = await db.getAllKeys('img');
+  for (const key of keys) {
+    const k = String(key);
+    if (scanMap.has(k)) continue;
+    const blob = await db.get('img', key);
+    if (!blob) continue;
+    const img = new Image();
+    img.src = URL.createObjectURL(blob as Blob);
+    try {
+      await img.decode();
+      scanMap.set(k, img);
+    } catch {
+      URL.revokeObjectURL(img.src);
+    }
+  }
+  return scanMap.size;
 }
 
 // ---------------------------------------------------------------------------

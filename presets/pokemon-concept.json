@@ -15,7 +15,9 @@
      "type": "psychic",
      "rarity": "holo",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 900,
+     "printRun": 3000
     },
     {
      "num": 2,
@@ -23,7 +25,9 @@
      "type": "water",
      "rarity": "holo",
      "hp": 100,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 2800,
+     "printRun": 3000
     },
     {
      "num": 3,
@@ -31,7 +35,9 @@
      "type": "colorless",
      "rarity": "holo",
      "hp": 120,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 1000,
+     "printRun": 3000
     },
     {
      "num": 4,
@@ -39,7 +45,9 @@
      "type": "fire",
      "rarity": "holo",
      "hp": 120,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22000,
+     "printRun": 3000
     },
     {
      "num": 5,
@@ -47,7 +55,9 @@
      "type": "colorless",
      "rarity": "holo",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 600,
+     "printRun": 3000
     },
     {
      "num": 6,
@@ -55,7 +65,9 @@
      "type": "water",
      "rarity": "holo",
      "hp": 100,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 800,
+     "printRun": 3000
     },
     {
      "num": 7,
@@ -63,7 +75,9 @@
      "type": "fighting",
      "rarity": "holo",
      "hp": 70,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 500,
+     "printRun": 3000
     },
     {
      "num": 8,
@@ -71,7 +85,9 @@
      "type": "fighting",
      "rarity": "holo",
      "hp": 100,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 300,
+     "printRun": 3000
     },
     {
      "num": 9,
@@ -79,7 +95,9 @@
      "type": "lightning",
      "rarity": "holo",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 450,
+     "printRun": 3000
     },
     {
      "num": 10,
@@ -87,7 +105,9 @@
      "type": "psychic",
      "rarity": "holo",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 900,
+     "printRun": 3000
     },
     {
      "num": 11,
@@ -95,7 +115,9 @@
      "type": "grass",
      "rarity": "holo",
      "hp": 90,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 550,
+     "printRun": 3000
     },
     {
      "num": 12,
@@ -103,7 +125,9 @@
      "type": "fire",
      "rarity": "holo",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 700,
+     "printRun": 3000
     },
     {
      "num": 13,
@@ -111,7 +135,9 @@
      "type": "water",
      "rarity": "holo",
      "hp": 90,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 450,
+     "printRun": 3000
     },
     {
      "num": 14,
@@ -119,7 +145,9 @@
      "type": "lightning",
      "rarity": "holo",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 1000,
+     "printRun": 3000
     },
     {
      "num": 15,
@@ -127,7 +155,9 @@
      "type": "grass",
      "rarity": "holo",
      "hp": 100,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 2400,
+     "printRun": 3000
     },
     {
      "num": 16,
@@ -135,7 +165,9 @@
      "type": "lightning",
      "rarity": "holo",
      "hp": 90,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 800,
+     "printRun": 3000
     },
     {
      "num": 17,
@@ -143,7 +175,9 @@
      "type": "grass",
      "rarity": "rare",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 90,
+     "printRun": 5000
     },
     {
      "num": 18,
@@ -151,7 +185,9 @@
      "type": "colorless",
      "rarity": "rare",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 140,
+     "printRun": 5000
     },
     {
      "num": 19,
@@ -159,7 +195,9 @@
      "type": "fighting",
      "rarity": "rare",
      "hp": 70,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 70,
+     "printRun": 5000
     },
     {
      "num": 20,
@@ -167,7 +205,9 @@
      "type": "lightning",
      "rarity": "rare",
      "hp": 70,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 80,
+     "printRun": 5000
     },
     {
      "num": 21,
@@ -175,7 +215,9 @@
      "type": "lightning",
      "rarity": "rare",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 60,
+     "printRun": 5000
     },
     {
      "num": 22,
@@ -183,7 +225,9 @@
      "type": "colorless",
      "rarity": "rare",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 70,
+     "printRun": 5000
     },
     {
      "num": 23,
@@ -191,7 +235,9 @@
      "type": "fire",
      "rarity": "uncommon",
      "hp": 100,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 45,
+     "printRun": 15000
     },
     {
      "num": 24,
@@ -199,7 +245,9 @@
      "type": "fire",
      "rarity": "uncommon",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 60,
+     "printRun": 15000
     },
     {
      "num": 25,
@@ -207,7 +255,9 @@
      "type": "water",
      "rarity": "uncommon",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 25,
+     "printRun": 15000
     },
     {
      "num": 26,
@@ -215,7 +265,9 @@
      "type": "colorless",
      "rarity": "uncommon",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 35,
+     "printRun": 15000
     },
     {
      "num": 27,
@@ -223,7 +275,9 @@
      "type": "colorless",
      "rarity": "uncommon",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22,
+     "printRun": 15000
     },
     {
      "num": 28,
@@ -231,7 +285,9 @@
      "type": "fire",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 30,
+     "printRun": 15000
     },
     {
      "num": 29,
@@ -239,7 +295,9 @@
      "type": "psychic",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 30,
+     "printRun": 15000
     },
     {
      "num": 30,
@@ -247,7 +305,9 @@
      "type": "grass",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 40,
+     "printRun": 15000
     },
     {
      "num": 31,
@@ -255,7 +315,9 @@
      "type": "psychic",
      "rarity": "uncommon",
      "hp": 70,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22,
+     "printRun": 15000
     },
     {
      "num": 32,
@@ -263,7 +325,9 @@
      "type": "psychic",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 35,
+     "printRun": 15000
     },
     {
      "num": 33,
@@ -271,7 +335,9 @@
      "type": "grass",
      "rarity": "uncommon",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 20,
+     "printRun": 15000
     },
     {
      "num": 34,
@@ -279,7 +345,9 @@
      "type": "fighting",
      "rarity": "uncommon",
      "hp": 80,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22,
+     "printRun": 15000
     },
     {
      "num": 35,
@@ -287,7 +355,9 @@
      "type": "water",
      "rarity": "uncommon",
      "hp": 30,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 40,
+     "printRun": 15000
     },
     {
      "num": 36,
@@ -295,7 +365,9 @@
      "type": "fire",
      "rarity": "uncommon",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 25,
+     "printRun": 15000
     },
     {
      "num": 37,
@@ -303,7 +375,9 @@
      "type": "grass",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22,
+     "printRun": 15000
     },
     {
      "num": 38,
@@ -311,7 +385,9 @@
      "type": "water",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22,
+     "printRun": 15000
     },
     {
      "num": 39,
@@ -319,7 +395,9 @@
      "type": "colorless",
      "rarity": "uncommon",
      "hp": 30,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 28,
+     "printRun": 15000
     },
     {
      "num": 40,
@@ -327,7 +405,9 @@
      "type": "colorless",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 22,
+     "printRun": 15000
     },
     {
      "num": 41,
@@ -335,7 +415,9 @@
      "type": "water",
      "rarity": "uncommon",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 20,
+     "printRun": 15000
     },
     {
      "num": 42,
@@ -343,7 +425,9 @@
      "type": "water",
      "rarity": "uncommon",
      "hp": 70,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 45,
+     "printRun": 15000
     },
     {
      "num": 43,
@@ -351,7 +435,9 @@
      "type": "psychic",
      "rarity": "common",
      "hp": 30,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 14,
+     "printRun": 22000
     },
     {
      "num": 44,
@@ -359,7 +445,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 30,
+     "printRun": 22000
     },
     {
      "num": 45,
@@ -367,7 +455,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 46,
@@ -375,7 +465,9 @@
      "type": "fire",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 32,
+     "printRun": 22000
     },
     {
      "num": 47,
@@ -383,7 +475,9 @@
      "type": "fighting",
      "rarity": "common",
      "hp": 30,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 48,
@@ -391,7 +485,9 @@
      "type": "colorless",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 10,
+     "printRun": 22000
     },
     {
      "num": 49,
@@ -399,7 +495,9 @@
      "type": "psychic",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 50,
@@ -407,7 +505,9 @@
      "type": "psychic",
      "rarity": "common",
      "hp": 30,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 14,
+     "printRun": 22000
     },
     {
      "num": 51,
@@ -415,7 +515,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 52,
@@ -423,7 +525,9 @@
      "type": "fighting",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 14,
+     "printRun": 22000
     },
     {
      "num": 53,
@@ -431,7 +535,9 @@
      "type": "lightning",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 54,
@@ -439,7 +545,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 70,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 55,
@@ -447,7 +555,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 56,
@@ -455,7 +565,9 @@
      "type": "fighting",
      "rarity": "common",
      "hp": 90,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 14,
+     "printRun": 22000
     },
     {
      "num": 57,
@@ -463,7 +575,9 @@
      "type": "colorless",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 58,
@@ -471,7 +585,9 @@
      "type": "lightning",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 48,
+     "printRun": 22000
     },
     {
      "num": 59,
@@ -479,7 +595,9 @@
      "type": "water",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 60,
@@ -487,7 +605,9 @@
      "type": "fire",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 14,
+     "printRun": 22000
     },
     {
      "num": 61,
@@ -495,7 +615,9 @@
      "type": "colorless",
      "rarity": "common",
      "hp": 30,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 62,
@@ -503,7 +625,9 @@
      "type": "fighting",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 63,
@@ -511,7 +635,9 @@
      "type": "water",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 30,
+     "printRun": 22000
     },
     {
      "num": 64,
@@ -519,7 +645,9 @@
      "type": "water",
      "rarity": "common",
      "hp": 60,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 65,
@@ -527,7 +655,9 @@
      "type": "water",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 66,
@@ -535,7 +665,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 67,
@@ -543,7 +675,9 @@
      "type": "lightning",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 68,
@@ -551,7 +685,9 @@
      "type": "fire",
      "rarity": "common",
      "hp": 50,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 16,
+     "printRun": 22000
     },
     {
      "num": 69,
@@ -559,7 +695,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": 40,
-     "kind": "creature"
+     "kind": "creature",
+     "value": 12,
+     "printRun": 22000
     },
     {
      "num": 70,
@@ -567,7 +705,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 30,
+     "printRun": 10000
     },
     {
      "num": 71,
@@ -575,7 +715,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 60,
+     "printRun": 10000
     },
     {
      "num": 72,
@@ -583,7 +725,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 25,
+     "printRun": 10000
     },
     {
      "num": 73,
@@ -591,7 +735,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 30,
+     "printRun": 10000
     },
     {
      "num": 74,
@@ -599,7 +745,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 50,
+     "printRun": 10000
     },
     {
      "num": 75,
@@ -607,7 +755,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 45,
+     "printRun": 10000
     },
     {
      "num": 76,
@@ -615,7 +765,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 40,
+     "printRun": 10000
     },
     {
      "num": 77,
@@ -623,7 +775,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 35,
+     "printRun": 10000
     },
     {
      "num": 78,
@@ -631,7 +785,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 30,
+     "printRun": 10000
     },
     {
      "num": 79,
@@ -639,7 +795,9 @@
      "type": "trainer",
      "rarity": "rare",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 30,
+     "printRun": 10000
     },
     {
      "num": 80,
@@ -647,7 +805,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 12,
+     "printRun": 30000
     },
     {
      "num": 81,
@@ -655,7 +815,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 12,
+     "printRun": 30000
     },
     {
      "num": 82,
@@ -663,7 +825,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 10,
+     "printRun": 30000
     },
     {
      "num": 83,
@@ -671,7 +835,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 10,
+     "printRun": 30000
     },
     {
      "num": 84,
@@ -679,7 +845,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 14,
+     "printRun": 30000
     },
     {
      "num": 85,
@@ -687,7 +855,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 12,
+     "printRun": 30000
     },
     {
      "num": 86,
@@ -695,7 +865,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 14,
+     "printRun": 30000
     },
     {
      "num": 87,
@@ -703,7 +875,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 12,
+     "printRun": 30000
     },
     {
      "num": 88,
@@ -711,7 +885,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 25,
+     "printRun": 30000
     },
     {
      "num": 89,
@@ -719,7 +895,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 12,
+     "printRun": 30000
     },
     {
      "num": 90,
@@ -727,7 +905,9 @@
      "type": "trainer",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 12,
+     "printRun": 30000
     },
     {
      "num": 91,
@@ -735,7 +915,9 @@
      "type": "trainer",
      "rarity": "common",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 10,
+     "printRun": 44000
     },
     {
      "num": 92,
@@ -743,7 +925,9 @@
      "type": "trainer",
      "rarity": "common",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 9,
+     "printRun": 44000
     },
     {
      "num": 93,
@@ -751,7 +935,9 @@
      "type": "trainer",
      "rarity": "common",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 10,
+     "printRun": 44000
     },
     {
      "num": 94,
@@ -759,7 +945,9 @@
      "type": "trainer",
      "rarity": "common",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 8,
+     "printRun": 44000
     },
     {
      "num": 95,
@@ -767,7 +955,9 @@
      "type": "trainer",
      "rarity": "common",
      "hp": null,
-     "kind": "trainer"
+     "kind": "trainer",
+     "value": 9,
+     "printRun": 44000
     },
     {
      "num": 96,
@@ -775,7 +965,9 @@
      "type": "colorless",
      "rarity": "uncommon",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 40,
+     "printRun": 60000
     },
     {
      "num": 97,
@@ -783,7 +975,9 @@
      "type": "fighting",
      "rarity": "common",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 6,
+     "printRun": 60000
     },
     {
      "num": 98,
@@ -791,7 +985,9 @@
      "type": "fire",
      "rarity": "common",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 8,
+     "printRun": 60000
     },
     {
      "num": 99,
@@ -799,7 +995,9 @@
      "type": "grass",
      "rarity": "common",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 7,
+     "printRun": 60000
     },
     {
      "num": 100,
@@ -807,7 +1005,9 @@
      "type": "lightning",
      "rarity": "common",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 8,
+     "printRun": 60000
     },
     {
      "num": 101,
@@ -815,7 +1015,9 @@
      "type": "psychic",
      "rarity": "common",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 7,
+     "printRun": 60000
     },
     {
      "num": 102,
@@ -823,15 +1025,18 @@
      "type": "water",
      "rarity": "common",
      "hp": null,
-     "kind": "energy"
+     "kind": "energy",
+     "value": 7,
+     "printRun": 60000
     }
-   ]
+   ],
+   "edition": "1st Edition"
   },
   {
    "key": "151",
    "name": "Pokemon 151",
    "year": 2023,
-   "size": 151,
+   "size": 165,
    "officialArt": "https://images.pokemontcg.io/sv3pt5/{num}.png",
    "cards": [
     {
@@ -841,7 +1046,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 1
+     "dex": 1,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 2,
@@ -850,7 +1057,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 2
+     "dex": 2,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 3,
@@ -859,7 +1068,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 3
+     "dex": 3,
+     "value": 6.0,
+     "printRun": 2500
     },
     {
      "num": 4,
@@ -868,7 +1079,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 4
+     "dex": 4,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 5,
@@ -877,7 +1090,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 5
+     "dex": 5,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 6,
@@ -886,7 +1101,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 6
+     "dex": 6,
+     "value": 25.0,
+     "printRun": 2500
     },
     {
      "num": 7,
@@ -895,7 +1112,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 7
+     "dex": 7,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 8,
@@ -904,7 +1123,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 8
+     "dex": 8,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 9,
@@ -913,7 +1134,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 9
+     "dex": 9,
+     "value": 8.0,
+     "printRun": 2500
     },
     {
      "num": 10,
@@ -922,7 +1145,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 10
+     "dex": 10,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 11,
@@ -931,7 +1156,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 11
+     "dex": 11,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 12,
@@ -940,7 +1167,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 12
+     "dex": 12,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 13,
@@ -949,7 +1178,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 13
+     "dex": 13,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 14,
@@ -958,7 +1189,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 14
+     "dex": 14,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 15,
@@ -967,7 +1200,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 15
+     "dex": 15,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 16,
@@ -976,7 +1211,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 16
+     "dex": 16,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 17,
@@ -985,7 +1222,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 17
+     "dex": 17,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 18,
@@ -994,7 +1233,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 18
+     "dex": 18,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 19,
@@ -1003,7 +1244,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 19
+     "dex": 19,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 20,
@@ -1012,7 +1255,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 20
+     "dex": 20,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 21,
@@ -1021,7 +1266,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 21
+     "dex": 21,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 22,
@@ -1030,7 +1277,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 22
+     "dex": 22,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 23,
@@ -1039,7 +1288,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 23
+     "dex": 23,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 24,
@@ -1048,7 +1299,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 24
+     "dex": 24,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 25,
@@ -1057,7 +1310,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 25
+     "dex": 25,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 26,
@@ -1066,7 +1321,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 26
+     "dex": 26,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 27,
@@ -1075,7 +1332,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 27
+     "dex": 27,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 28,
@@ -1084,7 +1343,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 28
+     "dex": 28,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 29,
@@ -1093,7 +1354,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 29
+     "dex": 29,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 30,
@@ -1102,7 +1365,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 30
+     "dex": 30,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 31,
@@ -1111,7 +1376,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 31
+     "dex": 31,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 32,
@@ -1120,7 +1387,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 32
+     "dex": 32,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 33,
@@ -1129,7 +1398,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 33
+     "dex": 33,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 34,
@@ -1138,7 +1409,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 34
+     "dex": 34,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 35,
@@ -1147,7 +1420,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 35
+     "dex": 35,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 36,
@@ -1156,7 +1431,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 36
+     "dex": 36,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 37,
@@ -1165,7 +1442,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 37
+     "dex": 37,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 38,
@@ -1174,7 +1453,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 38
+     "dex": 38,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 39,
@@ -1183,7 +1464,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 39
+     "dex": 39,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 40,
@@ -1192,7 +1475,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 40
+     "dex": 40,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 41,
@@ -1201,7 +1486,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 41
+     "dex": 41,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 42,
@@ -1210,7 +1497,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 42
+     "dex": 42,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 43,
@@ -1219,7 +1508,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 43
+     "dex": 43,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 44,
@@ -1228,7 +1519,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 44
+     "dex": 44,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 45,
@@ -1237,7 +1530,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 45
+     "dex": 45,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 46,
@@ -1246,7 +1541,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 46
+     "dex": 46,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 47,
@@ -1255,7 +1552,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 47
+     "dex": 47,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 48,
@@ -1264,7 +1563,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 48
+     "dex": 48,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 49,
@@ -1273,7 +1574,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 49
+     "dex": 49,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 50,
@@ -1282,7 +1585,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 50
+     "dex": 50,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 51,
@@ -1291,7 +1596,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 51
+     "dex": 51,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 52,
@@ -1300,7 +1607,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 52
+     "dex": 52,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 53,
@@ -1309,7 +1618,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 53
+     "dex": 53,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 54,
@@ -1318,7 +1629,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 54
+     "dex": 54,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 55,
@@ -1327,7 +1640,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 55
+     "dex": 55,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 56,
@@ -1336,7 +1651,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 56
+     "dex": 56,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 57,
@@ -1345,7 +1662,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 57
+     "dex": 57,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 58,
@@ -1354,7 +1673,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 58
+     "dex": 58,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 59,
@@ -1363,7 +1684,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 59
+     "dex": 59,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 60,
@@ -1372,7 +1695,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 60
+     "dex": 60,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 61,
@@ -1381,7 +1706,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 61
+     "dex": 61,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 62,
@@ -1390,7 +1717,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 62
+     "dex": 62,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 63,
@@ -1399,7 +1728,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 63
+     "dex": 63,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 64,
@@ -1408,7 +1739,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 64
+     "dex": 64,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 65,
@@ -1417,7 +1750,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 65
+     "dex": 65,
+     "value": 3.5,
+     "printRun": 2500
     },
     {
      "num": 66,
@@ -1426,7 +1761,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 66
+     "dex": 66,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 67,
@@ -1435,7 +1772,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 67
+     "dex": 67,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 68,
@@ -1444,7 +1783,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 68
+     "dex": 68,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 69,
@@ -1453,7 +1794,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 69
+     "dex": 69,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 70,
@@ -1462,7 +1805,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 70
+     "dex": 70,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 71,
@@ -1471,7 +1816,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 71
+     "dex": 71,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 72,
@@ -1480,7 +1827,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 72
+     "dex": 72,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 73,
@@ -1489,7 +1838,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 73
+     "dex": 73,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 74,
@@ -1498,7 +1849,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 74
+     "dex": 74,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 75,
@@ -1507,7 +1860,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 75
+     "dex": 75,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 76,
@@ -1516,7 +1871,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 76
+     "dex": 76,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 77,
@@ -1525,7 +1882,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 77
+     "dex": 77,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 78,
@@ -1534,7 +1893,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 78
+     "dex": 78,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 79,
@@ -1543,7 +1904,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 79
+     "dex": 79,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 80,
@@ -1552,7 +1915,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 80
+     "dex": 80,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 81,
@@ -1561,7 +1926,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 81
+     "dex": 81,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 82,
@@ -1570,7 +1937,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 82
+     "dex": 82,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 83,
@@ -1579,7 +1948,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 83
+     "dex": 83,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 84,
@@ -1588,7 +1959,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 84
+     "dex": 84,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 85,
@@ -1597,7 +1970,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 85
+     "dex": 85,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 86,
@@ -1606,7 +1981,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 86
+     "dex": 86,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 87,
@@ -1615,7 +1992,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 87
+     "dex": 87,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 88,
@@ -1624,7 +2003,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 88
+     "dex": 88,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 89,
@@ -1633,7 +2014,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 89
+     "dex": 89,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 90,
@@ -1642,7 +2025,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 90
+     "dex": 90,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 91,
@@ -1651,7 +2036,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 91
+     "dex": 91,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 92,
@@ -1660,7 +2047,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 92
+     "dex": 92,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 93,
@@ -1669,7 +2058,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 93
+     "dex": 93,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 94,
@@ -1678,7 +2069,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 94
+     "dex": 94,
+     "value": 4.0,
+     "printRun": 2500
     },
     {
      "num": 95,
@@ -1687,7 +2080,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 95
+     "dex": 95,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 96,
@@ -1696,7 +2091,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 96
+     "dex": 96,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 97,
@@ -1705,7 +2102,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 97
+     "dex": 97,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 98,
@@ -1714,7 +2113,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 98
+     "dex": 98,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 99,
@@ -1723,7 +2124,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 99
+     "dex": 99,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 100,
@@ -1732,7 +2135,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 100
+     "dex": 100,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 101,
@@ -1741,7 +2146,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 101
+     "dex": 101,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 102,
@@ -1750,7 +2157,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 102
+     "dex": 102,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 103,
@@ -1759,7 +2168,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 103
+     "dex": 103,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 104,
@@ -1768,7 +2179,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 104
+     "dex": 104,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 105,
@@ -1777,7 +2190,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 105
+     "dex": 105,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 106,
@@ -1786,7 +2201,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 106
+     "dex": 106,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 107,
@@ -1795,7 +2212,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 107
+     "dex": 107,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 108,
@@ -1804,7 +2223,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 108
+     "dex": 108,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 109,
@@ -1813,7 +2234,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 109
+     "dex": 109,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 110,
@@ -1822,7 +2245,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 110
+     "dex": 110,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 111,
@@ -1831,7 +2256,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 111
+     "dex": 111,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 112,
@@ -1840,7 +2267,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 112
+     "dex": 112,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 113,
@@ -1849,7 +2278,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 113
+     "dex": 113,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 114,
@@ -1858,7 +2289,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 114
+     "dex": 114,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 115,
@@ -1867,7 +2300,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 115
+     "dex": 115,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 116,
@@ -1876,7 +2311,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 116
+     "dex": 116,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 117,
@@ -1885,7 +2322,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 117
+     "dex": 117,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 118,
@@ -1894,7 +2333,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 118
+     "dex": 118,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 119,
@@ -1903,7 +2344,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 119
+     "dex": 119,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 120,
@@ -1912,7 +2355,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 120
+     "dex": 120,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 121,
@@ -1921,7 +2366,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 121
+     "dex": 121,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 122,
@@ -1930,7 +2377,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 122
+     "dex": 122,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 123,
@@ -1939,7 +2388,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 123
+     "dex": 123,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 124,
@@ -1948,7 +2399,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 124
+     "dex": 124,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 125,
@@ -1957,7 +2410,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 125
+     "dex": 125,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 126,
@@ -1966,7 +2421,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 126
+     "dex": 126,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 127,
@@ -1975,7 +2432,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 127
+     "dex": 127,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 128,
@@ -1984,7 +2443,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 128
+     "dex": 128,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 129,
@@ -1993,7 +2454,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 129
+     "dex": 129,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 130,
@@ -2002,7 +2465,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 130
+     "dex": 130,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 131,
@@ -2011,7 +2476,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 131
+     "dex": 131,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 132,
@@ -2020,7 +2487,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 132
+     "dex": 132,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 133,
@@ -2029,7 +2498,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 133
+     "dex": 133,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 134,
@@ -2038,7 +2509,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 134
+     "dex": 134,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 135,
@@ -2047,7 +2520,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 135
+     "dex": 135,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 136,
@@ -2056,7 +2531,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 136
+     "dex": 136,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 137,
@@ -2065,7 +2542,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 137
+     "dex": 137,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 138,
@@ -2074,7 +2553,9 @@
      "rarity": "uncommon",
      "hp": null,
      "kind": "creature",
-     "dex": 138
+     "dex": 138,
+     "value": 0.3,
+     "printRun": 160000
     },
     {
      "num": 139,
@@ -2083,7 +2564,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 139
+     "dex": 139,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 140,
@@ -2092,7 +2575,9 @@
      "rarity": "common",
      "hp": null,
      "kind": "creature",
-     "dex": 140
+     "dex": 140,
+     "value": 0.15,
+     "printRun": 220000
     },
     {
      "num": 141,
@@ -2101,7 +2586,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 141
+     "dex": 141,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 142,
@@ -2110,7 +2597,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 142
+     "dex": 142,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 143,
@@ -2119,7 +2608,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 143
+     "dex": 143,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 144,
@@ -2128,7 +2619,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 144
+     "dex": 144,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 145,
@@ -2137,7 +2630,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 145
+     "dex": 145,
+     "value": 4.0,
+     "printRun": 2500
     },
     {
      "num": 146,
@@ -2146,7 +2641,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 146
+     "dex": 146,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 147,
@@ -2155,7 +2652,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 147
+     "dex": 147,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 148,
@@ -2164,7 +2663,9 @@
      "rarity": "rare",
      "hp": null,
      "kind": "creature",
-     "dex": 148
+     "dex": 148,
+     "value": 0.8,
+     "printRun": 90000
     },
     {
      "num": 149,
@@ -2173,7 +2674,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 149
+     "dex": 149,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 150,
@@ -2182,7 +2685,9 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 150
+     "dex": 150,
+     "value": 2.5,
+     "printRun": 40000
     },
     {
      "num": 151,
@@ -2191,7 +2696,21 @@
      "rarity": "holo",
      "hp": null,
      "kind": "creature",
-     "dex": 151
+     "dex": 151,
+     "value": 8.0,
+     "printRun": 2500
+    },
+    {
+     "num": 199,
+     "name": "Charizard ex",
+     "type": "fire",
+     "rarity": "chase",
+     "hp": null,
+     "kind": "creature",
+     "dex": 6,
+     "value": 240.0,
+     "printRun": 900,
+     "outOf": 165
     }
    ]
   }

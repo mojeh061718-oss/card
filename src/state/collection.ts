@@ -121,6 +121,8 @@ interface CollectionState {
   overrides: OverrideSet;
   /** False until the player has completed career setup. */
   careerStarted: boolean;
+  /** TCG sets unlocked (survives reloads; populations persist like any series). */
+  tcgEnabled: boolean;
   addPulls(pulls: PulledCard[], opts?: { quiet?: boolean }): void;
   /** Promote a held-back breaking story once the reveal ceremony is over. */
   releaseBreaking(): void;
@@ -144,6 +146,8 @@ interface CollectionState {
   startCareer(): void;
   listAtAuction(uid: number, days: number, reserve: number): void;
   dismissSale(uid: number): void;
+  /** Register the TCG sets with the world and persist the unlock. */
+  enableTcg(): void;
 }
 
 const DB_NAME = 'cardboard';
@@ -189,6 +193,7 @@ function saveRecord(state: CollectionState): Record<string, unknown> {
     shopName: state.shopName,
     overrides: state.overrides,
     careerStarted: state.careerStarted,
+    tcgEnabled: state.tcgEnabled,
     populations: world.savePopulations(),
   };
 }
@@ -254,6 +259,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
   shopName: 'Corner Store Cards',
   overrides: emptyOverrides(),
   careerStarted: false,
+  tcgEnabled: false,
   addPulls(pulls, opts) {
     const { cards, nextUid } = get();
     const stamped: CardInstance[] = pulls.map((p, i) => ({
@@ -594,10 +600,43 @@ export const useCollection = create<CollectionState>((set, get) => ({
     set({ saleFeed: get().saleFeed.filter(s => s.uid !== uid) });
     scheduleSave(get());
   },
+  enableTcg() {
+    if (get().tcgEnabled) return;
+    world.enableTcg();
+    set({ tcgEnabled: true });
+    scheduleSave(get());
+  },
 }));
 
 /** uid -> companyKey for slabs in transit back to the shop. */
 let arrivedCompanies = new Map<number, string>();
+
+/**
+ * Restart the career at the welcome screen while keeping what the player
+ * imported: names/colors and the TCG unlock survive; cards, cash, day, and
+ * population draw states do not (fresh supply, fresh start). Writes the
+ * fresh record directly and reloads so every module reboots from it.
+ */
+export async function resetToWelcome(): Promise<void> {
+  const state = useCollection.getState();
+  const fresh = {
+    version: 1,
+    cards: [], nextUid: 1, day: 1, cash: 2500,
+    submissions: [], returns: [], returnCompanies: {},
+    listings: [], saleFeed: [], dugLots: [], sealed: [],
+    marketFinds: [], nextSealedId: 1, ripSession: null,
+    bought: {}, news: [],
+    shopName: 'Corner Store Cards',
+    overrides: state.overrides,
+    careerStarted: false,
+    tcgEnabled: state.tcgEnabled,
+    // No populations key: the world reboots with full print runs.
+  };
+  const d = await getDb();
+  await d.put(STORE, fresh, 'save-v1');
+  saveBlocked = true; // nothing may overwrite the fresh record pre-reload
+  location.reload();
+}
 
 /** Load the save before first render; safe to call once from main. */
 export async function hydrateCollection(): Promise<void> {
@@ -606,8 +645,11 @@ export async function hydrateCollection(): Promise<void> {
     const save = await d.get(STORE, 'save-v1');
     if (save?.version === 1) {
       // The calendar must catch up to the save's day BEFORE populations
-      // restore, or late-released series would boot with fresh supply.
+      // restore, or late-released series would boot with fresh supply. The
+      // TCG runtimes must exist before restore too, or their draw states
+      // would be dropped on the floor.
       world.syncCalendar(save.day ?? 1);
+      if (save.tcgEnabled) world.enableTcg();
       world.restorePopulations(save.populations ?? {});
       // Names must be applied before any card renders from the save.
       world.applyOverrides(sanitizeOverrides(save.overrides ?? {}).set);
@@ -630,6 +672,7 @@ export async function hydrateCollection(): Promise<void> {
         shopName: save.shopName ?? 'Corner Store Cards',
         overrides: sanitizeOverrides(save.overrides ?? {}).set,
         careerStarted: save.careerStarted ?? false,
+        tcgEnabled: save.tcgEnabled ?? false,
         hydrated: true,
       });
       // Restore the uid→company map for arrived-but-unrevealed slabs. The

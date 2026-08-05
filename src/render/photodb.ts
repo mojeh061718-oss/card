@@ -16,3 +16,15 @@ export function setPhotoProvider(fn: PhotoProvider): void {
 export function heroPhoto(sport: string, fullName: string): HTMLImageElement | null {
   return provider(sport, fullName);
 }
+
+export type ScanProvider = (setKey: string, num: number) => HTMLImageElement | null;
+
+let scanProvider: ScanProvider = () => null;
+
+export function setScanProvider(fn: ScanProvider): void {
+  scanProvider = fn;
+}
+
+export function tcgScan(setKey: string, num: number): HTMLImageElement | null {
+  return scanProvider(setKey, num);
+}

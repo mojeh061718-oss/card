@@ -35,7 +35,8 @@ function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: st
     }
     return u;
   }, [seriesId, rev]);
-  const stack = productKey === 'case' ? 3 : productKey === 'hobbyBox' ? 2 : 1;
+  const stack = productKey === 'case' ? 3
+    : (productKey === 'hobbyBox' || productKey === 'tcg-box') ? 2 : 1;
   return (
     <div style={{ position: 'relative', width: 38, height: 54, flexShrink: 0 }}>
       {Array.from({ length: stack }, (_, i) => {
@@ -61,7 +62,7 @@ function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: st
 export function WaxScreen() {
   const {
     cash, day, sealed, bought, buyWax, openSealed, addPulls,
-    releaseBreaking, endDay, ripSession, beginRip, endRip,
+    releaseBreaking, endDay, ripSession, beginRip, endRip, tcgEnabled,
   } = useCollection();
 
   // supplyRevision: ripping moves scarcity-lifted prices, so the shelf must
@@ -76,6 +77,16 @@ export function WaxScreen() {
     })), [day, bought, supplyRev]);
 
   const upcoming = useMemo(() => world.upcomingReleases(day, 14), [day]);
+
+  // The vintage case — TCG boosters and boxes, once the realism import (or
+  // dev flag) has unlocked them. Vintage allocation is brutally thin: some
+  // days the case simply has nothing, which is the point.
+  const vintage = useMemo(() => (tcgEnabled
+    ? world.tcgShelf(day).map(row => ({
+      ...row,
+      used: bought[`${row.productKey}:${row.seriesId}:${day}`] ?? 0,
+    }))
+    : []), [tcgEnabled, day, bought, supplyRev]);
 
   const buy = (seriesId: string, productKey: string, price: number) => {
     unlockAudio();
@@ -179,6 +190,44 @@ export function WaxScreen() {
             );
           })}
         </section>
+
+        {vintage.length > 0 && (
+          <section style={S.section}>
+            <div style={{ ...S.sectionTitle, color: '#8ee08e', opacity: 0.85 }}>
+              THE VINTAGE CASE — sealed TCG product, priced like the real market
+            </div>
+            {vintage.map(({ seriesId, productKey, price, left, blurb, used }) => {
+              const soldOut = used >= left;
+              const affordable = cash >= price;
+              return (
+                <button
+                  key={`${seriesId}-${productKey}`}
+                  style={{
+                    ...S.shelfRow,
+                    border: '1px solid rgba(142,224,142,0.28)',
+                    background: 'rgba(142,224,142,0.05)',
+                    opacity: soldOut ? 0.35 : affordable ? 1 : 0.55,
+                  }}
+                  disabled={soldOut || !affordable}
+                  onClick={() => buy(seriesId, productKey, price)}
+                >
+                  <ProductArt seriesId={seriesId} productKey={productKey} />
+                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <div style={S.shelfName}>{world.product(productKey).name}</div>
+                    <div style={S.shelfMeta}>{world.get(seriesId).def.name}</div>
+                    <div style={S.shelfOdds}>{blurb}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={S.shelfPrice}>{formatMoney(price)}</div>
+                    <div style={S.shelfStock}>
+                      {soldOut ? (left === 0 ? 'NONE SURFACED TODAY' : 'GONE') : `${left - used} available`}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </section>
+        )}
 
         {upcoming.length > 0 && (
           <section style={S.section}>

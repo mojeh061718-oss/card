@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { useCollection } from '../state/collection';
 import { sfx, unlockAudio } from './feel';
+import { runRealismImport, realismCached } from './realism';
 
 const BANKROLL_TIERS = [
   { amount: 500, label: 'SHOEBOX', blurb: 'Dollar boxes and prayer. Every purchase matters.' },
@@ -24,9 +25,37 @@ const NAME_SUGGESTIONS = [
 ];
 
 export function CareerSetup({ onDone }: { onDone: () => void }) {
-  const { setShopName, setCash, startCareer } = useCollection();
+  const { setShopName, setCash, startCareer, tcgEnabled } = useCollection();
   const [name, setName] = useState('');
   const [tier, setTier] = useState(1);
+
+  // THE REALISM CONCEPT — the downloader lives on the very first page, so
+  // one tap here fetches every real asset (names, photos, card scans) into
+  // the device cache and unlocks the TCG sets before the career even opens.
+  // Once it finishes, the whole game runs offline.
+  const [realismBusy, setRealismBusy] = useState(false);
+  const [realismMsg, setRealismMsg] = useState<string | null>(null);
+  const cached = realismCached();
+  const realismDone = tcgEnabled && cached.scans > 0;
+  const realismTap = async () => {
+    if (realismBusy) return;
+    setRealismBusy(true);
+    try {
+      const r = await runRealismImport(setRealismMsg);
+      setRealismMsg(
+        `Done — real names applied, ${r.photos.done} player photos and ` +
+        `${r.scans.done} card scans cached for offline play. ` +
+        `The vintage TCG sets are now on the WAX shelf.` +
+        (r.photos.failed + r.scans.failed > 0
+          ? ` (${r.photos.failed + r.scans.failed} assets couldn't be fetched — tap again to retry.)`
+          : ''),
+      );
+    } catch {
+      setRealismMsg('Network error — whatever finished is kept. Tap again to resume.');
+    } finally {
+      setRealismBusy(false);
+    }
+  };
 
   const begin = () => {
     unlockAudio();
@@ -48,6 +77,27 @@ export function CareerSetup({ onDone }: { onDone: () => void }) {
           You're starting a small sports card business. Buy, rip, grade, and
           trade your way toward the cards everybody wants.
         </p>
+
+        <div style={S.realismPanel}>
+          <div style={S.realismTitle}>
+            🌎 REALISM CONCEPT{realismDone ? ' — LOADED' : ''}
+          </div>
+          <p style={S.realismBlurb}>
+            {realismDone
+              ? `Real assets are on this device (${cached.photos} photos, ${cached.scans} card scans). Everything runs offline — tap again anytime to re-check for missing assets.`
+              : 'One tap downloads everything for private use: real-league names and colors, real player photos, and both vintage TCG sets with official card scans — all cached on this device so the game runs fully offline.'}
+          </p>
+          <button
+            style={{ ...S.realismBtn, opacity: realismBusy ? 0.55 : 1 }}
+            disabled={realismBusy}
+            onClick={realismTap}
+          >
+            {realismBusy ? 'DOWNLOADING…'
+              : realismDone ? 'RE-CHECK ASSETS'
+                : 'DOWNLOAD ALL REAL ASSETS — ONE TAP'}
+          </button>
+          {realismMsg && <div style={S.realismMsg}>{realismMsg}</div>}
+        </div>
 
         <label style={S.label}>SHOP NAME</label>
         <input
@@ -119,5 +169,20 @@ const styles: Record<string, React.CSSProperties> = {
   begin: {
     width: '100%', marginTop: 26, background: '#d4a017', color: '#1a1405', border: 'none',
     borderRadius: 12, padding: '15px 0', fontSize: 14, fontWeight: 900, letterSpacing: 2,
+  },
+  realismPanel: {
+    marginTop: 22, padding: 13, borderRadius: 12,
+    background: 'rgba(142,224,142,0.07)', border: '1px solid rgba(142,224,142,0.35)',
+  },
+  realismTitle: { fontSize: 11, letterSpacing: 2, fontWeight: 900, color: '#8ee08e' },
+  realismBlurb: { fontSize: 11, opacity: 0.65, lineHeight: 1.55, marginTop: 6 },
+  realismBtn: {
+    width: '100%', marginTop: 10, background: 'rgba(142,224,142,0.16)', color: '#8ee08e',
+    border: '1px solid rgba(142,224,142,0.55)', borderRadius: 10, padding: '13px 0',
+    fontSize: 12, fontWeight: 900, letterSpacing: 1,
+  },
+  realismMsg: {
+    fontSize: 10, color: '#8ee08e', marginTop: 8, lineHeight: 1.5,
+    whiteSpace: 'pre-wrap',
   },
 };

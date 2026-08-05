@@ -9,8 +9,9 @@
 
 import { useMemo, useState } from 'react';
 import { world } from '../state/world';
-import { useCollection, exportSaveJson, importSaveJson } from '../state/collection';
-import { importRealPhotos, importSetArt, photoCount } from './artcache';
+import { useCollection, exportSaveJson, importSaveJson, resetToWelcome } from '../state/collection';
+import { photoCount } from './artcache';
+import { runRealismImport } from './realism';
 import type { Sport } from '../engine/world/teams';
 import { sanitizeOverrides, teamKey, playerKey, emptyOverrides } from '../state/overrides';
 import { sfx } from './feel';
@@ -87,49 +88,22 @@ export function EditorScreen() {
   };
 
   // THE REALISM CONCEPT — one tap, everything: real-league names, real
-  // player photos resolved by name from public APIs, and both creature
-  // sets' card scans. All of it fetched at the user's own request into
-  // this device's local cache; nothing ships in the app.
+  // player photos, official card scans, and the TCG unlock. When the import
+  // finishes it restarts the career at the welcome screen (names, photos,
+  // scans and the unlock all survive the reset — only the career resets).
   const [realismBusy, setRealismBusy] = useState(false);
   const realismOneTap = async () => {
     if (realismBusy) return;
     setRealismBusy(true);
     try {
-      // 1. Names + colors for every team and the top 75 players per sport.
-      setNotice('1/3 — applying real-league names…');
-      const raw = await fetch('presets/real-world.json').then(r => r.json());
-      const clean = sanitizeOverrides(raw).set;
-      setOverrides(clean);
-
-      // 2. Player photos, resolved by name via the public search APIs.
-      const rosters = [
-        { sport: 'football' as const, names: (raw.rosterByRank?.football ?? []) as string[] },
-        { sport: 'baseball' as const, names: (raw.rosterByRank?.baseball ?? []) as string[] },
-      ];
-      const photos = await importRealPhotos(rosters, (done, failed, total) =>
-        setNotice(`2/3 — importing player photos… ${done + failed}/${total}`));
-
-      // 3. Creature card scans for both concept sets.
-      const poke = await fetch('presets/pokemon-concept.json').then(r => r.json());
-      let scans = 0;
-      for (const s of poke.sets ?? []) {
-        const nums = (s.cards as { num: number }[]).map(c => c.num);
-        const r = await importSetArt(s.key, s.officialArt, nums, (done, failed) =>
-          setNotice(`3/3 — importing ${s.name} scans… ${done + failed}/${nums.length}`));
-        scans += r.done;
-      }
-
-      // Re-apply to bump namesRevision: every cached card re-renders, now
-      // with photos where they exist.
-      setOverrides(clean);
+      const r = await runRealismImport(setNotice);
       setNotice(
-        `Realism concept loaded: names + colors applied, ${photos.done} player photos` +
-        (photos.failed ? ` (${photos.failed} not found)` : '') +
-        `, ${scans} card scans cached. Cards with a photo now render it; visit ?pokelab for the sets.`,
+        `Realism loaded — ${r.photos.done} photos, ${r.scans.done} scans cached. ` +
+        'Restarting at the welcome screen…',
       );
+      await resetToWelcome();
     } catch {
       setNotice('Realism import hit a network error — whatever finished is kept; tap again to resume.');
-    } finally {
       setRealismBusy(false);
     }
   };
@@ -301,9 +275,10 @@ export function EditorScreen() {
             </button>
             <p style={S.note}>
               One tap loads everything: real-league names and colors, real
-              player photos onto the cards (resolved by name from public
-              APIs), and both creature-set card scans — all cached on this
-              device only, for private use.
+              player photos onto the cards, and both vintage TCG sets with
+              official card scans — all cached on this device only, for
+              private use. When it finishes, the game restarts fresh at the
+              welcome screen (your imported assets survive; the career resets).
             </p>
             <button
               style={{

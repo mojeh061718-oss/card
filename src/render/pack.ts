@@ -101,12 +101,22 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number): HTM
   ctx.restore();
   ctx.font = `700 ${wPx * 0.05}px Arial, sans-serif`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(`${def.year} ${def.sport.toUpperCase()}`, cx, hPx * 0.53);
+  ctx.fillText(`${def.year} ${def.id.startsWith('tcg-') ? 'TRADING CARDS' : def.sport.toUpperCase()}`, cx, hPx * 0.53);
 
   // Sport ball mark.
   ctx.save();
   ctx.translate(cx, hPx * 0.70);
-  if (def.sport === 'football') {
+  if (def.id.startsWith('tcg-')) {
+    // TCG wrapper mark: a simple energy orb.
+    ctx.beginPath();
+    ctx.arc(0, 0, wPx * 0.09, 0, Math.PI * 2);
+    ctx.fillStyle = accent;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-wPx * 0.025, -wPx * 0.025, wPx * 0.032, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fill();
+  } else if (def.sport === 'football') {
     ctx.rotate(-0.5);
     ctx.beginPath();
     ctx.ellipse(0, 0, wPx * 0.16, wPx * 0.1, 0, 0, Math.PI * 2);
@@ -131,7 +141,7 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number): HTM
 
   ctx.font = `600 ${wPx * 0.038}px Arial, sans-serif`;
   ctx.fillStyle = withAlpha('#ffffff', 0.85);
-  ctx.fillText(`10 CARDS PER PACK`, cx, hPx * 0.87);
+  ctx.fillText(`${def.id.startsWith('tcg-') ? 11 : 10} CARDS PER PACK`, cx, hPx * 0.87);
   return c;
 }
 
