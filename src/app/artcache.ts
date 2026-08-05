@@ -111,11 +111,11 @@ export async function loadCachedScans(): Promise<number> {
   const keys = await db.getAllKeys('img');
   for (const key of keys) {
     const k = String(key);
-    if (scanMap.has(k)) continue;
+    if (k.startsWith('__') || scanMap.has(k)) continue;
     const blob = await db.get('img', key);
-    if (!blob) continue;
+    if (!(blob instanceof Blob)) continue;
     const img = new Image();
-    img.src = URL.createObjectURL(blob as Blob);
+    img.src = URL.createObjectURL(blob);
     try {
       await img.decode();
       scanMap.set(k, img);
@@ -163,9 +163,10 @@ export async function loadCachedPhotos(): Promise<number> {
   const db = await photoDb();
   const keys = await db.getAllKeys('img');
   for (const key of keys) {
-    if (photoMap.has(String(key))) continue;
+    const k = String(key);
+    if (k.startsWith('__') || photoMap.has(k)) continue; // skip meta records
     const blob = await db.get('img', key);
-    if (blob) await decodeInto(String(key), blob as Blob);
+    if (blob instanceof Blob) await decodeInto(k, blob);
   }
   return photoMap.size;
 }
@@ -190,9 +191,16 @@ async function resolveMlbPhoto(name: string): Promise<string | null> {
   const d = await res.json();
   const id = d.people?.[0]?.id;
   return id
-    ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_640,q_auto:best/v1/people/${id}/headshot/67/current`
+    ? `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_1000,q_auto:best/v1/people/${id}/headshot/67/current`
     : null;
 }
+
+/**
+ * Photo cache generation. Bump when the fetch URLs improve (e.g. w_640 →
+ * w_1000): the next import wipes the store and refetches everything sharp,
+ * instead of skipping the stale low-res blobs forever.
+ */
+const PHOTO_GEN = 2;
 
 export interface PhotoRoster { sport: 'football' | 'baseball'; names: string[] }
 
@@ -205,6 +213,11 @@ export async function importRealPhotos(
   onProgress: (done: number, failed: number, total: number) => void,
 ): Promise<{ done: number; failed: number }> {
   const db = await photoDb();
+  // Stale-generation cache (older, lower-res URLs): wipe and refetch sharp.
+  if (await db.get('img', '__gen') !== PHOTO_GEN) {
+    for (const key of await db.getAllKeys('img')) await db.delete('img', key);
+    await db.put('img', PHOTO_GEN, '__gen');
+  }
   const jobs = rosters.flatMap(r => r.names.map(name => ({ sport: r.sport, name })));
   let done = 0, failed = 0;
   const WORKERS = 4;

@@ -180,7 +180,7 @@ function blurb(key: string): string {
 function PickCell({ card, picked, onTap, onInspect }: {
   card: CardInstance; picked: boolean; onTap: () => void; onInspect: () => void;
 }) {
-  const url = useMemo(() => snapshotCard(world.specFor(card), 200), [card]);
+  const url = useMemo(() => snapshotCard(world.specFor(card), 300), [card]);
   const info = world.displayName(card);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const held = useRef(false);

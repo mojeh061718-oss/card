@@ -156,7 +156,7 @@ function DigOverlay({ offer, cards, onClose }: {
   const current = cards[idx];
   const heat = heats[idx] ?? 0;
   const glow = heat >= 11 ? '#ffd75e' : heat >= 7 ? '#d4a017' : heat >= 4 ? '#a06bff' : heat >= 2.2 ? '#4f9dde' : null;
-  const url = useMemo(() => current ? cachedSnapshot(world.specFor(current), world.identityKey(current), 420) : null, [current]);
+  const url = useMemo(() => current ? cachedSnapshot(world.specFor(current), world.identityKey(current), 640) : null, [current]);
 
   const S = styles;
   if (done) {

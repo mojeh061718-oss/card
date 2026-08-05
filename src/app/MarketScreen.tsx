@@ -261,7 +261,7 @@ function PriceSheet({ card, day, onClose, onQuickSell, onList }: {
     <div style={S.overlay} onClick={onClose}>
       <div style={S.sheet} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', gap: 12 }}>
-          <img src={cachedSnapshot(world.specFor(card), world.identityKey(card), 220)} alt="" style={{ width: 92, borderRadius: 7 }} />
+          <img src={cachedSnapshot(world.specFor(card), world.identityKey(card), 280)} alt="" style={{ width: 92, borderRadius: 7 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 16 }}>{info.player} <HypeChip pull={card} /></div>
             <div style={{ fontSize: 11, color: '#e8c86a', fontWeight: 700 }}>{info.tier}</div>

@@ -15,8 +15,10 @@ import { COMPANIES, TIERS, type Tier } from '../engine/condition/grading';
 import { formatMoney } from '../engine/economy/valuation';
 import { sfx } from './feel';
 
-const THUMB_W = 220;
-const CACHE_MAX = 360;
+// Pocket ≈ 110pt on a 3x display → 330px, or scans read soft. The cache
+// cap drops to keep the data-URL heap in check at the bigger size.
+const THUMB_W = 330;
+const CACHE_MAX = 240;
 const thumbCache = new Map<string, string>();
 
 function thumbFor(card: CardInstance): string {

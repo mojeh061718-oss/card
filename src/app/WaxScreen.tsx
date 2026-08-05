@@ -575,7 +575,7 @@ function RipSession({ session, onClose }: {
             <>
               <div style={{ ...S.sectionTitle, marginTop: 8 }}>THE HEADLINER</div>
               <img
-                src={cachedSnapshot(world.specFor(best[0]), world.identityKey(best[0]), 420)}
+                src={cachedSnapshot(world.specFor(best[0]), world.identityKey(best[0]), 540)}
                 alt=""
                 style={{ width: 172, borderRadius: 10, boxShadow: '0 16px 44px rgba(0,0,0,0.6)' }}
               />

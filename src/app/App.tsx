@@ -49,6 +49,8 @@ export function App() {
     <div style={{
       height: '100dvh', display: 'flex', flexDirection: 'column',
       paddingTop: 'env(safe-area-inset-top)',
+      // Clear the FIXED nav: content must never run under it.
+      paddingBottom: 'calc(58px + env(safe-area-inset-bottom))',
     }}>
       <div style={{ flex: 1, minHeight: 0 }}>
         {route === 'devlab' ? <DevLab />
@@ -61,11 +63,13 @@ export function App() {
           : route === 'wax' ? <WaxScreen />
           : <HomeScreen go={r => setRoute(r as Route)} />}
       </div>
-      {/* The nav is the escape hatch from EVERY screen and ceremony: it
-          paints above all overlays (their z-indexes stay below 90) on a
-          solid bar, so no state can ever strand the player. */}
+      {/* The nav is the escape hatch from EVERY screen and ceremony. It is
+          position:FIXED to the visual viewport bottom — immune to document
+          flow, body padding, inset math, or any overlay (z < 90) — so no
+          layout state can ever push it off screen. */}
       <nav style={{
-        position: 'relative', zIndex: 90, background: '#0c0c10',
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 90,
+        background: '#0c0c10',
         display: 'flex',
         padding: '4px 4px calc(4px + env(safe-area-inset-bottom))',
         borderTop: '1px solid rgba(255,255,255,0.08)',
