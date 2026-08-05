@@ -89,7 +89,10 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'fixed', inset: 0, zIndex: 80, overflowY: 'auto',
     background: 'radial-gradient(120% 80% at 50% 0%, #1c1c26 0%, #0a0a0d 65%)',
   },
-  inner: { padding: '40px 22px 40px', maxWidth: 460, margin: '0 auto' },
+  inner: {
+    padding: 'calc(40px + env(safe-area-inset-top)) 22px calc(40px + env(safe-area-inset-bottom))',
+    maxWidth: 460, margin: '0 auto',
+  },
   kicker: { fontSize: 10, letterSpacing: 4, color: '#d4a017', fontWeight: 800 },
   title: { fontSize: 30, fontWeight: 900, letterSpacing: -0.5, marginTop: 6 },
   sub: { fontSize: 13, opacity: 0.6, lineHeight: 1.6, marginTop: 8 },

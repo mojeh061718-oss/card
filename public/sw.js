@@ -4,7 +4,7 @@
  * are no image assets to cache — the whole game is code plus a save file.
  */
 
-const CACHE = 'cardboard-v1';
+const CACHE = 'cardboard-v2';
 
 self.addEventListener('install', event => {
   event.waitUntil(

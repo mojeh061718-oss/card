@@ -324,6 +324,8 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.94)', zIndex: 40,
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: 6, padding: 20, textAlign: 'center',
+    paddingTop: 'calc(20px + env(safe-area-inset-top))',
+    paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
   },
   detailName: { fontSize: 20, fontWeight: 800, marginTop: 14 },
   detailTier: { fontSize: 13, color: '#e8c86a', fontWeight: 700, letterSpacing: 1 },
