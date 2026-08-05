@@ -44,7 +44,7 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
     { key: 'wax', title: 'WAX', sub: 'Buy & rip sealed product' },
     { key: 'hunt', title: 'HUNT', sub: 'Dig lots & estate finds' },
     { key: 'binder', title: 'BOOK', sub: `${cards.length} card${cards.length === 1 ? '' : 's'} in the binder` },
-    { key: 'grade', title: 'GRADE', sub: 'Slab the best pulls' },
+    { key: 'grade', title: 'GRADE', sub: returns.length > 0 ? `${returns.length} slab${returns.length > 1 ? 's' : ''} to reveal!` : 'Bulk submit · reveal slabs' },
     { key: 'market', title: 'SELL', sub: 'Comps, dealers & auctions' },
     { key: 'news', title: 'WIRE', sub: headline ? 'Fresh stories' : 'The hobby news feed' },
   ];
@@ -102,6 +102,10 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
           </div>
         </div>
 
+        <button style={S.editorRow} onClick={() => { sfx.tap(); go('edit'); }}>
+          EDITOR — names, realism import & save backup ▸
+        </button>
+
         {headline && (
           <button style={S.wire} onClick={() => { sfx.tap(); go('news'); }}>
             <div style={S.sectionTitle}>LATEST FROM THE WIRE</div>
@@ -157,6 +161,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   wireHead: { fontSize: 13, fontWeight: 800, lineHeight: 1.35 },
   wireBody: { fontSize: 11, opacity: 0.55, marginTop: 5, lineHeight: 1.5 },
+  editorRow: {
+    width: '100%', marginTop: 10, background: 'rgba(255,255,255,0.04)',
+    color: 'rgba(244,242,236,0.65)', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 11, padding: '12px 0', fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+  },
   endDay: {
     width: '100%', marginTop: 20, background: 'rgba(255,255,255,0.07)', color: '#e8c86a',
     border: '1px solid rgba(232,200,106,0.4)', borderRadius: 12, padding: '14px 0',

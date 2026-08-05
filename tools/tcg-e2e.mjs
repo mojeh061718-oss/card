@@ -35,6 +35,11 @@ await new Promise(r => server.listen(4183, r));
 
 const fails = [];
 const nav = label => page.getByRole('button', { name: label, exact: true });
+const goGrade = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("GRADE")').first().click();
+};
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
   if (!ok) fails.push(name);
@@ -125,21 +130,20 @@ check('binder holds the TCG pulls', /11 cards|11 CARDS/i.test(bodyText)
   || (await page.locator('img').count()) > 0, isBase ? 'base set booster' : '151 booster');
 await page.screenshot({ path: join(SHOTS, 'tcg-binder.png') });
 
-// --- 5. Grade the best card ------------------------------------------------
-await nav('GRADE').click();
-await page.waitForTimeout(700);
-// PickCells are divs with pointer handlers; a quick click toggles the pick.
-const gradeCard = page.locator('img[alt=""]').first();
-await gradeCard.click({ delay: 60 });
+// --- 5. Grade straight from the binder card (the new flow) -----------------
+// Still on BOOK from the previous step: tap a pocket, send from the card.
+await page.locator('[data-pocket="0"]').click();
+await page.waitForTimeout(1200);
+check('card detail offers grading in place',
+  (await page.getByText('SEND FOR GRADING').count()) === 1);
+await page.locator('button:has-text("QuickGrade")').click();
+await page.locator('button:has-text("EXPRESS")').click();
+await page.locator('button:has-text("SEND ·")').click();
+await page.waitForTimeout(600);
+check('TCG card submitted from the binder',
+  (await page.locator('text=/At QuickGrade/').count()) > 0);
+await page.mouse.click(201, 60); // close the detail overlay
 await page.waitForTimeout(400);
-const submitBtn = page.locator('button:has-text("SUBMIT 1")').first();
-const canSubmit = (await submitBtn.count()) > 0;
-if (canSubmit) {
-  await submitBtn.click();
-  await page.waitForTimeout(600);
-}
-check('TCG card submitted for grading',
-  canSubmit && (await page.getByText('AT THE GRADERS').count()) > 0);
 
 // --- 6. End days until the slab returns, then reveal -----------------------
 let revealed = false;
@@ -148,7 +152,7 @@ for (let d = 0; d < 12 && !revealed; d++) {
   await page.waitForTimeout(400);
   await page.locator('button:has-text("END DAY")').click();
   await page.waitForTimeout(700);
-  await nav('GRADE').click();
+  await goGrade();
   await page.waitForTimeout(500);
   const reveal = page.locator('button:has-text("REVEAL")').first();
   if ((await reveal.count()) > 0) {

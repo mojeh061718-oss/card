@@ -33,6 +33,17 @@ await new Promise(r => server.listen(4181, r));
 const fails = [];
 /** Nav tabs share text with page headings — always click the nav button. */
 const nav = label => page.getByRole('button', { name: label, exact: true });
+/** GRADE and EDIT live on the HOME hub now, not the bottom nav. */
+const goGrade = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("GRADE")').first().click();
+};
+const goEdit = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("EDITOR")').first().click();
+};
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
   if (!ok) fails.push(name);
@@ -187,7 +198,7 @@ const scratchStable = await page.evaluate(async () => {
 check('canvas dimensions stay stable (no resize leak)', scratchStable);
 
 // --- 6. Grade a card, advance days, reveal the slab -----------------------
-await nav('GRADE').click();
+await goGrade();
 await page.waitForTimeout(1600);
 const gradeCells = page.locator('div[style*="position: relative"] img[src^="data:"]');
 await gradeCells.nth(0).click();
@@ -260,7 +271,7 @@ await nav('BOOK').click();
 await page.waitForTimeout(1600);
 const artBefore = await firstThumb();
 
-await nav('EDIT').click();
+await goEdit();
 await page.waitForTimeout(600);
 await page.getByText('FILE', { exact: true }).click();
 await page.waitForTimeout(300);

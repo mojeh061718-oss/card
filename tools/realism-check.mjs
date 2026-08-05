@@ -65,7 +65,8 @@ await page.locator('input').fill('Realism Check');
 await page.getByText('TRUST FUND').click();
 await page.getByText('OPEN FOR BUSINESS').click();
 await page.waitForTimeout(800);
-await nav('EDIT').click();
+// EDIT lives on the HOME hub now (we land on HOME after setup).
+await page.locator('button:has-text("EDITOR")').first().click();
 await page.waitForTimeout(500);
 await page.locator('button:has-text("FILE")').first().click();
 await page.waitForTimeout(400);

@@ -14,15 +14,16 @@ import { useCollection } from '../state/collection';
 
 type Route = 'home' | 'hunt' | 'wax' | 'binder' | 'grade' | 'market' | 'news' | 'edit' | 'devlab';
 
+// Six items, thumb-sized. GRADE (bulk + slab reveals) and EDIT (names,
+// realism import, save backup) live on the HOME hub — grading a single
+// card happens right on the card in the BOOK.
 const NAV: { route: Route; label: string }[] = [
   { route: 'home', label: 'HOME' },
   { route: 'hunt', label: 'HUNT' },
   { route: 'wax', label: 'WAX' },
   { route: 'binder', label: 'BOOK' },
-  { route: 'grade', label: 'GRADE' },
   { route: 'market', label: 'SELL' },
   { route: 'news', label: 'WIRE' },
-  { route: 'edit', label: 'EDIT' },
 ];
 
 export function App() {
@@ -65,14 +66,17 @@ export function App() {
           solid bar, so no state can ever strand the player. */}
       <nav style={{
         position: 'relative', zIndex: 90, background: '#0c0c10',
-        display: 'flex', justifyContent: 'center', gap: 4,
-        padding: '10px 0 calc(6px + env(safe-area-inset-bottom))',
-        borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, letterSpacing: 2,
+        display: 'flex',
+        padding: '4px 4px calc(4px + env(safe-area-inset-bottom))',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
       }}>
         {NAV.map(({ route: r, label }) => (
           <button key={r} onClick={() => setRoute(r)} style={{
-            background: 'none', border: 'none', color: route === r ? '#d4a017' : 'rgba(244,242,236,0.5)',
-            fontWeight: 700, letterSpacing: 1.2, fontSize: 11, padding: '4px 5px',
+            flex: 1, minHeight: 46,
+            background: route === r ? 'rgba(212,160,23,0.12)' : 'none',
+            border: 'none', borderRadius: 10,
+            color: route === r ? '#d4a017' : 'rgba(244,242,236,0.55)',
+            fontWeight: 800, letterSpacing: 1, fontSize: 13, padding: '12px 0',
           }}>
             {label}
           </button>

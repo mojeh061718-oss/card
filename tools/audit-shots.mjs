@@ -34,6 +34,16 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 402, height: 874 }, deviceScaleFactor: 3 });
 page.on('pageerror', e => console.error('[pageerror]', e.message));
 const nav = label => page.getByRole('button', { name: label, exact: true });
+const goGrade = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("GRADE")').first().click();
+};
+const goEdit = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("EDITOR")').first().click();
+};
 const shot = name => page.screenshot({ path: `shots/audit-${name}.png` });
 
 // --- Career setup ---
@@ -109,7 +119,7 @@ await page.mouse.click(30, 100); // close overlay
 await page.waitForTimeout(400);
 
 // --- GRADE ---
-await nav('GRADE').click();
+await goGrade();
 await page.waitForTimeout(1200);
 await shot('11-grade');
 
@@ -135,7 +145,7 @@ if (await topBtn.count()) {
 }
 
 // --- EDIT: one-tap real-league preset ---
-await nav('EDIT').click();
+await goEdit();
 await page.waitForTimeout(700);
 await page.getByText('FILE', { exact: true }).click();
 await page.waitForTimeout(400);

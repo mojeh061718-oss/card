@@ -26,13 +26,23 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 402, height: 874 }, deviceScaleFactor: 3 });
 page.on('pageerror', e => console.error('[pageerror]', e.message));
 const nav = l => page.getByRole('button', { name: l, exact: true });
+const goGrade = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("GRADE")').first().click();
+};
+const goEdit = async () => {
+  await nav('HOME').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("EDITOR")').first().click();
+};
 
 await page.goto('http://localhost:4184/?seed-collection=3');
 await page.waitForTimeout(1400);
 await page.getByText('OPEN FOR BUSINESS').click();
 await page.waitForTimeout(700);
 
-await nav('EDIT').click();
+await goEdit();
 await page.waitForTimeout(700);
 await page.screenshot({ path: 'shots/editor-1-teams.png' });
 
@@ -53,7 +63,7 @@ await page.screenshot({ path: 'shots/editor-3-players.png' });
 // Reload: names must survive, and nothing else may break.
 await page.reload();
 await page.waitForTimeout(1600);
-await nav('EDIT').click();
+await goEdit();
 await page.waitForTimeout(700);
 const persisted = await page.locator('input[placeholder="City"]').first().inputValue();
 console.log('city after reload:', persisted);
@@ -69,7 +79,7 @@ await page.screenshot({ path: 'shots/editor-4-binder.png' });
 
 // Import a real-world preset through the same file picker a player would use,
 // then confirm the ranked roster actually reached the cards and the board.
-await nav('EDIT').click();
+await goEdit();
 await page.waitForTimeout(500);
 await page.getByText('FILE', { exact: true }).click();
 await page.waitForTimeout(400);

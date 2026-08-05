@@ -11,8 +11,9 @@ import { useCollection, type CardInstance } from '../state/collection';
 import { world } from '../state/world';
 import { snapshotCard, LiveCard } from './cardview';
 import { renderSlab } from '../render/slab';
-import { COMPANIES } from '../engine/condition/grading';
+import { COMPANIES, TIERS, type Tier } from '../engine/condition/grading';
 import { formatMoney } from '../engine/economy/valuation';
+import { sfx } from './feel';
 
 const THUMB_W = 220;
 const CACHE_MAX = 360;
@@ -225,6 +226,12 @@ function PocketPage({ page, pageNo, onFocus }: {
   );
 }
 
+/**
+ * Everything about one card, including sending it off: grading lives right
+ * here in the binder, so "tap the card → pick a house → send it" is the
+ * whole flow. The GRADING screen remains for bulk submissions, the loupe,
+ * and the slab-reveal ceremony (reachable from HOME).
+ */
 function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => void }) {
   const info = world.displayName(card);
   const rt = world.get(card.seriesId);
@@ -232,6 +239,14 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
   const surfaced = rt.pop.drawnCount(card.cardIndex * rt.def.ladder.length + card.parallelId);
   const S = styles;
   const [slabUrl, setSlabUrl] = useState<string | null>(null);
+  const { submissions, returns, listings, cash, day, submitForGrading } = useCollection();
+  const [companyKey, setCompanyKey] = useState('psg');
+  const [tier, setTier] = useState<Tier>(1);
+  const atGrader = submissions.find(s => s.uids.includes(card.uid));
+  const arrived = returns.includes(card.uid);
+  const listed = listings.some(l => l.uid === card.uid);
+  const company = COMPANIES.find(c => c.key === companyKey)!;
+  const fee = company.fees[tier];
   useEffect(() => {
     if (!card.grade) return;
     const co = COMPANIES.find(c => c.key === card.grade!.companyKey)!;
@@ -249,7 +264,7 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
           ? (slabUrl
               ? <img src={slabUrl} alt="graded slab" style={{ width: 290, display: 'block', filter: 'drop-shadow(0 18px 44px rgba(0,0,0,0.7))' }} />
               : <LiveCard spec={world.specFor(card)} width={290} />)
-          : <LiveCard spec={world.specFor(card)} width={300} />}
+          : <LiveCard spec={world.specFor(card)} width={252} />}
       </div>
       <div style={S.detailName}>{info.player}</div>
       <div style={S.detailTier}>{info.tier}</div>
@@ -284,6 +299,59 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
       <div style={S.detailMeta}>
         {info.series} · {world.printRunOf(card).toLocaleString()} printed · {surfaced.toLocaleString()} surfaced · {popLeft.toLocaleString()} still sealed
       </div>
+
+      {/* Send-for-grading, right here. States: raw & free → the form;
+          in transit / arrived / at auction → an honest status line. */}
+      {!card.grade && (
+        <div style={S.gradePanel} onClick={e => e.stopPropagation()}>
+          {atGrader ? (
+            <div style={S.gradeStatus}>
+              ⏳ At {COMPANIES.find(c => c.key === atGrader.companyKey)?.name} —
+              back in {Math.max(0, atGrader.dueDay - day)} day{atGrader.dueDay - day !== 1 ? 's' : ''}
+            </div>
+          ) : arrived ? (
+            <div style={S.gradeStatus}>📦 Slab arrived — reveal it from HOME → GRADE</div>
+          ) : listed ? (
+            <div style={S.gradeStatus}>🔨 Live at auction — settles overnight</div>
+          ) : (
+            <>
+              <div style={S.gradeTitle}>SEND FOR GRADING</div>
+              <div style={S.gradeRow}>
+                {COMPANIES.map(co => (
+                  <button key={co.key} onClick={() => setCompanyKey(co.key)}
+                    style={{
+                      ...S.gradeChip,
+                      outline: co.key === companyKey ? `2px solid ${co.color === '#0b2545' ? '#78b7e0' : co.color}` : 'none',
+                    }}>
+                    <div style={{ fontWeight: 900, fontSize: 12 }}>{co.name}</div>
+                    <div style={{ fontSize: 9, opacity: 0.6 }}>${co.fees[tier]} · {co.turnaroundDays[tier]}d</div>
+                  </button>
+                ))}
+              </div>
+              <div style={S.gradeRow}>
+                {TIERS.map((t, i) => (
+                  <button key={t} onClick={() => setTier(i as Tier)}
+                    style={{
+                      ...S.gradeChip, flex: 1,
+                      background: tier === i ? 'rgba(212,160,23,0.2)' : 'rgba(255,255,255,0.06)',
+                      outline: tier === i ? '1px solid rgba(212,160,23,0.6)' : 'none',
+                      fontSize: 11, fontWeight: 800, padding: '9px 0',
+                    }}>
+                    {t.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                style={{ ...S.gradeSend, opacity: fee > cash ? 0.4 : 1 }}
+                disabled={fee > cash}
+                onClick={() => { sfx.tap(); submitForGrading([card.uid], companyKey, tier); }}
+              >
+                {fee > cash ? `NEED ${formatMoney(fee)} TO SEND` : `SEND · ${formatMoney(fee)}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
       <div style={{ ...S.count, marginTop: 6 }}>tap outside the card to close</div>
     </div>
   );
@@ -323,10 +391,26 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.94)', zIndex: 40,
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: 20, textAlign: 'center',
+    gap: 6, padding: 20, textAlign: 'center', overflowY: 'auto',
     paddingTop: 'calc(20px + env(safe-area-inset-top))',
-    paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
+    paddingBottom: 'calc(64px + env(safe-area-inset-bottom))',
   },
+  gradePanel: {
+    width: '100%', maxWidth: 340, marginTop: 8, padding: 11,
+    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 7,
+  },
+  gradeTitle: { fontSize: 10, letterSpacing: 2, opacity: 0.55, fontWeight: 800 },
+  gradeRow: { display: 'flex', gap: 6 },
+  gradeChip: {
+    flex: 1, background: 'rgba(255,255,255,0.06)', color: '#f4f2ec', border: 'none',
+    borderRadius: 9, padding: '7px 2px', fontFamily: 'inherit',
+  },
+  gradeSend: {
+    background: '#d4a017', color: '#1a1405', border: 'none', borderRadius: 10,
+    padding: '13px 0', fontSize: 13, fontWeight: 900, letterSpacing: 1,
+  },
+  gradeStatus: { fontSize: 12, color: '#e8c86a', fontWeight: 700, padding: '4px 0' },
   detailName: { fontSize: 20, fontWeight: 800, marginTop: 14 },
   detailTier: { fontSize: 13, color: '#e8c86a', fontWeight: 700, letterSpacing: 1 },
   detailMeta: { fontSize: 11, opacity: 0.6, maxWidth: 300, lineHeight: 1.5 },
