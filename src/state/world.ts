@@ -17,6 +17,9 @@ import {
 import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/economy/lots';
 import { buildTop50, type Top50Entry } from '../engine/news/top50';
 import { ripWorldDay } from '../engine/cards/worldRips';
+import {
+  emptyOverrides, teamKey, playerKey, type OverrideSet,
+} from './overrides';
 import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
 import type { Population } from '../engine/cards/population';
@@ -29,6 +32,7 @@ export interface SeriesRuntime {
   dna: DesignDna;
   pop: Population;
   classes: ReturnType<typeof classifySlots>;
+  /** Repointed when name overrides are applied. */
   players: Player[];
   teams: Team[];
   press: PressProfile;
@@ -37,14 +41,21 @@ export interface SeriesRuntime {
 const WORLD_SEED = seedFromText('career-dev');
 
 class World {
+  /** Generated, pristine. Never mutated — overrides are applied on read. */
+  private readonly baseLeagues: Record<Sport, { players: Player[]; teams: Team[] }>;
   readonly leagues: Record<Sport, { players: Player[]; teams: Team[] }>;
   readonly series: Map<string, SeriesRuntime> = new Map();
   private packRng: Rng;
+  private overrides: OverrideSet = emptyOverrides();
 
   constructor() {
-    this.leagues = {
+    this.baseLeagues = {
       football: generateLeague(WORLD_SEED, 'football', 2027),
       baseball: generateLeague(WORLD_SEED, 'baseball', 2027),
+    };
+    this.leagues = {
+      football: this.baseLeagues.football,
+      baseball: this.baseLeagues.baseball,
     };
     this.packRng = Rng.from(childSeed(WORLD_SEED, 'shop-rips'), 'packs');
     this.register(2027, 'Pinnacle Press', 'Chromium', 'football', 'chromium');
@@ -63,6 +74,46 @@ class World {
       teams: lg.teams,
       press: pressProfile(def.seed),
     });
+  }
+
+  /**
+   * Apply name overrides. Only display fields change — ids, seeds, talent,
+   * jersey numbers and populations are untouched, so a rename can never
+   * re-price a collection or invalidate a save.
+   */
+  applyOverrides(set: OverrideSet): void {
+    this.overrides = set;
+    for (const sport of ['football', 'baseball'] as Sport[]) {
+      const base = this.baseLeagues[sport];
+      this.leagues[sport] = {
+        teams: base.teams.map(t => {
+          const o = set.teams[teamKey(sport, t.id)];
+          return o ? { ...t, ...o } : t;
+        }),
+        players: base.players.map(p => {
+          const o = set.players[playerKey(sport, p.id)];
+          return o ? { ...p, ...o } : p;
+        }),
+      };
+    }
+    // Series runtimes hold their own roster references; repoint them.
+    for (const rt of this.series.values()) {
+      const lg = this.leagues[rt.def.sport];
+      rt.players = lg.players;
+      rt.teams = lg.teams;
+    }
+  }
+
+  get currentOverrides(): OverrideSet {
+    return this.overrides;
+  }
+
+  /** Display name for a series, honoring any brand/line override. */
+  seriesName(seriesId: string): string {
+    const rt = this.get(seriesId);
+    const o = this.overrides.series[seriesId];
+    if (!o) return rt.def.name;
+    return `${rt.def.year} ${o.brand ?? rt.def.brand} ${o.line ?? rt.def.line}`;
   }
 
   get(seriesId: string): SeriesRuntime {
@@ -191,7 +242,7 @@ class World {
       condition: this.conditionOf(pull),
       player, team, dna: rt.dna, parallel,
       serial: parallel.numberedTo !== null ? pull.serial : null,
-      seriesName: rt.def.name,
+      seriesName: this.seriesName(rt.def.id),
       cardNumber: card.cardNumber,
       isRookie: card.isRookie,
       auto: card.isAuto ? { ink: card.autoInk ?? 'blueSharpie', sticker: card.autoSticker } : null,
@@ -288,7 +339,7 @@ class World {
     return {
       player: `${player.first} ${player.last}`,
       tier: `${card.isAuto ? 'AUTO · ' : ''}${tier}`,
-      series: rt.def.name,
+      series: this.seriesName(rt.def.id),
     };
   }
 
@@ -369,7 +420,7 @@ class World {
         return {
           player: `${player.first} ${player.last}`,
           team: `${team.city} ${team.nickname}`,
-          seriesName: rt.def.name,
+          seriesName: this.seriesName(rt.def.id),
           tierName: card.insertName
             ? `${card.insertName} /${INSERT_SETS.find(s => s.name === card.insertName)?.printRun ?? par.printRun}`
             : par.numberedTo === 1 ? 'Superfractor 1/1'

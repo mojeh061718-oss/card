@@ -19,6 +19,7 @@ import {
   bigSaleStory, grailFoundStory, ambientStories, productDropStory, type NewsItem,
 } from '../engine/news/wire';
 import type { PulledCard as Pull } from '../engine/cards/series';
+import { emptyOverrides, sanitizeOverrides, type OverrideSet } from './overrides';
 
 export interface CardInstance extends PulledCard {
   /** Unique ownership id (monotonic per save). */
@@ -97,6 +98,7 @@ interface CollectionState {
   /** Unread breaking story awaiting its takeover. */
   breaking: NewsItem | null;
   shopName: string;
+  overrides: OverrideSet;
   /** False until the player has completed career setup. */
   careerStarted: boolean;
   addPulls(pulls: PulledCard[]): void;
@@ -110,6 +112,7 @@ interface CollectionState {
   pushNews(items: NewsItem[]): void;
   clearBreaking(): void;
   setShopName(name: string): void;
+  setOverrides(set: OverrideSet): void;
   buyWax(seriesId: string, productKey: string, price: number): SealedItem | null;
   buyFind(listedDay: number, uidKey: string): boolean;
   openSealed(id: number): void;
@@ -155,6 +158,7 @@ function scheduleSave(state: CollectionState): void {
         bought: state.bought,
         news: state.news.slice(0, 60),
         shopName: state.shopName,
+        overrides: state.overrides,
         careerStarted: state.careerStarted,
         populations: world.savePopulations(),
       }, 'save-v1');
@@ -182,6 +186,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
   news: [],
   breaking: null,
   shopName: 'Corner Store Cards',
+  overrides: emptyOverrides(),
   careerStarted: false,
   addPulls(pulls) {
     const { cards, nextUid } = get();
@@ -437,6 +442,12 @@ export const useCollection = create<CollectionState>((set, get) => ({
     set({ shopName: name.trim() || 'Corner Store Cards' });
     scheduleSave(get());
   },
+  setOverrides(set) {
+    world.applyOverrides(set);
+    set = world.currentOverrides;
+    useCollection.setState({ overrides: set });
+    scheduleSave(useCollection.getState());
+  },
   setCash(amount) {
     set({ cash: Math.max(0, amount) });
     scheduleSave(get());
@@ -461,6 +472,8 @@ export async function hydrateCollection(): Promise<void> {
     const save = await d.get(STORE, 'save-v1');
     if (save?.version === 1) {
       world.restorePopulations(save.populations ?? {});
+      // Names must be applied before any card renders from the save.
+      world.applyOverrides(sanitizeOverrides(save.overrides ?? {}).set);
       useCollection.setState({
         cards: save.cards ?? [],
         nextUid: save.nextUid ?? 1,
@@ -477,6 +490,7 @@ export async function hydrateCollection(): Promise<void> {
         bought: save.bought ?? {},
         news: save.news ?? [],
         shopName: save.shopName ?? 'Corner Store Cards',
+        overrides: sanitizeOverrides(save.overrides ?? {}).set,
         careerStarted: save.careerStarted ?? false,
         hydrated: true,
       });

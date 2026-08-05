@@ -7,9 +7,10 @@ import { MarketScreen } from './MarketScreen';
 import { SourcingScreen } from './SourcingScreen';
 import { NewsScreen, BreakingOverlay } from './NewsScreen';
 import { CareerSetup } from './CareerSetup';
+import { EditorScreen } from './EditorScreen';
 import { useCollection } from '../state/collection';
 
-type Route = 'hunt' | 'wax' | 'binder' | 'grade' | 'market' | 'news' | 'devlab';
+type Route = 'hunt' | 'wax' | 'binder' | 'grade' | 'market' | 'news' | 'edit' | 'devlab';
 
 export function App() {
   const careerStarted = useCollection(s => s.careerStarted);
@@ -30,20 +31,21 @@ export function App() {
           : route === 'market' ? <MarketScreen />
           : route === 'hunt' ? <SourcingScreen />
           : route === 'news' ? <NewsScreen />
+          : route === 'edit' ? <EditorScreen />
           : <WaxScreen />}
       </div>
       <nav style={{
-        display: 'flex', justifyContent: 'center', gap: 12, padding: '10px 0 4px',
+        display: 'flex', justifyContent: 'center', gap: 9, padding: '10px 0 4px',
         borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, letterSpacing: 2,
       }}>
-        {(['hunt', 'wax', 'binder', 'grade', 'market', 'news', 'devlab'] as Route[]).map(r => (
+        {(['hunt', 'wax', 'binder', 'grade', 'market', 'news', 'edit', 'devlab'] as Route[]).map(r => (
           <button key={r} onClick={() => setRoute(r)} style={{
             background: 'none', border: 'none', color: route === r ? '#d4a017' : 'rgba(244,242,236,0.5)',
             fontWeight: 700, letterSpacing: 1.5, fontSize: 11,
           }}>
             {r === 'hunt' ? 'HUNT' : r === 'wax' ? 'WAX' : r === 'binder' ? 'BOOK'
               : r === 'grade' ? 'GRADE' : r === 'market' ? 'SELL'
-              : r === 'news' ? 'WIRE' : 'LAB'}
+              : r === 'news' ? 'WIRE' : r === 'edit' ? 'EDIT' : 'LAB'}
           </button>
         ))}
       </nav>

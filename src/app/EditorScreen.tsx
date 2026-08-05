@@ -1,0 +1,249 @@
+/**
+ * Series editor — rename the world without breaking it.
+ *
+ * Everything the game stores references numeric ids, never names, so
+ * renaming is a pure display-layer change. Teams, players and product lines
+ * can all be edited freely; talent, jersey numbers, print runs and anything
+ * already in your binder are untouched.
+ */
+
+import { useMemo, useState } from 'react';
+import { world } from '../state/world';
+import { useCollection } from '../state/collection';
+import type { Sport } from '../engine/world/teams';
+import { sanitizeOverrides, teamKey, playerKey, emptyOverrides } from '../state/overrides';
+import { sfx } from './feel';
+
+type Tab = 'teams' | 'players' | 'brands' | 'file';
+
+export function EditorScreen() {
+  const { overrides, setOverrides } = useCollection();
+  const [sport, setSport] = useState<Sport>('football');
+  const [tab, setTab] = useState<Tab>('teams');
+  const [teamFilter, setTeamFilter] = useState<number>(0);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const league = world.leagues[sport];
+  const roster = useMemo(
+    () => league.players
+      .filter(p => p.teamId === teamFilter)
+      .sort((a, b) => b.talent - a.talent),
+    [league, teamFilter],
+  );
+
+  const patchTeam = (id: number, field: string, value: string) => {
+    const key = teamKey(sport, id);
+    const next = {
+      ...overrides,
+      teams: { ...overrides.teams, [key]: { ...overrides.teams[key], [field]: value } },
+    };
+    setOverrides(next);
+  };
+  const patchPlayer = (id: number, field: string, value: string) => {
+    const key = playerKey(sport, id);
+    const next = {
+      ...overrides,
+      players: { ...overrides.players, [key]: { ...overrides.players[key], [field]: value } },
+    };
+    setOverrides(next);
+  };
+
+  const exportFile = () => {
+    const blob = new Blob([JSON.stringify(overrides, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cardboard-names.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    setNotice('Exported cardboard-names.json');
+  };
+
+  const importFile = async (file: File) => {
+    try {
+      const { set, dropped } = sanitizeOverrides(JSON.parse(await file.text()));
+      setOverrides(set);
+      sfx.tap();
+      setNotice(
+        dropped.length > 0
+          ? `Loaded, ignoring ${dropped.length} bad entr${dropped.length === 1 ? 'y' : 'ies'}: ${dropped.slice(0, 3).join(', ')}`
+          : 'Loaded name overrides.',
+      );
+    } catch {
+      setNotice("That file isn't valid JSON — nothing was changed.");
+    }
+  };
+
+  const S = styles;
+  const editCount = Object.keys(overrides.teams).length
+    + Object.keys(overrides.players).length
+    + Object.keys(overrides.series).length;
+
+  return (
+    <div style={S.root}>
+      <header style={S.header}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <div style={S.title}>EDITOR</div>
+          <div style={S.sub}>{editCount} edit{editCount === 1 ? '' : 's'}</div>
+        </div>
+        <div style={S.note}>
+          Renaming is safe. Everything is stored by id, so your collection,
+          print runs and serial numbers are untouched.
+        </div>
+        <div style={S.chips}>
+          {(['football', 'baseball'] as Sport[]).map(sp => (
+            <button key={sp} onClick={() => { setSport(sp); setTeamFilter(0); }}
+              style={{ ...S.chip, ...(sport === sp ? S.chipOn : {}) }}>
+              {sp.toUpperCase()}
+            </button>
+          ))}
+          <span style={{ flex: 1 }} />
+          {(['teams', 'players', 'brands', 'file'] as Tab[]).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ ...S.chip, ...(tab === t ? S.chipOn : {}) }}>
+              {t.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div style={S.scroll}>
+        {notice && <div style={S.notice}>{notice}</div>}
+
+        {tab === 'teams' && league.teams.map(t => (
+          <div key={t.id} style={S.row}>
+            <div style={{ ...S.swatch, background: t.primary, borderColor: t.secondary }} />
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <input style={S.input} defaultValue={t.city} placeholder="City"
+                onBlur={e => patchTeam(t.id, 'city', e.target.value)} />
+              <input style={S.input} defaultValue={t.nickname} placeholder="Nickname"
+                onBlur={e => patchTeam(t.id, 'nickname', e.target.value)} />
+              <input style={{ ...S.input, fontFamily: 'monospace' }} defaultValue={t.primary}
+                placeholder="#primary"
+                onBlur={e => patchTeam(t.id, 'primary', e.target.value)} />
+              <input style={{ ...S.input, fontFamily: 'monospace' }} defaultValue={t.secondary}
+                placeholder="#secondary"
+                onBlur={e => patchTeam(t.id, 'secondary', e.target.value)} />
+            </div>
+          </div>
+        ))}
+
+        {tab === 'players' && (
+          <>
+            <select
+              style={S.select}
+              value={teamFilter}
+              onChange={e => setTeamFilter(Number(e.target.value))}
+            >
+              {league.teams.map(t => (
+                <option key={t.id} value={t.id}>{t.city} {t.nickname}</option>
+              ))}
+            </select>
+            {roster.map(p => (
+              <div key={p.id} style={S.row}>
+                <div style={S.jersey}>{p.jersey}</div>
+                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <input style={S.input} defaultValue={p.first} placeholder="First"
+                    onBlur={e => patchPlayer(p.id, 'first', e.target.value)} />
+                  <input style={S.input} defaultValue={p.last} placeholder="Last"
+                    onBlur={e => patchPlayer(p.id, 'last', e.target.value)} />
+                </div>
+                <div style={S.meta}>{p.position}<br />{p.talent} OVR</div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {tab === 'brands' && world.seriesIds.map(id => {
+          const def = world.get(id).def;
+          const o = overrides.series[id] ?? {};
+          return (
+            <div key={id} style={S.row}>
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <input style={S.input} defaultValue={o.brand ?? def.brand} placeholder="Brand"
+                  onBlur={e => setOverrides({
+                    ...overrides,
+                    series: { ...overrides.series, [id]: { ...o, brand: e.target.value } },
+                  })} />
+                <input style={S.input} defaultValue={o.line ?? def.line} placeholder="Line"
+                  onBlur={e => setOverrides({
+                    ...overrides,
+                    series: { ...overrides.series, [id]: { ...o, line: e.target.value } },
+                  })} />
+              </div>
+              <div style={S.meta}>{def.year}<br />{def.sport}</div>
+            </div>
+          );
+        })}
+
+        {tab === 'file' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <p style={S.note}>
+              Export your edits to a JSON file you can hand-edit and re-import.
+              Unrecognized entries are skipped rather than wiping the rest.
+            </p>
+            <button style={S.action} onClick={exportFile}>EXPORT NAMES JSON</button>
+            <label style={{ ...S.action, textAlign: 'center', cursor: 'pointer' }}>
+              IMPORT NAMES JSON
+              <input
+                type="file" accept="application/json" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) void importFile(f); }}
+              />
+            </label>
+            <button
+              style={{ ...S.action, background: 'rgba(224,138,106,0.15)', borderColor: 'rgba(224,138,106,0.4)' }}
+              onClick={() => { setOverrides(emptyOverrides()); setNotice('Reset to generated names.'); }}
+            >
+              RESET TO GENERATED NAMES
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  root: { height: '100%', display: 'flex', flexDirection: 'column', background: '#0c0c10' },
+  header: { padding: '14px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
+  title: { fontSize: 16, fontWeight: 800, letterSpacing: 4 },
+  sub: { fontSize: 11, color: '#e8c86a' },
+  note: { fontSize: 10, opacity: 0.5, lineHeight: 1.6, marginTop: 4 },
+  chips: { display: 'flex', gap: 5, marginTop: 10, flexWrap: 'wrap' },
+  chip: {
+    background: 'rgba(255,255,255,0.06)', color: 'rgba(244,242,236,0.6)', border: 'none',
+    borderRadius: 20, padding: '5px 9px', fontSize: 10, fontWeight: 700, letterSpacing: 1,
+  },
+  chipOn: { background: '#d4a017', color: '#1a1405' },
+  scroll: { flex: 1, overflowY: 'auto', padding: '12px 14px 30px' },
+  notice: {
+    fontSize: 11, color: '#8ee08e', background: 'rgba(142,224,142,0.08)',
+    border: '1px solid rgba(142,224,142,0.3)', borderRadius: 8, padding: 9, marginBottom: 12,
+    lineHeight: 1.5,
+  },
+  row: {
+    display: 'flex', gap: 9, alignItems: 'center', padding: 9, marginBottom: 7,
+    background: 'rgba(255,255,255,0.035)', borderRadius: 9,
+  },
+  swatch: { width: 26, height: 26, borderRadius: 6, border: '2px solid', flexShrink: 0 },
+  jersey: {
+    width: 26, textAlign: 'center', fontSize: 13, fontWeight: 900,
+    opacity: 0.5, flexShrink: 0,
+  },
+  meta: { fontSize: 9, opacity: 0.4, textAlign: 'right', lineHeight: 1.4, flexShrink: 0 },
+  input: {
+    background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 6, padding: '7px 8px', fontSize: 12, color: '#f4f2ec',
+    fontFamily: 'inherit', minWidth: 0,
+  },
+  select: {
+    width: '100%', background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 10px',
+    fontSize: 13, color: '#f4f2ec', marginBottom: 10, fontFamily: 'inherit',
+  },
+  action: {
+    background: 'rgba(212,160,23,0.12)', color: '#f4f2ec',
+    border: '1px solid rgba(212,160,23,0.4)', borderRadius: 10, padding: '12px 0',
+    fontSize: 12, fontWeight: 800, letterSpacing: 1,
+  },
+};
