@@ -366,7 +366,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   saleRow: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', marginBottom: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid', borderRadius: 8, color: '#f4f2ec' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.9)', zIndex: 50, display: 'flex', alignItems: 'flex-end' },
-  sheet: { background: '#15151c', borderRadius: '18px 18px 0 0', padding: 18, paddingBottom: 'calc(18px + env(safe-area-inset-bottom))', width: '100%', maxHeight: '88%', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)' },
+  sheet: { background: '#15151c', borderRadius: '18px 18px 0 0', padding: 18, paddingBottom: 'calc(64px + env(safe-area-inset-bottom))', width: '100%', maxHeight: '88%', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)' },
   compBox: { marginTop: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 10 },
   compRow: { display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, padding: '3px 0' },
   dealerBtn: { width: '100%', marginTop: 12, background: 'rgba(255,255,255,0.08)', color: '#f4f2ec', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '11px 0', fontSize: 12, fontWeight: 800, letterSpacing: 1 },

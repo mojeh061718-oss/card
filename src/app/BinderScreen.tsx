@@ -186,7 +186,8 @@ function PocketPage({ page, pageNo, onFocus }: {
           const card = page[i];
           const slabUrl = card?.grade && visible ? ensureSlab(card, () => setTick(t => t + 1)) : null;
           return (
-            <div key={i} style={S.pocket} onClick={card ? () => onFocus(card) : undefined}>
+            <div key={i} data-pocket={pageNo * 9 + i} style={S.pocket}
+              onClick={card ? () => onFocus(card) : undefined}>
               {card && visible ? (
                 <img
                   src={slabUrl ?? thumbFor(card)}
@@ -227,7 +228,6 @@ function PocketPage({ page, pageNo, onFocus }: {
 function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => void }) {
   const info = world.displayName(card);
   const rt = world.get(card.seriesId);
-  const par = rt.def.ladder[card.parallelId];
   const popLeft = rt.pop.remaining(card.cardIndex * rt.def.ladder.length + card.parallelId);
   const surfaced = rt.pop.drawnCount(card.cardIndex * rt.def.ladder.length + card.parallelId);
   const S = styles;
@@ -282,7 +282,7 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
         </div>
       )}
       <div style={S.detailMeta}>
-        {info.series} · {par.printRun.toLocaleString()} printed · {surfaced.toLocaleString()} surfaced · {popLeft.toLocaleString()} still sealed
+        {info.series} · {world.printRunOf(card).toLocaleString()} printed · {surfaced.toLocaleString()} surfaced · {popLeft.toLocaleString()} still sealed
       </div>
       <div style={{ ...S.count, marginTop: 6 }}>tap outside the card to close</div>
     </div>

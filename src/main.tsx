@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { hydrateCollection, useCollection } from './state/collection';
 import { world } from './state/world';
-import { loadCachedPhotos, loadCachedScans } from './app/artcache';
+import { loadCachedPhotos, loadCachedScans, photoFor, scanFor } from './app/artcache';
 
 async function boot() {
   await hydrateCollection();
@@ -30,9 +30,22 @@ async function boot() {
   if (params.has('enable-tcg')) useCollection.getState().enableTcg();
   if (params.has('seed-collection') && useCollection.getState().cards.length === 0) {
     const n = Number(params.get('seed-collection')) || 4;
+    // Both launch flagships, so binder/testing flows cover both sports.
+    const baseball = [...world.series.keys()]
+      .find(id => !world.isTcg(id) && world.get(id).def.sport === 'baseball');
     for (let i = 0; i < n; i++) {
       useCollection.getState().addPulls(world.ripPack('2027-pinnacle-press-chromium-football'));
+      if (baseball) useCollection.getState().addPulls(world.ripPack(baseball));
     }
+    if (params.has('enable-tcg')) {
+      useCollection.getState().addPulls(world.openProduct('tcg-base', 'tcg-pack').flat());
+    }
+  }
+  // Scripted-test hook, only alongside the dev flags above.
+  if (params.has('seed-collection') || params.has('enable-tcg')) {
+    (window as unknown as Record<string, unknown>).__cardboard = {
+      world, useCollection, photoFor, scanFor,
+    };
   }
   createRoot(document.getElementById('root')!).render(<App />);
 }

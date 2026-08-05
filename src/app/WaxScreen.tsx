@@ -319,18 +319,28 @@ function RipSession({ session, onClose }: {
     if (p > 0.92) {
       tearing.current = false;
       setTimeout(() => { setPhase('stack'); setIdx(0); setFlipped(false); }, 380);
+      // First card flips itself — the tear is the only wind-up.
+      setTimeout(() => revealAt(0), 700);
     }
   };
 
-  const reveal = () => {
-    if (!current || flipped) return;
-    if (tier > 0) sfx.riser(tier as 1 | 2 | 3);
+  // One gesture per card: tap OR swipe advances, and the next card flips
+  // itself. The old flow (tap to flip, tap again for next, 11 times twice
+  // over) read as "painfully slow" — this one is swipe-swipe-swipe with the
+  // reveal doing its own work.
+  const revealAt = (i: number) => {
+    const c = cards[i];
+    if (!c) return;
+    const t = heatTier(world.heat(c));
+    if (t > 0) sfx.riser(t as 1 | 2 | 3);
     // 520px covers the 260pt flip stage at 2x; the tap→flip latency is the
     // most-felt frame in the game, so resolution buys nothing here.
-    setStillUrl(snapshotCard(world.specFor(current), 520));
+    setStillUrl(snapshotCard(world.specFor(c), 520));
     setFlipped(true);
-    setTimeout(() => (tier > 0 ? sfx.hit(tier as 1 | 2 | 3) : sfx.flip()), tier > 0 ? 260 : 0);
+    setTimeout(() => (t > 0 ? sfx.hit(t as 1 | 2 | 3) : sfx.flip()), t > 0 ? 180 : 0);
   };
+
+  const reveal = () => { if (current && !flipped) revealAt(idx); };
 
   const nextCard = () => {
     if (!flipped) return;
@@ -342,7 +352,12 @@ function RipSession({ session, onClose }: {
     sfx.cardSlide();
     setFlipped(false);
     setStillUrl(null);
-    if (idx + 1 < cards.length) { setIdx(idx + 1); return; }
+    if (idx + 1 < cards.length) {
+      setIdx(idx + 1);
+      // Auto-reveal the incoming card after the slide beat.
+      setTimeout(() => revealAt(idx + 1), 170);
+      return;
+    }
     // Pack finished — next pack, or the box tally.
     if (packIdx + 1 < packs.length) {
       setPackIdx(packIdx + 1);
@@ -352,6 +367,28 @@ function RipSession({ session, onClose }: {
     } else {
       setPhase('done');
     }
+  };
+
+  // Swipe = same action as tap, so riffling through a pack feels like
+  // thumbing a stack of cards. Small movements still count as taps.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const swipeConsumed = useRef(false);
+  const onStagePointerDown = (e: React.PointerEvent) => {
+    swipe.current = { x: e.clientX, y: e.clientY };
+  };
+  const onStagePointerUp = (e: React.PointerEvent) => {
+    if (!swipe.current) return;
+    const dx = e.clientX - swipe.current.x;
+    const dy = e.clientY - swipe.current.y;
+    swipe.current = null;
+    if (Math.abs(dx) >= 36 || Math.abs(dy) >= 36) {
+      swipeConsumed.current = true; // the trailing click must not double-fire
+      (flipped ? nextCard : reveal)();
+    }
+  };
+  const onStageClick = () => {
+    if (swipeConsumed.current) { swipeConsumed.current = false; return; }
+    (flipped ? nextCard : reveal)();
   };
 
   /** Skip the ceremony: jump straight to the tally. */
@@ -409,7 +446,12 @@ function RipSession({ session, onClose }: {
       )}
 
       {phase === 'stack' && current && (
-        <div style={S.center} onClick={flipped ? nextCard : reveal}>
+        <div
+          style={{ ...S.center, touchAction: 'none' }}
+          onClick={onStageClick}
+          onPointerDown={onStagePointerDown}
+          onPointerUp={onStagePointerUp}
+        >
           <div style={S.counter}>
             {packs.length > 1 && `PACK ${packIdx + 1}/${packs.length} · `}
             {idx + 1} / {cards.length}
@@ -437,10 +479,10 @@ function RipSession({ session, onClose }: {
               <div style={{ fontSize: 10, opacity: 0.55, marginTop: 2 }}>
                 {world.displayName(current).tier}
               </div>
-              <div style={{ ...S.caption, marginTop: 6 }}>tap for next card</div>
+              <div style={{ ...S.caption, marginTop: 6 }}>swipe for next card</div>
             </div>
           ) : (
-            <div style={S.caption}>tap to flip</div>
+            <div style={S.caption}>swipe or tap to flip</div>
           )}
         </div>
       )}
@@ -530,7 +572,7 @@ const styles: Record<string, React.CSSProperties> = {
   shelfPrice: { fontSize: 15, fontWeight: 900, color: '#e8c86a' },
   shelfStock: { fontSize: 9, opacity: 0.45, marginTop: 2 },
   tip: { fontSize: 11, opacity: 0.4, lineHeight: 1.6, textAlign: 'center', padding: '0 20px' },
-  overlay: { position: 'fixed', inset: 0, zIndex: 55, background: 'radial-gradient(120% 90% at 50% 0%, #16161f 0%, #0a0a0d 70%)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' },
+  overlay: { position: 'fixed', inset: 0, zIndex: 55, background: 'radial-gradient(120% 90% at 50% 0%, #16161f 0%, #0a0a0d 70%)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(52px + env(safe-area-inset-bottom))' },
   center: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16 },
   packCounter: { fontSize: 11, letterSpacing: 3, color: '#e8c86a' },
   packWrap: { position: 'relative', width: 250, height: 352, touchAction: 'none' },
@@ -541,12 +583,12 @@ const styles: Record<string, React.CSSProperties> = {
   counter: { fontSize: 12, letterSpacing: 3, opacity: 0.7 },
   skip: { background: 'rgba(255,255,255,0.08)', color: 'rgba(244,242,236,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '7px 14px', fontSize: 10, letterSpacing: 1, fontWeight: 700 },
   flipScene: { perspective: '1200px', width: 260, transition: 'filter 300ms' },
-  flipInner: { position: 'relative', width: '100%', transformStyle: 'preserve-3d', transition: 'transform 520ms cubic-bezier(0.2, 0.8, 0.25, 1)' },
+  flipInner: { position: 'relative', width: '100%', transformStyle: 'preserve-3d', transition: 'transform 360ms cubic-bezier(0.2, 0.8, 0.25, 1)' },
   face: { width: '100%', borderRadius: 12, display: 'block', boxShadow: '0 18px 50px rgba(0,0,0,0.6)' },
-  takeover: { position: 'fixed', inset: 0, background: '#050507', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 60, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' },
+  takeover: { position: 'fixed', inset: 0, background: '#050507', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 60, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(52px + env(safe-area-inset-bottom))' },
   oneBanner: { fontSize: 26, fontWeight: 900, letterSpacing: 10, color: '#ffd75e', textShadow: '0 0 30px rgba(255, 215, 94, 0.5)' },
   oneSub: { fontSize: 13, opacity: 0.75, letterSpacing: 1 },
-  doneStage: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 24, paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', overflowY: 'auto', textAlign: 'center' },
+  doneStage: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 24, paddingBottom: 12, overflowY: 'auto', textAlign: 'center' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, width: '100%', maxWidth: 360 },
   button: { marginTop: 18, background: '#d4a017', color: '#1a1405', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 13, fontWeight: 900, letterSpacing: 1 },
 };

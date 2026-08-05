@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0c0c10" />
@@ -31,6 +31,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // iOS ignores user-scalable in some contexts — kill pinch/double-tap
+      // zoom at the gesture level so the layout can never be zoomed off
+      // screen (the "stuck in a screen" failure mode).
+      for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+        document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+      }
+      // Double-tap zoom is handled by `touch-action: manipulation` in CSS.
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

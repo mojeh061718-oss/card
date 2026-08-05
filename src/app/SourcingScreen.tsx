@@ -241,7 +241,7 @@ const styles: Record<string, React.CSSProperties> = {
   lotPrice: { fontSize: 16, fontWeight: 900, color: '#e8c86a' },
   lotCta: { fontSize: 9, opacity: 0.6, letterSpacing: 1, marginTop: 2 },
   tip: { fontSize: 11, opacity: 0.4, lineHeight: 1.6, marginTop: 14, textAlign: 'center' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.97)', zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.97)', zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(52px + env(safe-area-inset-bottom))' },
   digStage: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: 20 },
   digCount: { fontSize: 12, letterSpacing: 3, opacity: 0.6 },
   digCard: { transition: 'filter 160ms' },

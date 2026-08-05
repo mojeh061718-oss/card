@@ -101,17 +101,17 @@ for (let i = 1; i <= 12; i++) {
 }
 await page.mouse.up();
 await page.waitForTimeout(900);
-let flips = 0;
-for (let i = 0; i < 13; i++) {
+// One gesture per card now: the first card auto-flips after the tear and
+// each click advances + auto-reveals the next.
+let taps = 0;
+for (let i = 0; i < 16; i++) {
   if ((await page.getByText('ADD TO COLLECTION').count()) > 0) break;
-  await page.mouse.click(201, 420); // flip
-  await page.waitForTimeout(420);
-  if (i === 10) await page.screenshot({ path: join(SHOTS, 'tcg-flip.png') });
-  await page.mouse.click(201, 420); // next
-  await page.waitForTimeout(220);
-  flips++;
+  if (i === 5) await page.screenshot({ path: join(SHOTS, 'tcg-flip.png') });
+  await page.mouse.click(201, 420);
+  await page.waitForTimeout(430);
+  taps++;
 }
-check('booster ripped through 11 reveals', flips >= 11, `${flips} flips`);
+check('booster ripped through with one gesture per card', taps >= 10 && taps <= 13, `${taps} taps`);
 check('tally screen reached', (await page.getByText('ADD TO COLLECTION').count()) > 0);
 await page.screenshot({ path: join(SHOTS, 'tcg-tally.png') });
 await page.getByText('ADD TO COLLECTION').click();
