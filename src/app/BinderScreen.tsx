@@ -10,6 +10,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCollection, type CardInstance } from '../state/collection';
 import { world } from '../state/world';
 import { snapshotCard, LiveCard } from './cardview';
+import { renderSlab } from '../render/slab';
+import { COMPANIES } from '../engine/condition/grading';
 
 const THUMB_W = 220;
 const CACHE_MAX = 360;
@@ -32,8 +34,29 @@ function thumbFor(card: CardInstance): string {
   return url;
 }
 
+const slabCache = new Map<number, string>();
+const slabPending = new Set<number>();
+
+/** Kick off slab rasterization; resolves to a data URL via `onReady`. */
+function ensureSlab(card: CardInstance, onReady: () => void): string | null {
+  const cached = slabCache.get(card.uid);
+  if (cached) return cached;
+  if (slabPending.has(card.uid) || !card.grade) return null;
+  slabPending.add(card.uid);
+  const co = COMPANIES.find(c => c.key === card.grade!.companyKey)!;
+  const info = world.displayName(card);
+  void renderSlab(snapshotCard(world.specFor(card), 320), co, card.grade.result, {
+    player: info.player, seriesLine: info.series, tierLine: info.tier,
+  }, 360).then(canvas => {
+    slabCache.set(card.uid, canvas.toDataURL());
+    slabPending.delete(card.uid);
+    onReady();
+  });
+  return null;
+}
+
 type SortKey = 'newest' | 'heat' | 'player';
-type FilterKey = 'all' | 'hits' | 'rc' | 'autos';
+type FilterKey = 'all' | 'hits' | 'rc' | 'autos' | 'graded';
 
 function isHit(c: CardInstance): boolean {
   return c.numberedTo !== null || world.heat(c) >= 4;
@@ -57,6 +80,7 @@ export function BinderScreen() {
     if (filter === 'autos') {
       list = list.filter(c => world.get(c.seriesId).def.checklist[c.cardIndex].isAuto);
     }
+    if (filter === 'graded') list = list.filter(c => c.grade);
     const sorted = [...list];
     if (sort === 'newest') sorted.sort((a, b) => b.pulledSeq - a.pulledSeq);
     if (sort === 'heat') sorted.sort((a, b) => world.heat(b) - world.heat(a));
@@ -81,7 +105,7 @@ export function BinderScreen() {
         <div style={S.title}>COLLECTION</div>
         <div style={S.count}>{cards.length} cards · {cards.filter(isHit).length} {cards.filter(isHit).length === 1 ? 'hit' : 'hits'}</div>
         <div style={S.chips}>
-          {(['all', 'hits', 'rc', 'autos'] as FilterKey[]).map(f => (
+          {(['all', 'hits', 'rc', 'autos', 'graded'] as FilterKey[]).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               style={{ ...S.chip, ...(filter === f ? S.chipOn : {}) }}>
               {f.toUpperCase()}
@@ -113,6 +137,7 @@ function PocketPage({ page, pageNo, onFocus }: {
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(pageNo < 2);
+  const [, setTick] = useState(0); // repaint when an async slab lands
   useEffect(() => {
     const el = ref.current;
     if (!el || visible) return;
@@ -131,14 +156,28 @@ function PocketPage({ page, pageNo, onFocus }: {
       <div style={S.pocketGrid}>
         {Array.from({ length: 9 }, (_, i) => {
           const card = page[i];
+          const slabUrl = card?.grade && visible ? ensureSlab(card, () => setTick(t => t + 1)) : null;
           return (
             <div key={i} style={S.pocket} onClick={card ? () => onFocus(card) : undefined}>
               {card && visible ? (
-                <img src={thumbFor(card)} alt="" style={S.pocketImg} />
+                <img
+                  src={slabUrl ?? thumbFor(card)}
+                  alt=""
+                  style={card.grade && slabUrl ? S.pocketSlab : S.pocketImg}
+                />
               ) : card ? (
                 <div style={S.pocketLoading} />
               ) : (
                 <div style={S.pocketEmpty} />
+              )}
+              {card?.grade && (
+                <div style={{
+                  ...S.pocketBadge, left: 5, right: 'auto',
+                  background: card.grade.result.overall === 10 ? '#ffd75e' : 'rgba(8,8,12,0.9)',
+                  color: card.grade.result.overall === 10 ? '#241d05' : '#8ee08e',
+                }}>
+                  {card.grade.result.overall.toFixed(1).replace('.0', '')}
+                </div>
               )}
               {card && card.numberedTo !== null && (
                 <div style={{
@@ -164,13 +203,37 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
   const popLeft = rt.pop.remaining(card.cardIndex * rt.def.ladder.length + card.parallelId);
   const surfaced = rt.pop.drawnCount(card.cardIndex * rt.def.ladder.length + card.parallelId);
   const S = styles;
+  const [slabUrl, setSlabUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!card.grade) return;
+    const co = COMPANIES.find(c => c.key === card.grade!.companyKey)!;
+    let alive = true;
+    void renderSlab(snapshotCard(world.specFor(card), 640), co, card.grade.result, {
+      player: info.player, seriesLine: info.series, tierLine: info.tier,
+    }).then(c => { if (alive) setSlabUrl(c.toDataURL()); });
+    return () => { alive = false; };
+  }, [card, info.player, info.series, info.tier]);
+
   return (
     <div style={S.overlay} onClick={onClose}>
       <div onClick={e => e.stopPropagation()}>
-        <LiveCard spec={world.specFor(card)} width={300} />
+        {card.grade
+          ? (slabUrl
+              ? <img src={slabUrl} alt="graded slab" style={{ width: 290, display: 'block', filter: 'drop-shadow(0 18px 44px rgba(0,0,0,0.7))' }} />
+              : <LiveCard spec={world.specFor(card)} width={290} />)
+          : <LiveCard spec={world.specFor(card)} width={300} />}
       </div>
       <div style={S.detailName}>{info.player}</div>
       <div style={S.detailTier}>{info.tier}</div>
+      {card.grade && (
+        <div style={{ fontSize: 12, color: '#8ee08e', fontWeight: 700 }}>
+          {COMPANIES.find(c => c.key === card.grade!.companyKey)!.name} {card.grade.result.overall.toFixed(1).replace('.0', '')}
+          {' · '}cent {card.grade.result.subs.centering.toFixed(1).replace('.0', '')}
+          {' · '}corn {card.grade.result.subs.corners.toFixed(1).replace('.0', '')}
+          {' · '}edge {card.grade.result.subs.edges.toFixed(1).replace('.0', '')}
+          {' · '}surf {card.grade.result.subs.surface.toFixed(1).replace('.0', '')}
+        </div>
+      )}
       <div style={S.detailMeta}>
         {info.series} · {par.printRun.toLocaleString()} printed · {surfaced.toLocaleString()} surfaced · {popLeft.toLocaleString()} still sealed
       </div>
@@ -200,6 +263,7 @@ const styles: Record<string, React.CSSProperties> = {
   pocketGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 },
   pocket: { position: 'relative', aspectRatio: '2.5 / 3.5', borderRadius: 8 },
   pocketImg: { width: '100%', height: '100%', borderRadius: 8, display: 'block' },
+  pocketSlab: { width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' },
   pocketLoading: { width: '100%', height: '100%', borderRadius: 8, background: 'rgba(255,255,255,0.04)' },
   pocketEmpty: {
     width: '100%', height: '100%', borderRadius: 8,

@@ -17,6 +17,7 @@ import { Rng, childSeedN } from '../engine/rng';
 import { shade, withAlpha, mixHex, inkOn } from './color';
 import { renderAthleteLayer, athleteStyle, posesFor } from './athlete';
 import { buildSignature, drawSignature, type InkKind } from './signature';
+import type { Condition } from '../engine/condition/condition';
 
 export const CARD_ASPECT = 2.5 / 3.5;
 
@@ -32,6 +33,8 @@ export interface CardRenderSpec {
   auto: { ink: InkKind; sticker: boolean } | null;
   /** Unique per card-def art variance (pose pick etc.). */
   artSeed: bigint;
+  /** Physical copy condition; null renders a factory-fresh proof. */
+  condition?: Condition | null;
 }
 
 export interface CardLayers {
@@ -218,11 +221,23 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   const fctx = foilMask.getContext('2d')!;
   fctx.fillStyle = '#000';
   fctx.fillRect(0, 0, w, h);
+  if (spec.condition && (spec.condition.offX !== 0 || spec.condition.offY !== 0)) {
+    fctx.save();
+    fctx.translate(spec.condition.offX * w, spec.condition.offY * h);
+  }
 
   // Card die-cut clip.
   ctx.save();
   roundedCardPath(ctx, w, h, cornerR);
   ctx.clip();
+
+  // Raw card stock beneath the print: an off-center cut exposes it.
+  const cond = spec.condition ?? null;
+  ctx.fillStyle = '#d9d5c9';
+  ctx.fillRect(0, 0, w, h);
+  if (cond && (cond.offX !== 0 || cond.offY !== 0)) {
+    ctx.translate(cond.offX * w, cond.offY * h);
+  }
 
   // --- Palette: team colors + series accent shift, parallel tint override ---
   const accentBase = mixHex(team.secondary, team.primary, 0.15);
@@ -482,6 +497,15 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     ctx.fillStyle = 'rgba(244, 242, 236, 0.85)';
     const label = isOne ? 'ONE OF ONE' : parallel.name.toUpperCase();
     ctx.fillText(label, 0, isOne ? bh2 * 0.28 : -bh2 * 0.26, bw2 * 0.9);
+    if (spec.condition?.error === 'doubleStamp') {
+      // Factory double-stamp: ghost impression offset below.
+      ctx.globalAlpha = 0.45;
+      ctx.translate(bw2 * 0.06, bh2 * 0.35);
+      ctx.font = `900 ${serPx}px "Arial Narrow", Arial, sans-serif`;
+      ctx.fillStyle = gold;
+      ctx.fillText(isOne ? '1/1' : st, 0, isOne ? -bh2 * 0.16 : bh2 * 0.16);
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
     // Badge burns on the foil layer.
     fctx.save();
@@ -609,7 +633,94 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   ctx.stroke();
   ctx.restore();
 
-  ctx.restore(); // die-cut clip
+  ctx.restore(); // die-cut clip (also drops the off-center translate)
+
+  // ---- Physical wear + factory errors: drawn relative to the DIE CUT ----
+  if (cond) {
+    const wrng = new Rng(spec.artSeed ^ 0xdefec7n);
+    ctx.save();
+    roundedCardPath(ctx, w, h, cornerR);
+    ctx.clip();
+    // Corner wear: pale fray flecks (devastating on dark borders).
+    const cornerPts = [[0, 0], [w, 0], [w, h], [0, h]];
+    cond.corners.forEach((wear, i) => {
+      if (wear < 0.06) return;
+      const [cx, cy] = cornerPts[i];
+      const n = Math.round(wear * 14);
+      for (let k = 0; k < n; k++) {
+        const ang = Math.atan2(h / 2 - cy, w / 2 - cx) + (wrng.float() - 0.5) * 1.4;
+        const d = wrng.float() * wear * w * 0.05;
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(ang) * d, cy + Math.sin(ang) * d,
+          0.7 + wrng.float() * wear * 2.4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(226, 221, 208, ${0.5 + wear * 0.4})`;
+        ctx.fill();
+      }
+    });
+    // Edge chipping: white flecks along each rim.
+    const edgeSpecs: [number, number, number, number][] = [
+      [0, 0, w, 0], [w, 0, 0, h], [0, h, w, 0], [0, 0, 0, h],
+    ];
+    cond.edges.forEach((chip, i) => {
+      if (chip < 0.05) return;
+      const [ex, ey, dx, dy] = edgeSpecs[i];
+      const n = Math.round(chip * 26);
+      for (let k = 0; k < n; k++) {
+        const t = wrng.float();
+        ctx.beginPath();
+        ctx.arc(ex + dx * t + (dy ? (i === 1 ? -1 : 1) * wrng.float() * 2 : 0),
+          ey + dy * t + (dx ? (i === 2 ? -1 : 1) * wrng.float() * 2 : 0),
+          0.5 + wrng.float() * chip * 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(230, 226, 214, ${0.45 + chip * 0.4})`;
+        ctx.fill();
+      }
+    });
+    // Surface scratches: hairline light strokes.
+    for (let k = 0; k < cond.scratches; k++) {
+      const x0 = wrng.float() * w, y0 = wrng.float() * h * 0.8;
+      const len = w * (0.1 + wrng.float() * 0.25);
+      const ang = wrng.float() * Math.PI;
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0 + Math.cos(ang) * len, y0 + Math.sin(ang) * len);
+      ctx.stroke();
+    }
+    // Print lines: full-width roller marks.
+    for (let k = 0; k < cond.printLines; k++) {
+      const y0 = h * (0.15 + wrng.float() * 0.7);
+      ctx.fillStyle = 'rgba(30, 26, 40, 0.18)';
+      ctx.fillRect(0, y0, w, 1.6);
+    }
+    // Ink specks.
+    for (let k = 0; k < cond.printDots; k++) {
+      ctx.beginPath();
+      ctx.arc(wrng.float() * w, wrng.float() * h, 1 + wrng.float() * 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(20, 16, 28, 0.5)';
+      ctx.fill();
+    }
+    // Factory ink smear: a dramatic diagonal band.
+    if (cond.error === 'inkSmear') {
+      const y0 = h * (0.2 + wrng.float() * 0.5);
+      const smear = ctx.createLinearGradient(0, y0, w, y0 + h * 0.08);
+      smear.addColorStop(0, 'rgba(18, 14, 26, 0)');
+      smear.addColorStop(0.4, 'rgba(18, 14, 26, 0.55)');
+      smear.addColorStop(1, 'rgba(18, 14, 26, 0)');
+      ctx.fillStyle = smear;
+      ctx.fillRect(0, y0 - h * 0.02, w, h * 0.12);
+    }
+    ctx.restore();
+  }
+  if (spec.condition && (spec.condition.offX !== 0 || spec.condition.offY !== 0)) {
+    fctx.restore();
+  }
+  // Missing foil error: the board never got its shine.
+  if (cond?.error === 'missingFoil') {
+    fctx.globalCompositeOperation = 'source-over';
+    fctx.fillStyle = '#000';
+    fctx.fillRect(0, 0, w, h);
+  }
   return { print, foilMask, widthPx: w, heightPx: h };
 }
 

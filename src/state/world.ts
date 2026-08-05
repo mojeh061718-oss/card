@@ -16,6 +16,7 @@ import {
 import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
 import type { Population } from '../engine/cards/population';
+import { conditionFor, pressProfile, type Condition, type PressProfile } from '../engine/condition/condition';
 
 export interface SeriesRuntime {
   def: SeriesDef;
@@ -24,6 +25,7 @@ export interface SeriesRuntime {
   classes: ReturnType<typeof classifySlots>;
   players: Player[];
   teams: Team[];
+  press: PressProfile;
 }
 
 const WORLD_SEED = seedFromText('career-dev');
@@ -53,6 +55,7 @@ class World {
       classes: classifySlots(def),
       players: lg.players,
       teams: lg.teams,
+      press: pressProfile(def.seed),
     });
   }
 
@@ -67,10 +70,16 @@ class World {
     return openPack(rt.def, rt.pop, this.packRng, rt.classes, 10, []);
   }
 
+  conditionOf(pull: PulledCard): Condition {
+    const rt = this.get(pull.seriesId);
+    return conditionFor(rt.def.seed, pull.cardIndex, pull.parallelId, pull.serial, rt.press);
+  }
+
   specFor(pull: PulledCard): CardRenderSpec {
     const rt = this.get(pull.seriesId);
     const { player, team, card, parallel } = renderInputs(rt.def, pull, rt.players, rt.teams);
     return {
+      condition: this.conditionOf(pull),
       player, team, dna: rt.dna, parallel,
       serial: parallel.numberedTo !== null ? pull.serial : null,
       seriesName: rt.def.name,
