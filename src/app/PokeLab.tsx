@@ -10,8 +10,71 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { openDB, type IDBPDatabase } from 'idb';
 import { renderPokeCard, POKE_ASPECT, type PokeCardSpec } from '../render/pokecard';
 import { createCardGL, type CardGL } from '../render/glcard';
+
+/**
+ * One-tap official art import: every card image for a set is fetched at
+ * runtime from the public CDN and cached as blobs in a local IndexedDB
+ * store, so after one tap the real scans work offline on this device.
+ * Nothing ships in the repo or the deployed bundle — the cache lives only
+ * in the player's own browser storage.
+ */
+let artDbPromise: Promise<IDBPDatabase> | null = null;
+function artDb(): Promise<IDBPDatabase> {
+  if (!artDbPromise) {
+    artDbPromise = openDB('poke-art-cache', 1, {
+      upgrade(d) { d.createObjectStore('img'); },
+    });
+  }
+  return artDbPromise;
+}
+
+async function cachedArtCount(setKey: string, nums: number[]): Promise<number> {
+  const db = await artDb();
+  let n = 0;
+  for (const num of nums) {
+    if (await db.get('img', `${setKey}:${num}`) !== undefined) n++;
+  }
+  return n;
+}
+
+async function importSetArt(
+  setKey: string, urlPattern: string, nums: number[],
+  onProgress: (done: number, failed: number) => void,
+): Promise<{ done: number; failed: number }> {
+  const db = await artDb();
+  let done = 0, failed = 0;
+  const WORKERS = 6;
+  await Promise.all(Array.from({ length: WORKERS }, async (_, w) => {
+    for (let i = w; i < nums.length; i += WORKERS) {
+      const key = `${setKey}:${nums[i]}`;
+      try {
+        if (await db.get('img', key) === undefined) {
+          const res = await fetch(urlPattern.replace('{num}', String(nums[i])));
+          if (!res.ok) throw new Error(String(res.status));
+          await db.put('img', await res.blob(), key);
+        }
+        done++;
+      } catch {
+        failed++;
+      }
+      onProgress(done, failed);
+    }
+  }));
+  return { done, failed };
+}
+
+async function loadArtUrls(setKey: string, nums: number[]): Promise<Record<number, string>> {
+  const db = await artDb();
+  const out: Record<number, string> = {};
+  for (const num of nums) {
+    const blob = await db.get('img', `${setKey}:${num}`);
+    if (blob) out[num] = URL.createObjectURL(blob as Blob);
+  }
+  return out;
+}
 
 interface ConceptCard {
   num: number; name: string; type: string;
@@ -34,6 +97,10 @@ export function PokeLab() {
   const [stills, setStills] = useState<string[]>([]);
   const [shown, setShown] = useState(24);
   const [focusIdx, setFocusIdx] = useState(0);
+  /** num → object URL for locally cached official art. */
+  const [artUrls, setArtUrls] = useState<Record<number, string>>({});
+  const [importing, setImporting] = useState<{ done: number; failed: number } | null>(null);
+  const [importNote, setImportNote] = useState('');
   const focusRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<CardGL | null>(null);
   const tiltRef = useRef({ x: 0, y: 0, dragging: false });
@@ -48,6 +115,34 @@ export function PokeLab() {
     () => sets?.find(s => s.key === setKey) ?? null,
     [sets, setKey],
   );
+
+  // Surface any already-imported art for the active set.
+  useEffect(() => {
+    if (!active) return;
+    let alive = true;
+    const nums = active.cards.map(c => c.num);
+    void loadArtUrls(active.key, nums).then(urls => { if (alive) setArtUrls(urls); });
+    void cachedArtCount(active.key, nums).then(n => {
+      if (alive && n > 0) setImportNote(`${n}/${nums.length} official images cached on this device.`);
+    });
+    return () => { alive = false; };
+  }, [active]);
+
+  const runImport = async () => {
+    if (!active || importing) return;
+    setImporting({ done: 0, failed: 0 });
+    const nums = active.cards.map(c => c.num);
+    const result = await importSetArt(
+      active.key, active.officialArt, nums,
+      (done, failed) => setImporting({ done, failed }),
+    );
+    setImporting(null);
+    setArtUrls(await loadArtUrls(active.key, nums));
+    setImportNote(result.failed === 0
+      ? `All ${result.done} official images imported — they now work offline on this device.`
+      : `Imported ${result.done}; ${result.failed} failed (network/CORS). Showing hotlinked images for those.`);
+    setOfficial(true);
+  };
 
   const specFor = (card: ConceptCard): PokeCardSpec => ({
     name: card.name, type: card.type, rarity: card.rarity, hp: card.hp,
@@ -165,11 +260,26 @@ export function PokeLab() {
           </button>
         ))}
         <span style={{ flex: 1 }} />
+        <button onClick={runImport} disabled={!!importing}
+          style={{ ...chip, borderColor: '#d4a017', color: '#e8c86a' }}>
+          {importing
+            ? `IMPORTING… ${importing.done + importing.failed}/${active.cards.length}`
+            : '⚡ IMPORT OFFICIAL ART — ONE TAP'}
+        </button>
         <button onClick={() => setOfficial(o => !o)}
           style={{ ...chip, ...(official ? chipOn : {}) }}>
-          {official ? '◉ OFFICIAL SCANS (runtime fetch)' : '○ OFFICIAL SCANS (runtime fetch)'}
+          {official ? '◉ OFFICIAL SCANS' : '○ OFFICIAL SCANS'}
         </button>
       </div>
+      {importNote && (
+        <div style={{
+          fontSize: 11, color: '#8ee08e', background: 'rgba(142,224,142,0.08)',
+          border: '1px solid rgba(142,224,142,0.3)', borderRadius: 8,
+          padding: '7px 10px', marginBottom: 12,
+        }}>
+          {importNote}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         {!official && (
@@ -198,12 +308,14 @@ export function PokeLab() {
             ? active.cards.slice(0, shown).map(card => (
               <figure key={card.num} style={{ margin: 0 }}>
                 <img
-                  src={active.officialArt.replace('{num}', String(card.num))}
+                  // Imported cache first (offline-capable); hotlink fallback.
+                  src={artUrls[card.num] ?? active.officialArt.replace('{num}', String(card.num))}
                   alt={card.name} loading="lazy"
                   style={{ width: '100%', borderRadius: 8, display: 'block', boxShadow: '0 8px 22px rgba(0,0,0,0.5)' }}
                 />
                 <figcaption style={{ fontSize: 10, opacity: 0.6, marginTop: 3, textAlign: 'center' }}>
                   {card.name} · {card.num}/{active.size}
+                  {artUrls[card.num] ? ' · cached' : ''}
                 </figcaption>
               </figure>
             ))
