@@ -130,6 +130,41 @@ export async function loadCachedScans(): Promise<number> {
   return scanMap.size;
 }
 
+/**
+ * THE VAULT: fetch each grail's verified public image URL into the scan
+ * cache (same store + keys the render seam reads). URLs are listing-bound
+ * on some hosts, so failures are tolerated — whatever lands is cached
+ * forever and works offline.
+ */
+export async function importVaultArt(
+  sets: Record<string, Record<string, string>>,
+  onProgress: (done: number, failed: number, total: number, lastKey?: string) => void,
+): Promise<{ done: number; failed: number }> {
+  const db = await pokeDb();
+  const jobs = Object.entries(sets).flatMap(([setKey, nums]) =>
+    Object.entries(nums).map(([num, url]) => ({ key: `${setKey}:${num}`, url })));
+  let done = 0, failed = 0;
+  const WORKERS = 6;
+  await Promise.all(Array.from({ length: WORKERS }, async (_, w) => {
+    for (let i = w; i < jobs.length; i += WORKERS) {
+      const { key, url } = jobs[i];
+      try {
+        if (await db.get('img', key) === undefined) {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(String(res.status));
+          await db.put('img', await res.blob(), key);
+        }
+        done++;
+        onProgress(done, failed, jobs.length, key);
+      } catch {
+        failed++;
+        onProgress(done, failed, jobs.length);
+      }
+    }
+  }));
+  return { done, failed };
+}
+
 // ---------------------------------------------------------------------------
 // Real player photos
 // ---------------------------------------------------------------------------

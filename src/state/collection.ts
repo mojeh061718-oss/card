@@ -367,6 +367,16 @@ export const useCollection = create<CollectionState>((set, get) => ({
     const surfaced = world.ripWorld(newDay);
     const forSale: MarketFind[] = [];
     const stories: NewsItem[] = [];
+    // THE VAULT: a grail surfacing is front-page news and a live listing.
+    for (const vf of world.vaultFinds(newDay)) {
+      forSale.push({ pull: vf.pull, ask: vf.ask, listedDay: newDay });
+      const info = world.displayName(vf.pull);
+      stories.push(grailFoundStory(
+        newDay, info.player, info.tier, info.series, false, get().shopName,
+        childSeedN(hashString(world.identityKey(vf.pull)), newDay),
+        world.valuation(vf.pull),
+      ));
+    }
     for (const { pull } of surfaced) {
       const run = world.printRunOf(pull);
       const info = world.displayName(pull);
@@ -651,6 +661,18 @@ export async function hydrateCollection(): Promise<void> {
       world.syncCalendar(save.day ?? 1);
       if (save.tcgEnabled) world.enableTcg();
       world.restorePopulations(save.populations ?? {});
+      // Checklists can shrink across updates (Currency S1 -> S5): drop owned
+      // tcg cards whose index no longer exists rather than crash the binder.
+      if (Array.isArray(save.cards)) {
+        save.cards = save.cards.filter((card: { seriesId?: string; cardIndex?: number }) => {
+          if (typeof card?.seriesId !== 'string' || !card.seriesId.startsWith('tcg-')) return true;
+          try {
+            return world.specFor(card as never) !== null;
+          } catch {
+            return false;
+          }
+        });
+      }
       // Names must be applied before any card renders from the save.
       world.applyOverrides(sanitizeOverrides(save.overrides ?? {}).set);
       useCollection.setState({

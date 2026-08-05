@@ -777,7 +777,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     const scan = tcgScan(spec.tcg.setKey, spec.tcg.poke.num);
     const holo = spec.tcg.chase || spec.tcg.poke.rarity === 'holo';
     if (scan) return renderScanCard(scan, holo, widthPx);
-    const l = spec.tcg.setKey === 'currency'
+    const l = spec.tcg.setKey === 'currency' || spec.tcg.setKey.startsWith('vault')
       ? renderCurrencyCard(spec.tcg.poke, widthPx)
       : renderPokeCard(spec.tcg.poke, widthPx);
     return { print: l.print, foilMask: l.foilMask, widthPx: l.widthPx, heightPx: l.heightPx };

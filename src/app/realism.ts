@@ -17,7 +17,7 @@ import { sanitizeOverrides } from '../state/overrides';
 import { useCollection } from '../state/collection';
 import { world } from '../state/world';
 import {
-  importRealPhotos, importSetArt, loadCachedPhotos, loadCachedScans,
+  importRealPhotos, importSetArt, importVaultArt, loadCachedPhotos, loadCachedScans,
   photoCount, scanCount,
 } from './artcache';
 
@@ -107,6 +107,27 @@ export async function runRealismImport(
     scansFailed += r.failed;
     hires += hiresNums.size;
   }
+
+  // 3b. THE VAULT — real images of the top-30 grails per sport, from
+  // CORS-verified public sources straight into the device cache.
+  const vaultCards = new Map<string, string>();
+  try {
+    const vault = await fetch('presets/vault-art.json').then(x => x.json());
+    const { world: w2 } = await import('../state/world');
+    for (const vs of (await import('../engine/cards/tcg')).VAULT_SETS) {
+      for (const c of vs.cards) vaultCards.set(`${vs.id.replace('tcg-', '')}:${c.num}`, `${c.name} — ${c.type}`);
+    }
+    void w2;
+    const vr = await importVaultArt(vault.sets ?? {}, (done, failed, total, lastKey) => {
+      onProgress(`3/4 — THE VAULT… ${done + failed}/${total}`);
+      emit({
+        stage: 3, stageName: STAGES[2], done: grandTotal + done + failed, total: grandTotal + total,
+        highlight: lastKey ? { label: `${vaultCards.get(lastKey) ?? lastKey} — GRAIL VAULTED`, hot: true } : undefined,
+      });
+    });
+    scansDone += vr.done;
+    scansFailed += vr.failed;
+  } catch { /* manifest missing — vault art arrives next import */ }
 
   // 4. Unlock the TCG sets and decode everything into the card press.
   onProgress('4/4 — unlocking the vault…');

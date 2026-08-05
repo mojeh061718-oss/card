@@ -30,6 +30,7 @@ import { releasesThrough, SHELF_LIFE_DAYS, type Release } from '../engine/cards/
 import { playerForm, hotMovers, statLine, type Mover } from '../engine/world/career';
 import {
   TCG_SETS, TCG_RUNGS, tcgClasses, tcgPopulation, tcgCardOf, tcgGradeMultiplier,
+  VAULT_SETS,
   openTcgPack, openTcgBox, tcgProducts, TCG_CARDS_PER_PACK, TCG_PACKS_PER_BOX,
   type TcgSetData, type TcgClasses,
 } from '../engine/cards/tcg';
@@ -148,10 +149,11 @@ class World {
 
   enableTcg(): void {
     if (this.tcgEnabled) return;
-    for (const set of TCG_SETS) {
+    for (const set of [...TCG_SETS, ...VAULT_SETS]) {
       const seed = childSeed(WORLD_SEED, `tcg:${set.id}`);
       const isVintage = set.id === 'tcg-base';
       const isCurrency = set.id === 'tcg-currency';
+      const isVault = set.id.startsWith('tcg-vault');
       const ladder: ParallelDef[] = TCG_RUNGS.map((r, i) => ({
         id: i,
         name: r === 'holo' ? (isCurrency ? 'Prism Foil' : 'Holo Rare')
@@ -172,8 +174,9 @@ class World {
         isRookie: false, isAuto: false, autoInk: null, autoSticker: false,
         insertName: null,
       }));
+      const vaultSport = set.id === 'tcg-vault-bb' ? 'baseball' as const : 'football' as const;
       const players: Player[] = set.cards.map((c, i) => ({
-        id: i, sport: 'football', teamId: 0,
+        id: i, sport: vaultSport, teamId: 0,
         first: c.name, last: '',
         position: c.type.toUpperCase(), jersey: c.num,
         bornYear: set.year, debutYear: set.year, talent: 50,
@@ -188,8 +191,9 @@ class World {
       }];
       const def: SeriesDef = {
         id: set.id, seed, year: set.year,
-        brand: isVintage ? 'Base Set' : isCurrency ? 'Mint Works' : 'Pokemon',
-        line: isVintage ? '1st Edition' : isCurrency ? 'Currency' : '151',
+        brand: isVault ? 'The Vault' : isVintage ? 'Base Set' : isCurrency ? 'Mint Works' : 'Pokemon',
+        line: isVault ? (set.id.endsWith('fb') ? 'Football Grails' : 'Baseball Grails')
+          : isVintage ? '1st Edition' : isCurrency ? 'Currency' : '151',
         sport: 'football', name: set.name,
         archetype: LADDER_ARCHETYPES[0],
         ladder, checklist,
@@ -208,6 +212,37 @@ class World {
     }
   }
 
+  /**
+   * THE VAULT: grails are never sold as product — a copy surfaces on the
+   * open market now and then, drawn from the same finite population, so
+   * the world can genuinely run out. ~1 surfacing every ~8 days.
+   */
+  vaultFinds(day: number): { pull: PulledCard; ask: number }[] {
+    if (!this.tcgEnabled) return [];
+    const rng = Rng.from(childSeed(WORLD_SEED, 'vault-market'), `day:${day}`);
+    if (!rng.chance(0.13)) return [];
+    const setId = rng.chance(0.5) ? 'tcg-vault-fb' : 'tcg-vault-bb';
+    const rt = this.series.get(setId);
+    const extra = this.tcgExtra.get(setId);
+    if (!rt || !extra) return [];
+    // Cheaper grails surface far more often than the crown jewels.
+    const idx = Math.min(
+      extra.set.cards.length - 1,
+      Math.floor(Math.pow(rng.float(), 0.55) * extra.set.cards.length));
+    const card = extra.set.cards[idx];
+    const rung = idx * 5 + TCG_RUNGS.indexOf(card.rarity);
+    const d = rt.pop.drawFrom(rng, [rung]);
+    if (!d) return [];
+    this.supplyRevision++;
+    return [{
+      pull: {
+        seriesId: setId, cardIndex: idx, parallelId: d.slotId % 5,
+        serial: d.serial, numberedTo: null,
+      },
+      ask: Math.round(card.value * (1.02 + rng.float() * 0.16)),
+    }];
+  }
+
   private tcgSet(seriesId: string): TcgSetData {
     const x = this.tcgExtra.get(seriesId);
     if (!x) throw new Error(`TCG not enabled: ${seriesId}`);
@@ -224,6 +259,7 @@ class World {
       price: number; left: number; blurb: string;
     }[] = [];
     for (const [seriesId, { set }] of this.tcgExtra) {
+      if (seriesId.startsWith('tcg-vault')) continue; // grails surface, never ship
       const isVintage = seriesId === 'tcg-base';
       for (const p of tcgProducts(set)) {
         const rng = Rng.from(this.get(seriesId).def.seed, `tcg-alloc:${p.key}:${day}`);
@@ -491,7 +527,8 @@ class World {
         artSeed: artSeedFor(rt.def.seed, pull.cardIndex),
         tcg: {
           setKey: set.id === 'tcg-base' ? 'base'
-            : set.id === 'tcg-currency' ? 'currency' : '151',
+            : set.id === 'tcg-currency' ? 'currency'
+              : set.id.startsWith('tcg-vault') ? set.id.replace('tcg-', '') : '151',
           chase: card.rarity === 'chase',
           poke: {
             name: card.name, type: card.type,
@@ -642,8 +679,10 @@ class World {
       const rung = this.get(pull.seriesId).def.ladder[pull.parallelId];
       return {
         player: card.name,
-        tier: `${rung.name} · ${card.num}/${card.outOf ?? set.size}` +
-          (set.id === 'tcg-base' ? ' · 1st Edition' : ''),
+        tier: set.id.startsWith('tcg-vault')
+          ? `${card.type} · GRAIL`
+          : `${rung.name} · ${card.num}/${card.outOf ?? set.size}` +
+            (set.id === 'tcg-base' ? ' · 1st Edition' : ''),
         series: set.name,
       };
     }
@@ -779,7 +818,13 @@ class World {
   restorePopulations(data: Record<string, number[]>): void {
     for (const [id, drawn] of Object.entries(data)) {
       const rt = this.series.get(id);
-      if (rt) rt.pop.restoreState(Uint32Array.from(drawn));
+      if (!rt) continue;
+      try {
+        rt.pop.restoreState(Uint32Array.from(drawn));
+      } catch {
+        // A set's checklist changed size across an update (Currency S1->S5):
+        // that ONE set reboots with fresh supply; the rest of the save lives.
+      }
     }
   }
 }

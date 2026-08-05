@@ -17,10 +17,10 @@
 import { Rng, childSeed, hashString } from '../rng';
 import { Population, type DrawResult } from './population';
 import type { PulledCard } from './series';
-import { TCG_SETS, type TcgCardData, type TcgSetData } from './tcgdata';
+import { TCG_SETS, VAULT_SETS, type TcgCardData, type TcgSetData } from './tcgdata';
 
 export type { TcgCardData, TcgSetData };
-export { TCG_SETS };
+export { TCG_SETS, VAULT_SETS };
 
 /** Ladder rung per rarity — slotId = cardIndex * 5 + rung. */
 export const TCG_RUNGS = ['common', 'uncommon', 'rare', 'holo', 'chase'] as const;

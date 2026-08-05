@@ -210,15 +210,16 @@ function avgValue(set: (typeof TCG_SETS)[number], rarity: string): number {
 describe('currency series', () => {
   const money = TCG_SETS.find(s => s.id === 'tcg-currency')!;
 
-  it('ships 50 cards plus the 1 BTC redemption chase', () => {
-    expect(money.cards.length).toBe(51);
-    expect(money.size).toBe(50);
+  it('ships the real Series 5 checklist plus the 1 BTC redemption chase', () => {
+    expect(money.cards.length).toBe(121); // 120 base + redemption
+    expect(money.size).toBe(120);
     const chase = money.cards.find(c => c.rarity === 'chase')!;
     expect(chase.name).toContain('1 BTC');
     expect(chase.value).toBeGreaterThanOrEqual(90000);
     expect(chase.printRun).toBeLessThanOrEqual(150);
-    // The signature and crypto holos the set is famous for.
-    expect(money.cards.some(c => c.name.includes('Franklin') && c.rarity === 'holo')).toBe(true);
+    // The Bitcoin/Satoshi foils the real set is famous for.
+    expect(money.cards.filter(c => c.name === 'Bitcoin').length).toBeGreaterThanOrEqual(8);
+    expect(money.cards.filter(c => c.name === 'Satoshi Nakamoto').length).toBeGreaterThanOrEqual(8);
     expect(money.cards.some(c => c.name.includes('Bitcoin') && c.rarity === 'holo')).toBe(true);
   });
 
