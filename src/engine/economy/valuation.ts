@@ -58,7 +58,9 @@ export function intrinsicValue(v: ValuationInputs): number {
   // Scarcity: value scales with rarity but with diminishing exponent so a
   // 1/1 is extraordinary without being absurd relative to a /5.
   const scarcity = Math.pow(20000 / Math.max(1, v.parallel.printRun), 0.62);
-  let value = 0.35 * hype * scarcity * Math.pow(v.parallel.desirability, 0.25);
+  // Coefficient calibrated so base commons are genuinely junk (cents), which
+  // is what makes digging bulk a hunt rather than a payday.
+  let value = 0.04 * hype * scarcity * Math.pow(v.parallel.desirability, 0.18);
   if (v.isRookie) value *= 2.6;      // rookie cards carry the hobby
   if (v.isAuto) value *= 4.2;
   value *= v.setFactor;

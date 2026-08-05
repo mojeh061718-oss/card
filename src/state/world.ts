@@ -10,9 +10,10 @@
 import { seedFromText, Rng, childSeed } from '../engine/rng';
 import { generateLeague, type Player, type Team, type Sport } from '../engine/world/teams';
 import {
-  buildSeries, makePopulation, classifySlots, openPack, renderInputs, rankOf,
+  buildSeries, makePopulation, classifySlots, openPack, renderInputs, rankOf, decodeSlot,
   type SeriesDef, type PulledCard,
 } from '../engine/cards/series';
+import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/economy/lots';
 import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
 import type { Population } from '../engine/cards/population';
@@ -70,6 +71,45 @@ class World {
   ripPack(seriesId: string): PulledCard[] {
     const rt = this.get(seriesId);
     return openPack(rt.def, rt.pop, this.packRng, rt.classes, 10, []);
+  }
+
+  get seriesIds(): string[] {
+    return [...this.series.keys()];
+  }
+
+  lotOffers(day: number): LotOffer[] {
+    return generateLotOffers(WORLD_SEED, day, this.seriesIds);
+  }
+
+  /**
+   * Dig a lot: draws its contents from the same finite populations packs
+   * use, so anything found here is genuinely removed from world supply.
+   */
+  digLot(offer: LotOffer): PulledCard[] {
+    const rt = this.get(offer.seriesId);
+    const rng = new Rng(offer.seed);
+    const w = lotClassWeights(offer);
+    const out: PulledCard[] = [];
+    const classNames = ['base', 'foil', 'numbered', 'auto'] as const;
+    const weights = [w.base, w.foil, w.numbered, w.auto];
+    for (let i = 0; i < offer.cardCount; i++) {
+      const cls = rng.pickWeighted(classNames, weights);
+      const ids = cls === 'base' ? rt.classes.base
+        : cls === 'foil' ? rt.classes.foil
+        : cls === 'numbered' ? rt.classes.numbered
+        : rt.classes.autos;
+      const drawn = rt.pop.drawFrom(rng, ids) ?? rt.pop.drawFrom(rng, rt.classes.base);
+      if (!drawn) break;
+      const { cardIndex, parallelId } = decodeSlot(rt.def, drawn.slotId);
+      out.push({
+        seriesId: rt.def.id,
+        cardIndex,
+        parallelId,
+        serial: drawn.serial,
+        numberedTo: rt.def.ladder[parallelId].numberedTo,
+      });
+    }
+    return out;
   }
 
   conditionOf(pull: PulledCard): Condition {

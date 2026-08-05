@@ -4,8 +4,9 @@ import { RipScreen } from './RipScreen';
 import { BinderScreen } from './BinderScreen';
 import { GradingScreen } from './GradingScreen';
 import { MarketScreen } from './MarketScreen';
+import { SourcingScreen } from './SourcingScreen';
 
-type Route = 'rip' | 'binder' | 'grade' | 'market' | 'devlab';
+type Route = 'hunt' | 'rip' | 'binder' | 'grade' | 'market' | 'devlab';
 
 export function App() {
   const [route, setRoute] = useState<Route>(
@@ -18,18 +19,20 @@ export function App() {
           : route === 'binder' ? <BinderScreen />
           : route === 'grade' ? <GradingScreen />
           : route === 'market' ? <MarketScreen />
+          : route === 'hunt' ? <SourcingScreen />
           : <RipScreen />}
       </div>
       <nav style={{
-        display: 'flex', justifyContent: 'center', gap: 18, padding: '10px 0 4px',
+        display: 'flex', justifyContent: 'center', gap: 12, padding: '10px 0 4px',
         borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, letterSpacing: 2,
       }}>
-        {(['rip', 'binder', 'grade', 'market', 'devlab'] as Route[]).map(r => (
+        {(['hunt', 'rip', 'binder', 'grade', 'market', 'devlab'] as Route[]).map(r => (
           <button key={r} onClick={() => setRoute(r)} style={{
             background: 'none', border: 'none', color: route === r ? '#d4a017' : 'rgba(244,242,236,0.5)',
-            fontWeight: 700, letterSpacing: 2, fontSize: 12,
+            fontWeight: 700, letterSpacing: 1.5, fontSize: 11,
           }}>
-            {r === 'rip' ? 'RIP' : r === 'binder' ? 'BINDER' : r === 'grade' ? 'GRADE' : r === 'market' ? 'MARKET' : 'LAB'}
+            {r === 'hunt' ? 'HUNT' : r === 'rip' ? 'RIP' : r === 'binder' ? 'BINDER'
+              : r === 'grade' ? 'GRADE' : r === 'market' ? 'MARKET' : 'LAB'}
           </button>
         ))}
       </nav>

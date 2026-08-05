@@ -66,12 +66,16 @@ interface CollectionState {
   listings: Listing[];
   /** Settled auctions awaiting acknowledgement. */
   saleFeed: SaleRecord[];
+  /** Lot offer ids already bought, so leads don't repeat. */
+  dugLots: string[];
   addPulls(pulls: PulledCard[]): void;
   submitForGrading(uids: number[], companyKey: string, tier: Tier): void;
   endDay(): void;
   /** Reveal one returned slab: applies the grade, returns the instance. */
   revealReturn(uid: number): CardInstance | null;
   quickSell(uid: number): SaleRecord | null;
+  spendCash(amount: number): void;
+  markLotDug(id: string): void;
   listAtAuction(uid: number, days: number, reserve: number): void;
   dismissSale(uid: number): void;
 }
@@ -105,6 +109,7 @@ function scheduleSave(state: CollectionState): void {
         returns: state.returns,
         listings: state.listings,
         saleFeed: state.saleFeed,
+        dugLots: state.dugLots,
         populations: world.savePopulations(),
       }, 'save-v1');
     } catch (err) {
@@ -123,6 +128,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
   returns: [],
   listings: [],
   saleFeed: [],
+  dugLots: [],
   addPulls(pulls) {
     const { cards, nextUid } = get();
     const stamped: CardInstance[] = pulls.map((p, i) => ({
@@ -252,6 +258,14 @@ export const useCollection = create<CollectionState>((set, get) => ({
     });
     scheduleSave(get());
   },
+  spendCash(amount) {
+    set({ cash: Math.max(0, get().cash - amount) });
+    scheduleSave(get());
+  },
+  markLotDug(id) {
+    set({ dugLots: [...get().dugLots, id].slice(-200) });
+    scheduleSave(get());
+  },
   dismissSale(uid) {
     set({ saleFeed: get().saleFeed.filter(s => s.uid !== uid) });
     scheduleSave(get());
@@ -277,6 +291,7 @@ export async function hydrateCollection(): Promise<void> {
         returns: save.returns ?? [],
         listings: save.listings ?? [],
         saleFeed: save.saleFeed ?? [],
+        dugLots: save.dugLots ?? [],
         hydrated: true,
       });
       // Rebuild the in-transit company map for already-arrived returns: the
