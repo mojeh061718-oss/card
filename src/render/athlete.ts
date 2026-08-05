@@ -7,8 +7,11 @@
  * which is the difference between an athlete and a mannequin. The torso is
  * a single closed silhouette with deltoids, a waist and hips.
  *
- * The whole figure is then cut out behind a white die-cut keyline, mirroring
- * real card construction: a crisp cutout floated over a printed backdrop.
+ * Every volume is lit by a single directional key light (opposite the
+ * motion vector), shaded as a cylinder with a core shadow and reflected
+ * light, so the figure reads as painted rather than flat-filled. The whole
+ * figure is then cut out behind a slim die-cut keyline, mirroring real card
+ * construction: a crisp cutout floated over a printed backdrop.
  *
  * Determinism: everything derives from (appearanceSeed, poseId, team colors).
  */
@@ -18,11 +21,11 @@ import type { Sport } from '../engine/world/teams';
 import { shade, withAlpha, mixHex } from './color';
 import {
   drawFootballHelmet, drawBattingHelmet, drawCap, drawGlove, drawMitt,
-  drawCleat, drawKneePad, drawBand,
+  drawCleat, drawKneePad, drawBand, drawFace,
 } from './equipment';
 import {
-  volume, limbShade, torsoPath, shoulderPad, neckColumn,
-  SPINDLE, TAPER_IN, BELLY, FLAT as FLATW,
+  volume, torsoPath, shoulderPad, neckColumn, jointShadow,
+  SPINDLE, TAPER_IN, BELLY, FLAT as FLATW, type Light,
 } from './anatomy';
 
 interface Pt { x: number; y: number }
@@ -90,6 +93,29 @@ export const POSES: PoseSpec[] = [
     prop: { kind: 'football', at: { x: 0.51, y: 0.055 }, angle: 0.25 },
   },
   {
+    // RB hurdling a would-be tackler: both knees driven high, ball locked to
+    // the chest, free arm thrown up and back for balance. Airborne.
+    id: 'rb-hurdle', sport: 'football', motion: { x: -0.6, y: -0.6 },
+    head: { x: 0.475, y: 0.16 }, neck: { x: 0.49, y: 0.24 }, pelvis: { x: 0.50, y: 0.50 },
+    shoulderNear: { x: 0.565, y: 0.295 }, elbowNear: { x: 0.625, y: 0.40 }, wristNear: { x: 0.545, y: 0.445 },
+    shoulderFar: { x: 0.425, y: 0.295 }, elbowFar: { x: 0.335, y: 0.235 }, wristFar: { x: 0.26, y: 0.135 },
+    hipNear: { x: 0.535, y: 0.50 }, kneeNear: { x: 0.645, y: 0.565 }, ankleNear: { x: 0.60, y: 0.70 }, toeNear: { x: 0.655, y: 0.735 },
+    hipFar: { x: 0.465, y: 0.50 }, kneeFar: { x: 0.35, y: 0.59 }, ankleFar: { x: 0.375, y: 0.735 }, toeFar: { x: 0.325, y: 0.785 },
+    prop: { kind: 'football', at: { x: 0.525, y: 0.435 }, angle: 0.9 },
+  },
+  {
+    // Ball carrier throwing a stiff-arm: far arm rammed straight out into
+    // the defender's space, ball high and tight on the near side, full
+    // sprint stride underneath.
+    id: 'stiff-arm', sport: 'football', motion: { x: -0.9, y: 0 },
+    head: { x: 0.465, y: 0.17 }, neck: { x: 0.485, y: 0.25 }, pelvis: { x: 0.52, y: 0.52 },
+    shoulderNear: { x: 0.575, y: 0.30 }, elbowNear: { x: 0.625, y: 0.405 }, wristNear: { x: 0.525, y: 0.44 },
+    shoulderFar: { x: 0.42, y: 0.30 }, elbowFar: { x: 0.30, y: 0.335 }, wristFar: { x: 0.19, y: 0.375 },
+    hipNear: { x: 0.552, y: 0.52 }, kneeNear: { x: 0.445, y: 0.635 }, ankleNear: { x: 0.40, y: 0.795 }, toeNear: { x: 0.33, y: 0.835 },
+    hipFar: { x: 0.488, y: 0.52 }, kneeFar: { x: 0.60, y: 0.645 }, ankleFar: { x: 0.70, y: 0.765 }, toeFar: { x: 0.775, y: 0.815 },
+    prop: { kind: 'football', at: { x: 0.505, y: 0.43 }, angle: 1.0 },
+  },
+  {
     // Batter at the contact point. Back foot pivoted with the heel to the
     // sky, front leg completely straight and rigid as a block, hips fully
     // open, back shoulder noticeably lower than the front, both hands
@@ -126,6 +152,28 @@ export const POSES: PoseSpec[] = [
     hipFar: { x: 0.468, y: 0.515 }, kneeFar: { x: 0.375, y: 0.655 }, ankleFar: { x: 0.335, y: 0.82 }, toeFar: { x: 0.275, y: 0.848 },
     prop: { kind: 'glove', at: { x: 0.245, y: 0.175 }, angle: -0.5 },
   },
+  {
+    // The home-run walk-off finish: bat wrapped behind the lead shoulder on
+    // the follow-through, chin up, watching it leave. Front leg locked.
+    id: 'hr-watch', sport: 'baseball', motion: { x: -0.35, y: -0.3 },
+    head: { x: 0.475, y: 0.17 }, neck: { x: 0.49, y: 0.25 }, pelvis: { x: 0.50, y: 0.53 },
+    shoulderNear: { x: 0.57, y: 0.30 }, elbowNear: { x: 0.635, y: 0.225 }, wristNear: { x: 0.575, y: 0.155 },
+    shoulderFar: { x: 0.43, y: 0.30 }, elbowFar: { x: 0.395, y: 0.21 }, wristFar: { x: 0.52, y: 0.165 },
+    hipNear: { x: 0.533, y: 0.53 }, kneeNear: { x: 0.595, y: 0.685 }, ankleNear: { x: 0.625, y: 0.835 }, toeNear: { x: 0.685, y: 0.862 },
+    hipFar: { x: 0.467, y: 0.53 }, kneeFar: { x: 0.425, y: 0.70 }, ankleFar: { x: 0.405, y: 0.855 }, toeFar: { x: 0.345, y: 0.875 },
+    prop: { kind: 'bat', at: { x: 0.578, y: 0.158 }, angle: -2.2 },
+  },
+  {
+    // Center fielder robbing a homer at the wall — glove arm at full
+    // vertical stretch, body long, both feet off the grass.
+    id: 'wall-robbery', sport: 'baseball', motion: { x: -0.2, y: -0.9 },
+    head: { x: 0.49, y: 0.20 }, neck: { x: 0.50, y: 0.275 }, pelvis: { x: 0.50, y: 0.55 },
+    shoulderNear: { x: 0.565, y: 0.315 }, elbowNear: { x: 0.60, y: 0.205 }, wristNear: { x: 0.615, y: 0.10 },
+    shoulderFar: { x: 0.435, y: 0.315 }, elbowFar: { x: 0.385, y: 0.42 }, wristFar: { x: 0.335, y: 0.50 },
+    hipNear: { x: 0.53, y: 0.55 }, kneeNear: { x: 0.575, y: 0.70 }, ankleNear: { x: 0.545, y: 0.83 }, toeNear: { x: 0.578, y: 0.872 },
+    hipFar: { x: 0.47, y: 0.55 }, kneeFar: { x: 0.40, y: 0.67 }, ankleFar: { x: 0.43, y: 0.80 }, toeFar: { x: 0.395, y: 0.85 },
+    prop: { kind: 'glove', at: { x: 0.625, y: 0.075 }, angle: 0.35 },
+  },
 ];
 
 export function posesFor(sport: Sport): PoseSpec[] {
@@ -146,6 +194,8 @@ export interface AthleteStyle {
   /** Nickname wordmark across the chest. */
   wordmark: string;
   pinstripes: boolean; // baseball whites
+  /** Mirrored visor on football helmets — the money look. */
+  visor: boolean;
 }
 
 export function athleteStyle(
@@ -163,6 +213,7 @@ export function athleteStyle(
     sport,
     wordmark,
     pinstripes: sport === 'baseball' && pantsWhite && rng.chance(0.5),
+    visor: sport === 'football' && rng.chance(0.4),
   };
 }
 
@@ -192,14 +243,18 @@ export function drawAthlete(
   const skinDark = shade(style.skin, -0.08);
   const jerseyDark = shade(style.jersey, -0.12);
   const pantsDark = shade(style.pants, -0.1);
-  const far = (c: string) => shade(c, -0.1);
+  // Far limbs recede with ATMOSPHERE (cooler, softer), not blackness — a
+  // pure darken turns dark jerseys into detached black shapes.
+  const far = (c: string) => mixHex(shade(c, -0.05), '#5a6a80', 0.22);
 
-  // Light comes from the side the figure is moving away from.
-  const lightX = -pose.motion.x, lightY = -pose.motion.y;
+  // One key light for the whole figure, opposite the motion vector.
+  const mlen = Math.hypot(pose.motion.x, pose.motion.y) || 1;
+  const light: Light = { x: -pose.motion.x / mlen, y: -pose.motion.y / mlen };
 
   // --- FAR limbs (painter's order, and dimmed for depth) ---
-  volume(ctx, P.sF, P.eF, armW * 0.95, TAPER_IN, far(jerseyDark), 0.06);
-  volume(ctx, P.eF, P.wF, foreW * 0.95, BELLY, far(skinDark), -0.05);
+  volume(ctx, P.sF, P.eF, armW * 0.95, TAPER_IN, far(jerseyDark), 0.06, light);
+  volume(ctx, P.eF, P.wF, foreW * 0.95, BELLY, far(skinDark), -0.05, light);
+  jointShadow(ctx, P.eF, foreW * 0.75, 0.14);
   const farArmAngle = Math.atan2(P.wF.y - P.eF.y, P.wF.x - P.eF.x);
   if (style.sport === 'football') {
     drawGlove(ctx, P.wF.x, P.wF.y, foreW * 1.1, farArmAngle,
@@ -210,11 +265,12 @@ export function drawAthlete(
     ctx.fillStyle = far(skinDark);
     ctx.fill();
   }
-  volume(ctx, P.hF, P.kF, legW * 0.98, SPINDLE, far(pantsDark), 0.05);
-  volume(ctx, P.kF, P.aF, calfW * 1.0, BELLY, far(pantsDark), -0.04);
+  volume(ctx, P.hF, P.kF, legW * 0.98, SPINDLE, far(pantsDark), 0.05, light);
+  volume(ctx, P.kF, P.aF, calfW * 1.0, BELLY, far(pantsDark), -0.04, light);
+  jointShadow(ctx, P.kF, calfW * 0.85, 0.14);
   if (style.sport === 'baseball') {
     const midF = { x: (P.kF.x + P.aF.x) / 2, y: (P.kF.y + P.aF.y) / 2 };
-    volume(ctx, midF, P.aF, calfW * 0.88, TAPER_IN, far(style.jersey));
+    volume(ctx, midF, P.aF, calfW * 0.88, TAPER_IN, far(style.jersey), 0, light);
   }
   drawCleat(ctx, P.aF.x, P.aF.y, P.tF.x, P.tF.y, calfW * 1.05, '#26262c', far(style.trim));
   if (style.sport === 'football') {
@@ -224,7 +280,16 @@ export function drawAthlete(
   }
 
   // --- Neck, then torso silhouette ---
-  neckColumn(ctx, P.neck, { x: P.head.x, y: P.head.y + 0.035 * u }, u, skinDark);
+  neckColumn(ctx, P.neck, { x: P.head.x, y: P.head.y + 0.035 * u }, u, skinDark, light);
+  if (style.sport === 'football') {
+    // Padded collar riding up the neck — shortens the bare-skin column and
+    // reads as the jersey meeting the helmet, the way pads actually sit.
+    const collarMid = {
+      x: P.neck.x + (P.head.x - P.neck.x) * 0.3,
+      y: P.neck.y + (P.head.y - P.neck.y) * 0.3,
+    };
+    volume(ctx, P.neck, collarMid, u * 0.075, TAPER_IN, shade(style.jersey, -0.06), 0, light);
+  }
 
   torsoPath(ctx, P.neck, P.sN, P.sF, P.hN, P.hF, u);
   ctx.fillStyle = style.jersey;
@@ -235,14 +300,23 @@ export function drawAthlete(
   torsoPath(ctx, P.neck, P.sN, P.sF, P.hN, P.hF, u);
   ctx.clip();
 
-  // Form shading: chest catches light, flanks fall away.
+  // Form shading: the chest plane facing the light burns bright, the flanks
+  // roll away through a core shadow with a reflected kick at the far edge.
   const shoulderW = Math.hypot(P.sN.x - P.sF.x, P.sN.y - P.sF.y);
+  const chestSpan = Math.max(shoulderW, u * 0.2);
+  const torsoMid = {
+    x: (P.neck.x + P.pelvis.x) / 2,
+    y: (P.neck.y + P.pelvis.y) / 2,
+  };
   const bodyGrad = ctx.createLinearGradient(
-    P.sF.x - shoulderW * 0.5, P.sF.y, P.sN.x + shoulderW * 0.5, P.hN.y,
+    torsoMid.x + light.x * chestSpan * 0.8, torsoMid.y - chestSpan * 0.3,
+    torsoMid.x - light.x * chestSpan * 0.8, torsoMid.y + chestSpan * 0.3,
   );
-  bodyGrad.addColorStop(0, withAlpha('#000014', 0.34));
-  bodyGrad.addColorStop(0.42, withAlpha('#ffffff', 0.12));
-  bodyGrad.addColorStop(1, withAlpha('#000014', 0.3));
+  bodyGrad.addColorStop(0, withAlpha('#ffffff', 0.2));
+  bodyGrad.addColorStop(0.3, withAlpha('#ffffff', 0.05));
+  bodyGrad.addColorStop(0.62, withAlpha('#000014', 0.16));
+  bodyGrad.addColorStop(0.88, withAlpha('#000014', 0.38));
+  bodyGrad.addColorStop(1, withAlpha('#000014', 0.22));
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(x, y, w, h);
 
@@ -259,6 +333,12 @@ export function drawAthlete(
     );
     ctx.stroke();
   }
+  // Shadow pooling where the jersey tucks into the pants.
+  const tuck = ctx.createRadialGradient(waist.x, waist.y, 0, waist.x, waist.y, shoulderW * 0.8);
+  tuck.addColorStop(0, withAlpha('#000014', 0.22));
+  tuck.addColorStop(1, withAlpha('#000014', 0));
+  ctx.fillStyle = tuck;
+  ctx.fillRect(x, y, w, h);
 
   const lean = Math.atan2(P.pelvis.x - P.neck.x, P.pelvis.y - P.neck.y);
   if (style.pinstripes) {
@@ -350,13 +430,12 @@ export function drawAthlete(
   }
 
   // --- NEAR leg ---
-  volume(ctx, P.hN, P.kN, legW * 1.06, SPINDLE, style.pants, 0.05);
-  limbShade(ctx, P.hN, P.kN, legW * 1.06, lightX, lightY);
-  volume(ctx, P.kN, P.aN, calfW * 1.05, BELLY, style.pants, -0.05);
-  limbShade(ctx, P.kN, P.aN, calfW * 1.05, lightX, lightY);
+  volume(ctx, P.hN, P.kN, legW * 1.06, SPINDLE, style.pants, 0.05, light);
+  volume(ctx, P.kN, P.aN, calfW * 1.05, BELLY, style.pants, -0.05, light);
+  jointShadow(ctx, P.kN, calfW * 0.9, 0.15);
   if (style.sport === 'baseball') {
     const mid = { x: (P.kN.x + P.aN.x) / 2, y: (P.kN.y + P.aN.y) / 2 };
-    volume(ctx, mid, P.aN, calfW * 0.92, TAPER_IN, style.jersey);
+    volume(ctx, mid, P.aN, calfW * 0.92, TAPER_IN, style.jersey, 0, light);
     const quarter = { x: (mid.x + P.kN.x) / 2, y: (mid.y + P.kN.y) / 2 };
     volume(ctx, quarter, mid, calfW * 0.96, FLATW, style.trim);
   }
@@ -368,14 +447,25 @@ export function drawAthlete(
   }
 
   // --- Head + headgear ---
-  const headR = 0.058 * u;
+  const headR = 0.055 * u;
   const dir = pose.motion.x >= 0 ? 1 : -1;
   if (style.sport === 'football') {
-    drawFootballHelmet(ctx, P.head.x, P.head.y, headR, dir, style.jersey, style.trim, style.skin);
+    // Seated slightly low so the shell overlaps the neck — no bare gap.
+    drawFootballHelmet(
+      ctx, P.head.x, P.head.y + 0.012 * u, headR, dir,
+      style.jersey, style.trim, style.skin, style.visor,
+    );
   } else {
     ctx.beginPath();
     ctx.ellipse(P.head.x, P.head.y, headR * 0.9, headR * 0.98, 0, 0, Math.PI * 2);
-    ctx.fillStyle = style.skin;
+    const hg = ctx.createRadialGradient(
+      P.head.x + dir * headR * 0.35, P.head.y - headR * 0.2, headR * 0.1,
+      P.head.x, P.head.y, headR * 1.2,
+    );
+    hg.addColorStop(0, shade(style.skin, 0.08));
+    hg.addColorStop(0.6, style.skin);
+    hg.addColorStop(1, shade(style.skin, -0.16));
+    ctx.fillStyle = hg;
     ctx.fill();
     // Jawline shadow so the head has a front and a side.
     ctx.beginPath();
@@ -388,28 +478,20 @@ export function drawAthlete(
     } else {
       drawCap(ctx, P.head.x, P.head.y, headR, dir, style.jersey, style.trim);
     }
-    ctx.fillStyle = 'rgba(27, 16, 8, 0.82)';
-    ctx.beginPath();
-    ctx.ellipse(P.head.x + dir * headR * 0.44, P.head.y + headR * 0.1, headR * 0.1, headR * 0.07, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(P.head.x + dir * headR * 0.02, P.head.y + headR * 0.14, headR * 0.09, headR * 0.065, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(24, 20, 16, 0.42)';
-    ctx.beginPath();
-    ctx.ellipse(P.head.x + dir * headR * 0.44, P.head.y + headR * 0.3, headR * 0.16, headR * 0.07, 0, 0, Math.PI * 2);
-    ctx.fill();
+    drawFace(ctx, P.head.x + dir * headR * 0.12, P.head.y + headR * 0.12, headR * 0.85, dir, style.skin);
   }
 
   // --- NEAR arm, over everything ---
-  volume(ctx, P.sN, P.eN, armW * 1.06, TAPER_IN, style.jersey, 0.07);
-  limbShade(ctx, P.sN, P.eN, armW * 1.06, lightX, lightY);
-  // Sleeve cuff.
-  const cuffA = { x: P.sN.x + (P.eN.x - P.sN.x) * 0.44, y: P.sN.y + (P.eN.y - P.sN.y) * 0.44 };
-  const cuffB = { x: P.sN.x + (P.eN.x - P.sN.x) * 0.56, y: P.sN.y + (P.eN.y - P.sN.y) * 0.56 };
-  volume(ctx, cuffA, cuffB, armW * 1.02, FLATW, style.trim);
-  volume(ctx, P.eN, P.wN, foreW * 1.02, BELLY, style.skin, -0.06);
-  limbShade(ctx, P.eN, P.wN, foreW * 1.02, lightX, lightY);
+  volume(ctx, P.sN, P.eN, armW * 1.06, TAPER_IN, style.jersey, 0.07, light);
+  // Sleeve cuff: a trim ring ACROSS the arm, not a blob on it.
+  const armAngle = Math.atan2(P.eN.y - P.sN.y, P.eN.x - P.sN.x);
+  drawBand(
+    ctx,
+    P.sN.x + (P.eN.x - P.sN.x) * 0.52, P.sN.y + (P.eN.y - P.sN.y) * 0.52,
+    armW * 0.98, armAngle + Math.PI / 2, style.trim,
+  );
+  volume(ctx, P.eN, P.wN, foreW * 1.02, BELLY, style.skin, -0.06, light);
+  jointShadow(ctx, P.eN, foreW * 0.8, 0.14);
   const nearArmAngle = Math.atan2(P.wN.y - P.eN.y, P.wN.x - P.eN.x);
   drawBand(
     ctx,
@@ -438,24 +520,44 @@ export function drawAthlete(
         const rw = 0.062 * u, rh = 0.038 * u;
         ctx.beginPath();
         ctx.ellipse(0, 0, rw, rh, 0, 0, Math.PI * 2);
-        ctx.fillStyle = '#6b3a1f';
+        const bg = ctx.createLinearGradient(0, -rh, 0, rh);
+        bg.addColorStop(0, '#8a4a26');
+        bg.addColorStop(0.5, '#6b3a1f');
+        bg.addColorStop(1, '#4a2715');
+        ctx.fillStyle = bg;
         ctx.fill();
         ctx.strokeStyle = withAlpha('#3d2113', 0.6);
         ctx.lineWidth = 1;
         ctx.stroke();
+        // Laces: a spine with cross-stitches, not a bare line.
         ctx.strokeStyle = '#f0ede4';
-        ctx.lineWidth = rh * 0.13;
+        ctx.lineWidth = rh * 0.1;
         ctx.beginPath();
-        ctx.moveTo(-rw * 0.38, 0);
-        ctx.lineTo(rw * 0.38, 0);
+        ctx.moveTo(-rw * 0.4, -rh * 0.35);
+        ctx.lineTo(rw * 0.4, -rh * 0.35);
         ctx.stroke();
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * rw * 0.16, -rh * 0.52);
+          ctx.lineTo(i * rw * 0.16, -rh * 0.18);
+          ctx.stroke();
+        }
+        // Sheen along the top panel.
+        ctx.beginPath();
+        ctx.ellipse(0, rh * 0.28, rw * 0.62, rh * 0.2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = withAlpha('#ffffff', 0.12);
+        ctx.fill();
         break;
       }
       case 'baseball': {
         const r = 0.026 * u;
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.fillStyle = '#f3f1e8';
+        const sg = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 1.3);
+        sg.addColorStop(0, '#ffffff');
+        sg.addColorStop(0.7, '#f3f1e8');
+        sg.addColorStop(1, '#cfccc0');
+        ctx.fillStyle = sg;
         ctx.fill();
         ctx.strokeStyle = '#c0392b';
         ctx.lineWidth = r * 0.2;
@@ -470,16 +572,35 @@ export function drawAthlete(
       case 'bat': {
         const bl = 0.32 * u;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = '#b98a4a';
+        // Handle.
+        ctx.strokeStyle = '#a3763c';
         ctx.lineWidth = 0.024 * u;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(bl * 0.35, 0);
         ctx.stroke();
+        // Knob.
+        ctx.beginPath();
+        ctx.arc(-0.004 * u, 0, 0.018 * u, 0, Math.PI * 2);
+        ctx.fillStyle = '#8a6232';
+        ctx.fill();
+        // Barrel with a wood-grain gradient along its length.
+        const wg = ctx.createLinearGradient(bl * 0.35, -0.02 * u, bl, 0.02 * u);
+        wg.addColorStop(0, '#c89a58');
+        wg.addColorStop(0.5, '#b98a4a');
+        wg.addColorStop(1, '#95692f');
+        ctx.strokeStyle = wg;
         ctx.lineWidth = 0.042 * u;
         ctx.beginPath();
         ctx.moveTo(bl * 0.35, 0);
         ctx.lineTo(bl, 0);
+        ctx.stroke();
+        // Barrel sheen.
+        ctx.strokeStyle = withAlpha('#ffffff', 0.3);
+        ctx.lineWidth = 0.008 * u;
+        ctx.beginPath();
+        ctx.moveTo(bl * 0.45, -0.012 * u);
+        ctx.lineTo(bl * 0.95, -0.012 * u);
         ctx.stroke();
         break;
       }
@@ -494,8 +615,9 @@ export function drawAthlete(
 }
 
 /**
- * Full figure layer with cel shading + rim light, rendered offscreen and
- * blitted with a cutout drop shadow. Motion streaks go behind the figure.
+ * Full figure layer with painted lighting + rim light, rendered offscreen
+ * and blitted with a cutout drop shadow. Motion streaks and a ground
+ * contact shadow go behind the figure.
  */
 export function renderAthleteLayer(
   target: CanvasRenderingContext2D,
@@ -512,19 +634,41 @@ export function renderAthleteLayer(
 
   drawAthlete(ctx, pose, style, 0, 0, w, h, appearanceSeed);
 
-  // Cel shading composited into the silhouette.
+  // Global light wash composited into the silhouette — unifies every part
+  // under one key light without flattening the per-limb shading.
   ctx.globalCompositeOperation = 'source-atop';
   const mx = pose.motion.x, my = pose.motion.y;
   const len = Math.hypot(mx, my) || 1;
   const lx = -mx / len, ly = -my / len; // light from opposite the motion
   const cx = w / 2, cy = h / 2, r = Math.max(w, h) * 0.62;
   const shadeGrad = ctx.createLinearGradient(cx + lx * r, cy + ly * r, cx - lx * r, cy - ly * r);
-  shadeGrad.addColorStop(0, 'rgba(255,255,255,0.12)');
+  shadeGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
   shadeGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
-  shadeGrad.addColorStop(1, 'rgba(0,0,20,0.30)');
+  shadeGrad.addColorStop(1, 'rgba(0,0,20,0.26)');
   ctx.fillStyle = shadeGrad;
   ctx.fillRect(0, 0, w, h);
   ctx.globalCompositeOperation = 'source-over';
+
+  // Ground contact shadow: anchors the figure to the card instead of
+  // letting it float. Sits under the lowest foot.
+  const footXs = [pose.ankleNear, pose.toeNear, pose.ankleFar, pose.toeFar];
+  const lowY = Math.max(...footXs.map(p => p.y));
+  const midX = (pose.ankleNear.x + pose.ankleFar.x) / 2;
+  const gx = x + midX * w, gy = y + (lowY + 0.012) * h;
+  const grx = w * 0.2, gry = h * 0.022;
+  const ground = target.createRadialGradient(gx, gy, 0, gx, gy, grx);
+  ground.addColorStop(0, 'rgba(4, 4, 12, 0.4)');
+  ground.addColorStop(0.7, 'rgba(4, 4, 12, 0.16)');
+  ground.addColorStop(1, 'rgba(4, 4, 12, 0)');
+  target.save();
+  target.translate(gx, gy);
+  target.scale(1, gry / grx);
+  target.translate(-gx, -gy);
+  target.fillStyle = ground;
+  target.beginPath();
+  target.arc(gx, gy, grx, 0, Math.PI * 2);
+  target.fill();
+  target.restore();
 
   // Motion streaks behind the figure.
   target.save();
@@ -558,12 +702,12 @@ export function renderAthleteLayer(
   rctx.fillStyle = mixHex(accent, '#ffffff', 0.7);
   rctx.fillRect(0, 0, w, h);
   rctx.globalCompositeOperation = 'destination-out';
-  rctx.drawImage(off, lx * w * 0.014, ly * h * 0.014);
+  rctx.drawImage(off, lx * w * 0.012, ly * h * 0.012);
 
-  // Die-cut keyline. Premium inserts photoshop a thick WHITE sticker outline
-  // around the cutout — it separates the figure from any background far more
-  // aggressively than a dark line, and it's the single most recognizable
-  // trait of the style. A thin dark line outside it keeps the edge defined.
+  // Die-cut keyline. Premium inserts photoshop a white sticker outline
+  // around the cutout — it separates the figure from any background — but
+  // drawn heavy it reads as a toy. A slim keyline plus a tight dark contour
+  // keeps the cutout crisp and lets the painted figure carry the card.
   const keyline = (radius: number, color: string): HTMLCanvasElement => {
     const c = document.createElement('canvas');
     c.width = off.width;
@@ -578,16 +722,16 @@ export function renderAthleteLayer(
     kctx.fillRect(0, 0, c.width, c.height);
     return c;
   };
-  const kr = Math.max(2, w * 0.0075);
-  const outline = keyline(kr * 1.5, 'rgba(18,18,26,0.55)');
+  const kr = Math.max(1.5, w * 0.0045);
+  const outline = keyline(kr * 1.8, 'rgba(14,14,22,0.6)');
   const sticker = keyline(kr, '#f7f5ef');
 
   // Blit: shadow → dark edge → white sticker → figure → rim.
   target.save();
-  target.shadowColor = 'rgba(0,0,0,0.55)';
-  target.shadowBlur = Math.max(8, w * 0.04);
-  target.shadowOffsetX = w * 0.014 * (mx >= 0 ? -1 : 1);
-  target.shadowOffsetY = h * 0.02;
+  target.shadowColor = 'rgba(0,0,0,0.5)';
+  target.shadowBlur = Math.max(8, w * 0.035);
+  target.shadowOffsetX = w * 0.012 * (mx >= 0 ? -1 : 1);
+  target.shadowOffsetY = h * 0.018;
   target.drawImage(outline, x, y);
   target.restore();
   target.drawImage(sticker, x, y);

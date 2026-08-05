@@ -16,9 +16,48 @@ import { useCollection, type SealedItem } from '../state/collection';
 import { formatMoney } from '../engine/economy/valuation';
 import { sfx, unlockAudio, heatTier } from './feel';
 
-const PRODUCT_ICON: Record<string, string> = {
-  retailPack: '🧧', hobbyPack: '✉️', hobbyBox: '📦', case: '🗄️',
-};
+/**
+ * Real product art on the shelf — the same procedural wrapper the rip
+ * ceremony uses, at thumbnail size, instead of an emoji placeholder.
+ * Cached per (series, product); the key carries `namesRevision` because the
+ * wrapper bakes in brand names (HANDOFF §6.1 — renames must invalidate).
+ */
+const wrapThumbCache = new Map<string, string>();
+
+function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: string }) {
+  const rev = world.namesRevision;
+  const url = useMemo(() => {
+    const key = `${seriesId}:${rev}`;
+    let u = wrapThumbCache.get(key);
+    if (!u) {
+      if (wrapThumbCache.size > 24) wrapThumbCache.clear();
+      u = renderPackWrapper(world.get(seriesId).def, 96, 136).toDataURL();
+      wrapThumbCache.set(key, u);
+    }
+    return u;
+  }, [seriesId, rev]);
+  const stack = productKey === 'case' ? 3 : productKey === 'hobbyBox' ? 2 : 1;
+  return (
+    <div style={{ position: 'relative', width: 38, height: 54, flexShrink: 0 }}>
+      {Array.from({ length: stack }, (_, i) => {
+        const k = stack - 1 - i; // back to front
+        return (
+          <img
+            key={i} src={url} alt=""
+            style={{
+              position: 'absolute',
+              left: -k * 4, top: -k * 3,
+              width: 38, height: 54,
+              borderRadius: 4,
+              boxShadow: '0 3px 10px rgba(0,0,0,0.55)',
+              filter: k > 0 ? `brightness(${1 - k * 0.25})` : undefined,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 export function WaxScreen() {
   const { cash, day, sealed, bought, buyWax, openSealed, addPulls, endDay } = useCollection();
@@ -71,7 +110,7 @@ export function WaxScreen() {
               const delta = now - item.pricePaid;
               return (
                 <button key={item.id} style={S.sealedRow} onClick={() => rip(item)}>
-                  <div style={{ fontSize: 26 }}>{PRODUCT_ICON[item.productKey]}</div>
+                  <ProductArt seriesId={item.seriesId} productKey={item.productKey} />
                   <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                     <div style={S.sealedName}>{p.name}</div>
                     <div style={S.sealedMeta}>{world.get(item.seriesId).def.name}</div>
@@ -104,7 +143,7 @@ export function WaxScreen() {
                 disabled={soldOut || !affordable}
                 onClick={() => buy(seriesId, product.key, price)}
               >
-                <div style={{ fontSize: 24 }}>{PRODUCT_ICON[product.key]}</div>
+                <ProductArt seriesId={seriesId} productKey={product.key} />
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={S.shelfName}>{product.name}</div>
                   <div style={S.shelfMeta}>{def.name}</div>

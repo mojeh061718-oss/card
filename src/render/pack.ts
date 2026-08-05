@@ -15,6 +15,7 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number): HTM
   const rng = Rng.from(def.seed, 'wrapper');
   const hue = ['#123f77', '#7a0c0c', '#0e5135', '#4b1d78', '#b34700', '#1a1a1e'][rng.int(6)];
   const accent = ['#d9a621', '#e8e3d5', '#78b7e0', '#e0432d', '#c8c8c8'][rng.int(5)];
+  const cx0 = wPx / 2;
 
   // Foil base with vertical crinkle bands.
   const g = ctx.createLinearGradient(0, 0, wPx, 0);
@@ -33,6 +34,31 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number): HTM
   for (let i = -4; i < 14; i++) {
     ctx.fillStyle = i % 2 ? accent : '#ffffff';
     ctx.fillRect(-wPx, i * hPx * 0.12, wPx * 3, hPx * 0.018);
+  }
+  ctx.restore();
+
+  // Specular sweep — the hot mirror band that makes mylar look like mylar.
+  const sweep = ctx.createLinearGradient(0, 0, wPx, hPx * 0.6);
+  sweep.addColorStop(0, 'rgba(255,255,255,0)');
+  sweep.addColorStop(0.42, 'rgba(255,255,255,0)');
+  sweep.addColorStop(0.5, 'rgba(255,255,255,0.34)');
+  sweep.addColorStop(0.58, 'rgba(255,255,255,0)');
+  sweep.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sweep;
+  ctx.fillRect(0, 0, wPx, hPx);
+
+  // Starburst radiating from behind the brand block.
+  ctx.save();
+  ctx.translate(cx0, hPx * 0.42);
+  ctx.globalAlpha = 0.16;
+  for (let i = 0; i < 22; i++) {
+    const a0 = (i / 22) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, wPx * 1.1, a0, a0 + 0.07);
+    ctx.closePath();
+    ctx.fillStyle = i % 2 ? '#ffffff' : accent;
+    ctx.fill();
   }
   ctx.restore();
 
@@ -60,9 +86,19 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number): HTM
   ctx.strokeText(def.brand.toUpperCase(), cx, hPx * 0.30);
   ctx.fillText(def.brand.toUpperCase(), cx, hPx * 0.30);
   ctx.font = `900 italic ${wPx * 0.16}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
-  ctx.fillStyle = accent;
+  // Metallic fill on the line name: bright crown, dark base, like stamped foil.
+  const metal = ctx.createLinearGradient(0, hPx * 0.38, 0, hPx * 0.46);
+  metal.addColorStop(0, mixHex(accent, '#ffffff', 0.65));
+  metal.addColorStop(0.5, accent);
+  metal.addColorStop(1, shade(accent, -0.22));
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur = wPx * 0.02;
+  ctx.shadowOffsetY = wPx * 0.008;
+  ctx.fillStyle = metal;
   ctx.strokeText(def.line.toUpperCase(), cx, hPx * 0.45);
   ctx.fillText(def.line.toUpperCase(), cx, hPx * 0.45);
+  ctx.restore();
   ctx.font = `700 ${wPx * 0.05}px Arial, sans-serif`;
   ctx.fillStyle = '#ffffff';
   ctx.fillText(`${def.year} ${def.sport.toUpperCase()}`, cx, hPx * 0.53);

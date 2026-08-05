@@ -6,14 +6,17 @@
  * limbs are *spindles*: they swell over the muscle belly and neck down at
  * the joint. An arm is two tapered spindles; a thigh is one big one.
  *
- * Everything here draws closed filled paths whose outline follows a width
- * profile along the limb, so the silhouette itself carries the anatomy —
- * which is what survives when the figure is 40px wide in a binder.
+ * Volumes are also LIT. Passing a light direction turns the flat fill into
+ * classic cylinder shading — highlight edge, base tone, core shadow, then a
+ * kick of reflected light at the far rim — which is what makes a limb read
+ * as round instead of cut from paper. The gradient lives in canvas space, so
+ * the polygon body and the round joint caps share it seamlessly.
  */
 
 import { withAlpha, shade } from './color';
 
 export interface Pt { x: number; y: number }
+export interface Light { x: number; y: number }
 
 /**
  * Width profile along a limb, sampled 0..1 from start to end.
@@ -45,13 +48,42 @@ function bendPoint(a: Pt, b: Pt, c: Pt, t: number): Pt {
 }
 
 /**
+ * Cylinder-shading gradient across a limb. Runs perpendicular to the limb
+ * axis; the side facing `light` gets the highlight, the far side gets the
+ * core shadow and a thin reflected-light rim.
+ */
+function limbGradient(
+  ctx: CanvasRenderingContext2D,
+  from: Pt, to: Pt, halfWidth: number, color: string, light: Light,
+): CanvasGradient {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len, ny = dx / len;
+  // Flip the normal so it points toward the light.
+  if (nx * light.x + ny * light.y < 0) { nx = -nx; ny = -ny; }
+  const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
+  const g = ctx.createLinearGradient(
+    mx + nx * halfWidth, my + ny * halfWidth,
+    mx - nx * halfWidth, my - ny * halfWidth,
+  );
+  g.addColorStop(0, shade(color, 0.14));
+  g.addColorStop(0.32, color);
+  g.addColorStop(0.68, shade(color, -0.1));
+  g.addColorStop(0.88, shade(color, -0.2));
+  g.addColorStop(1, shade(color, -0.08)); // reflected light at the rim
+  return g;
+}
+
+/**
  * Fill a tapered volume between two points, optionally bowed through a
  * control point so the limb curves like muscle rather than kinking.
+ * With a `light`, the fill is a full cylinder-shaded gradient and the lit
+ * flank carries a soft specular hairline.
  */
 export function volume(
   ctx: CanvasRenderingContext2D,
   from: Pt, to: Pt, baseWidth: number, profile: Profile, color: string,
-  bow = 0,
+  bow = 0, light?: Light,
 ): void {
   const steps = 14;
   const dx = to.x - from.x, dy = to.y - from.y;
@@ -64,6 +96,7 @@ export function volume(
 
   const left: Pt[] = [];
   const right: Pt[] = [];
+  const spine: Pt[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const p = bendPoint(from, mid, to, t);
@@ -72,9 +105,14 @@ export function volume(
     const tl = Math.hypot(tx, ty) || 1;
     const nx = -ty / tl, ny = tx / tl;
     const w = (baseWidth * profile(t)) / 2;
+    spine.push(p);
     left.push({ x: p.x + nx * w, y: p.y + ny * w });
     right.push({ x: p.x - nx * w, y: p.y - ny * w });
   }
+
+  const fill = light
+    ? limbGradient(ctx, from, to, baseWidth * 0.62, color, light)
+    : color;
 
   ctx.beginPath();
   ctx.moveTo(left[0].x, left[0].y);
@@ -82,14 +120,48 @@ export function volume(
   ctx.lineTo(right[right.length - 1].x, right[right.length - 1].y);
   for (let i = right.length - 2; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
   ctx.closePath();
-  ctx.fillStyle = color;
+  ctx.fillStyle = fill;
   ctx.fill();
-  // Round both joints so consecutive volumes blend instead of showing a seam.
+  // Round both joints so consecutive volumes blend instead of showing a
+  // seam. Same fillStyle: the canvas-space gradient continues across them.
   for (const [pt, t] of [[from, 0], [to, 1]] as const) {
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, (baseWidth * profile(t)) / 2, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  if (light) {
+    // Specular hairline riding the lit flank, following the bowed spine.
+    let lnx = -dy / len, lny = dx / len;
+    if (lnx * light.x + lny * light.y < 0) { lnx = -lnx; lny = -lny; }
+    ctx.strokeStyle = withAlpha('#ffffff', 0.22);
+    ctx.lineWidth = Math.max(0.8, baseWidth * 0.09);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 2; i <= steps - 2; i++) {
+      const t = i / steps;
+      const w = (baseWidth * profile(t)) / 2;
+      const px = spine[i].x + lnx * w * 0.55, py = spine[i].y + lny * w * 0.55;
+      i === 2 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+}
+
+/**
+ * Ambient-occlusion pool at a joint — a soft dark spot where two volumes
+ * meet, which visually welds them into one limb.
+ */
+export function jointShadow(
+  ctx: CanvasRenderingContext2D, at: Pt, r: number, strength = 0.16,
+): void {
+  const g = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y, r);
+  g.addColorStop(0, `rgba(10, 8, 20, ${strength})`);
+  g.addColorStop(1, 'rgba(10, 8, 20, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /** Soft shading down one side of a limb, clipped to the shape just filled. */
@@ -213,14 +285,19 @@ export function shoulderPad(
   ctx.save();
   ctx.translate(shoulder.x + ux * unit * 0.012, shoulder.y + uy * unit * 0.012);
   ctx.rotate(Math.atan2(uy, ux));
+  const rx = unit * 0.042 * outward, ry = unit * 0.032;
+  const g = ctx.createLinearGradient(0, -ry, 0, ry);
+  g.addColorStop(0, shade(color, 0.12));
+  g.addColorStop(0.55, color);
+  g.addColorStop(1, shade(color, -0.16));
   ctx.beginPath();
-  ctx.ellipse(0, 0, unit * 0.042 * outward, unit * 0.032, 0, 0, Math.PI * 2);
-  ctx.fillStyle = color;
+  ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = g;
   ctx.fill();
   // Pad edge catches light along the top.
   ctx.beginPath();
-  ctx.ellipse(0, -unit * 0.008, unit * 0.034 * outward, unit * 0.014, 0, Math.PI, Math.PI * 2);
-  ctx.fillStyle = withAlpha('#ffffff', 0.18);
+  ctx.ellipse(0, -unit * 0.008, rx * 0.8, ry * 0.44, 0, Math.PI, Math.PI * 2);
+  ctx.fillStyle = withAlpha('#ffffff', 0.22);
   ctx.fill();
   ctx.restore();
 }
@@ -228,9 +305,9 @@ export function shoulderPad(
 /** Neck with a sternocleidomastoid hint, so the head connects to something. */
 export function neckColumn(
   ctx: CanvasRenderingContext2D,
-  neck: Pt, headBase: Pt, unit: number, skin: string,
+  neck: Pt, headBase: Pt, unit: number, skin: string, light?: Light,
 ): void {
-  volume(ctx, neck, headBase, unit * 0.052, TAPER_IN, skin);
+  volume(ctx, neck, headBase, unit * 0.052, TAPER_IN, skin, 0, light);
   ctx.beginPath();
   ctx.moveTo(neck.x - unit * 0.018, neck.y);
   ctx.quadraticCurveTo(
