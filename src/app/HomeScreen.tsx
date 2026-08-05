@@ -6,11 +6,57 @@
  * wire story, and big tap targets into each part of the loop.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { world } from '../state/world';
 import { useCollection } from '../state/collection';
 import { formatMoney } from '../engine/economy/valuation';
 import { sfx } from './feel';
+
+/** Cash that ROLLS when it changes — money should feel alive. */
+function CashTicker({ value, color }: { value: number; color: string }) {
+  const [shown, setShown] = useState(value);
+  const prev = useRef(value);
+  useEffect(() => {
+    const from = prev.current, to = value;
+    prev.current = value;
+    if (from === to) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - t0) / 600);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setShown(from + (to - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return (
+    <div style={{ fontSize: 17, fontWeight: 900, marginTop: 3, color, fontVariantNumeric: 'tabular-nums' }}>
+      {formatMoney(Math.round(shown))}
+    </div>
+  );
+}
+
+/** Morning flavor — the shop has a life of its own. */
+const FLAVOR = [
+  'The shop bell rings as you flip the sign to OPEN.',
+  'Fresh coffee, fresh wax. The regulars are already outside.',
+  'A courier drops a padded box by the till.',
+  'Someone taped a want-list to the front window overnight.',
+  'The display case could use a new crown jewel.',
+  'Rumor is a grail changed hands across town.',
+  'The mail truck slows down... then keeps going. Tomorrow.',
+  'Two kids press their noses against the case.',
+];
+
+interface NightSummary {
+  endedDay: number;
+  earned: number;
+  slabsBack: number;
+  freshFinds: number;
+  headline: string | null;
+}
 
 export function HomeScreen({ go }: { go: (route: string) => void }) {
   const {
@@ -33,6 +79,28 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
   }, [cards, day, supplyRev]);
   const headline = news[0];
 
+  const [night, setNight] = useState<NightSummary | null>(null);
+  const [dawn, setDawn] = useState(false);
+  const sleep = () => {
+    sfx.tap();
+    const before = useCollection.getState();
+    const endedDay = before.day;
+    const cashBefore = before.cash;
+    const returnsBefore = before.returns.length;
+    const findsBefore = before.marketFinds.length;
+    endDay();
+    const after = useCollection.getState();
+    setNight({
+      endedDay,
+      earned: after.cash - cashBefore,
+      slabsBack: after.returns.length - returnsBefore,
+      freshFinds: Math.max(0, after.marketFinds.length - findsBefore),
+      headline: after.news[0]?.headline ?? null,
+    });
+    setDawn(false);
+    setTimeout(() => setDawn(true), 750);
+  };
+
   const attention: { label: string; route: string }[] = [];
   if (ripSession) attention.push({ label: 'A rip is waiting — finish the reveal', route: 'wax' });
   if (returns.length > 0) attention.push({ label: `${returns.length} slab${returns.length > 1 ? 's' : ''} back from grading`, route: 'grade' });
@@ -41,23 +109,25 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
 
   const S = styles;
   const tiles: { key: string; title: string; sub: string }[] = [
-    { key: 'wax', title: 'WAX', sub: 'Buy & rip sealed product' },
-    { key: 'hunt', title: 'HUNT', sub: 'Dig lots & estate finds' },
+    { key: 'wax', title: 'WAX', sub: 'Rip today\'s wax ✂️' },
+    { key: 'hunt', title: 'HUNT', sub: 'Dig for buried treasure' },
     { key: 'binder', title: 'BOOK', sub: `${cards.length} card${cards.length === 1 ? '' : 's'} in the binder` },
     { key: 'grade', title: 'GRADE', sub: returns.length > 0 ? `${returns.length} slab${returns.length > 1 ? 's' : ''} to reveal!` : 'Bulk submit · reveal slabs' },
-    { key: 'market', title: 'SELL', sub: 'Comps, dealers & auctions' },
+    { key: 'market', title: 'SELL', sub: 'Flip cards for profit' },
     { key: 'news', title: 'WIRE', sub: headline ? 'Fresh stories' : 'The hobby news feed' },
   ];
 
   return (
     <div style={S.root}>
       <div style={S.scroll}>
-        <div style={S.kicker}>YOUR SHOP</div>
+        <div style={S.awning} />
+        <div style={S.kicker}>DAY {day} · DOORS OPEN</div>
         <h1 style={S.title}>{shopName}</h1>
+        <div style={S.flavor}>{FLAVOR[day % FLAVOR.length]}</div>
         <div style={S.statRow}>
           <div style={S.stat}>
             <div style={S.statLabel}>CASH</div>
-            <div style={{ ...S.statValue, color: '#8ee08e' }}>{formatMoney(cash)}</div>
+            <CashTicker value={cash} color="#8ee08e" />
           </div>
           <div style={S.stat}>
             <div style={S.statLabel}>COLLECTION</div>
@@ -114,10 +184,44 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
           </button>
         )}
 
-        <button style={S.endDay} onClick={() => { sfx.tap(); endDay(); }}>
-          END DAY {day} ▸
+        <button style={S.endDay} onClick={sleep}>
+          🌙 CLOSE UP SHOP — END DAY {day}
         </button>
       </div>
+
+      {night && (
+        <div style={S.night} onClick={() => dawn && setNight(null)}>
+          <div style={{ ...S.nightSky, opacity: dawn ? 0 : 1 }} />
+          <div style={{ ...S.nightInner, opacity: dawn ? 1 : 0 }}>
+            <div style={S.nightKicker}>DAY {night.endedDay} · CLOSED</div>
+            <div style={S.nightTitle}>While you slept…</div>
+            <div style={S.nightRows}>
+              <div style={S.nightRow}>
+                <span>Overnight sales</span>
+                <b style={{ color: night.earned > 0 ? '#8ee08e' : 'rgba(244,242,236,0.5)' }}>
+                  {night.earned > 0 ? `+${formatMoney(night.earned)}` : '—'}
+                </b>
+              </div>
+              <div style={S.nightRow}>
+                <span>Slabs back from grading</span>
+                <b style={{ color: night.slabsBack > 0 ? '#ffd75e' : 'rgba(244,242,236,0.5)' }}>
+                  {night.slabsBack > 0 ? night.slabsBack : '—'}
+                </b>
+              </div>
+              <div style={S.nightRow}>
+                <span>Fresh cards on the market</span>
+                <b>{night.freshFinds > 0 ? night.freshFinds : '—'}</b>
+              </div>
+            </div>
+            {night.headline && (
+              <div style={S.nightHeadline}>📰 {night.headline}</div>
+            )}
+            <button style={S.nightOpen} onClick={() => setNight(null)}>
+              ☀️ OPEN THE SHOP — DAY {night.endedDay + 1}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -167,8 +271,40 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 11, padding: '12px 0', fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
   },
   endDay: {
-    width: '100%', marginTop: 20, background: 'rgba(255,255,255,0.07)', color: '#e8c86a',
-    border: '1px solid rgba(232,200,106,0.4)', borderRadius: 12, padding: '14px 0',
-    fontSize: 13, fontWeight: 900, letterSpacing: 2,
+    width: '100%', marginTop: 20, background: 'rgba(90,70,160,0.22)', color: '#c9baf5',
+    border: '1px solid rgba(150,130,220,0.45)', borderRadius: 12, padding: '15px 0',
+    fontSize: 13, fontWeight: 900, letterSpacing: 1.5,
+  },
+  awning: {
+    height: 10, borderRadius: 5, marginBottom: 12,
+    background: 'repeating-linear-gradient(90deg, #d4a017 0 26px, #17263d 26px 52px)',
+    boxShadow: '0 3px 8px rgba(0,0,0,0.4)',
+  },
+  flavor: { fontSize: 12, color: 'rgba(244,242,236,0.6)', fontStyle: 'italic', marginTop: 4, marginBottom: 12, lineHeight: 1.5 },
+  night: {
+    position: 'fixed', inset: 0, zIndex: 80, background: '#05060c',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
+  nightSky: {
+    position: 'absolute', inset: 0, transition: 'opacity 900ms ease',
+    background: 'linear-gradient(180deg, #2b1a4d 0%, #0c1030 55%, #05060c 100%)',
+  },
+  nightInner: {
+    position: 'relative', width: '100%', maxWidth: 360, transition: 'opacity 500ms ease',
+    background: 'rgba(16,18,30,0.96)', border: '1px solid rgba(150,130,220,0.35)',
+    borderRadius: 18, padding: 22,
+  },
+  nightKicker: { fontSize: 10, letterSpacing: 3, color: '#c9baf5', fontWeight: 800 },
+  nightTitle: { fontSize: 22, fontWeight: 900, marginTop: 6 },
+  nightRows: { marginTop: 14, display: 'flex', flexDirection: 'column', gap: 9 },
+  nightRow: { display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'rgba(244,242,236,0.8)' },
+  nightHeadline: {
+    marginTop: 14, fontSize: 11, lineHeight: 1.5, color: '#e8c86a',
+    background: 'rgba(232,200,106,0.08)', border: '1px solid rgba(232,200,106,0.25)',
+    borderRadius: 10, padding: 10,
+  },
+  nightOpen: {
+    width: '100%', marginTop: 16, background: '#d4a017', color: '#1a1405', border: 'none',
+    borderRadius: 12, padding: '14px 0', fontSize: 13, fontWeight: 900, letterSpacing: 1,
   },
 };

@@ -7,7 +7,7 @@
  * opened, which makes sitting on a case a strategy instead of a delay.
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { renderPackWrapper, renderCardBack } from '../render/pack';
 import { snapshotCard, cachedSnapshot, LiveCard } from './cardview';
 import { world } from '../state/world';
@@ -276,6 +276,51 @@ export function WaxScreen() {
 
 type Phase = 'sealed' | 'stack' | 'takeover' | 'done';
 
+/** One-shot gold confetti burst for monster pulls — pure canvas, ~1s. */
+function ConfettiBurst({ trigger }: { trigger: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!trigger) return;
+    const canvas = ref.current!;
+    const ctx = canvas.getContext('2d')!;
+    const W = canvas.width = canvas.offsetWidth * 2;
+    const H = canvas.height = canvas.offsetHeight * 2;
+    const colors = ['#ffd75e', '#d4a017', '#ffffff', '#8ee08e', '#a06bff'];
+    const parts = Array.from({ length: 90 }, (_, i) => ({
+      x: W / 2, y: H * 0.45,
+      vx: Math.cos((i / 90) * Math.PI * 2) * (3 + (i % 7)) * 2.2,
+      vy: Math.sin((i / 90) * Math.PI * 2) * (3 + (i % 5)) * 2.2 - 5,
+      r: 3 + (i % 4) * 2, c: colors[i % colors.length], a: 1, spin: (i % 9) / 3,
+    }));
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const t = (now - t0) / 1000;
+      ctx.clearRect(0, 0, W, H);
+      for (const p of parts) {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.32; p.a = Math.max(0, 1 - t / 1.1);
+        ctx.save();
+        ctx.globalAlpha = p.a;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(t * p.spin * 6);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+        ctx.restore();
+      }
+      if (t < 1.15) raf = requestAnimationFrame(tick);
+      else ctx.clearRect(0, 0, W, H);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [trigger]);
+  return (
+    <canvas ref={ref} style={{
+      position: 'absolute', inset: '-15%', width: '130%', height: '130%',
+      pointerEvents: 'none', zIndex: 3,
+    }} />
+  );
+}
+
 // The reveal stage card: as big as the viewport allows, and its still is
 // rendered at device pixels so it's crisp on a 3x display (the shared
 // scratch GL is 1536px wide — headroom without ever resizing a canvas).
@@ -345,6 +390,7 @@ function RipSession({ session, onClose }: {
   // looked at. Rapid swiping never pays the hi-res cost (motion hides the
   // softness); pausing on a card gets it crisp.
   const revealSeq = useRef(0);
+  const [burst, setBurst] = useState(0);
   const revealAt = (i: number) => {
     const c = cards[i];
     if (!c) return;
@@ -352,6 +398,7 @@ function RipSession({ session, onClose }: {
     if (t > 0) sfx.riser(t as 1 | 2 | 3);
     setStillUrl(snapshotCard(world.specFor(c), 520));
     setFlipped(true);
+    if (t >= 3) setTimeout(() => setBurst(b => b + 1), 300);
     setTimeout(() => (t > 0 ? sfx.hit(t as 1 | 2 | 3) : sfx.flip()), t > 0 ? 180 : 0);
     const seq = ++revealSeq.current;
     setTimeout(() => {
@@ -528,7 +575,8 @@ function RipSession({ session, onClose }: {
             {packs.length > 1 && `PACK ${packIdx + 1}/${packs.length} · `}
             {idx + 1} / {cards.length}
           </div>
-          <div ref={dragEl} style={{ willChange: 'transform' }}>
+          <div ref={dragEl} style={{ willChange: 'transform', position: 'relative' }}>
+          <ConfettiBurst trigger={burst} />
           <div style={{ ...S.flipScene, filter: glow && !flipped ? `drop-shadow(0 0 26px ${glow})` : undefined }}>
             <div style={{ ...S.flipInner, transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
               <img src={backUrl} alt="card back" style={{ ...S.face, backfaceVisibility: 'hidden' }} />
