@@ -145,7 +145,7 @@ const styles: Record<string, React.CSSProperties> = {
   headline: { fontSize: 14, fontWeight: 900, lineHeight: 1.3, letterSpacing: 0.3 },
   body: { fontSize: 11, opacity: 0.65, lineHeight: 1.6, marginTop: 6 },
   byline: { fontSize: 9, opacity: 0.3, marginTop: 8, letterSpacing: 1 },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.97)', zIndex: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 28, textAlign: 'center' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.97)', zIndex: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 28, paddingTop: 'calc(28px + env(safe-area-inset-top))', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))', textAlign: 'center' },
   breakingBanner: { fontSize: 13, letterSpacing: 8, color: '#ffd75e', fontWeight: 900, marginBottom: 16, textShadow: '0 0 24px rgba(255,215,94,0.5)' },
   breakingHead: { fontSize: 24, fontWeight: 900, lineHeight: 1.25 },
   breakingBody: { fontSize: 13, opacity: 0.7, lineHeight: 1.7, marginTop: 14, maxWidth: 330 },

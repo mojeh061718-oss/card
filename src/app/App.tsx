@@ -29,7 +29,14 @@ export function App() {
   }
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    // Installed PWAs draw under the status bar and home indicator
+    // (viewport-fit=cover) — the shell must consume the safe-area insets or
+    // the header collides with the clock and the nav dies under the
+    // home-indicator gesture zone.
+    <div style={{
+      height: '100dvh', display: 'flex', flexDirection: 'column',
+      paddingTop: 'env(safe-area-inset-top)',
+    }}>
       <div style={{ flex: 1, minHeight: 0 }}>
         {route === 'devlab' ? <DevLab />
           : route === 'binder' ? <BinderScreen />
@@ -41,7 +48,8 @@ export function App() {
           : <WaxScreen />}
       </div>
       <nav style={{
-        display: 'flex', justifyContent: 'center', gap: 9, padding: '10px 0 4px',
+        display: 'flex', justifyContent: 'center', gap: 9,
+        padding: '10px 0 calc(6px + env(safe-area-inset-bottom))',
         borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, letterSpacing: 2,
       }}>
         {(['hunt', 'wax', 'binder', 'grade', 'market', 'news', 'edit', 'devlab'] as Route[]).map(r => (
