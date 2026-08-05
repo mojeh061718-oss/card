@@ -11,6 +11,7 @@ import { renderPackWrapper, renderCardBack } from '../render/pack';
 import { snapshotCard, LiveCard } from './cardview';
 import { world } from '../state/world';
 import { useCollection } from '../state/collection';
+import { sfx, unlockAudio, heatTier } from './feel';
 
 const RIP_SERIES = '2027-pinnacle-press-chromium-football';
 
@@ -53,7 +54,11 @@ export function RipScreen() {
     if (!tearing.current) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    setTear(t => Math.max(t, p));
+    setTear(t => {
+      // One crinkle per ~8% of travel, so the tear sounds continuous.
+      if (Math.floor(p * 12) > Math.floor(t * 12)) sfx.tear();
+      return Math.max(t, p);
+    });
     if (p > 0.92) {
       tearing.current = false;
       startRip();
@@ -68,8 +73,12 @@ export function RipScreen() {
 
   const reveal = () => {
     if (!current || flipped) return;
+    const tier = heatTier(heat);
+    // Honest escalation: the riser only fires for cards that earn it.
+    if (tier > 0) sfx.riser(tier as 1 | 2 | 3);
     setStillUrl(snapshotCard(world.specFor(current), 640));
     setFlipped(true);
+    setTimeout(() => (tier > 0 ? sfx.hit(tier as 1 | 2 | 3) : sfx.flip()), tier > 0 ? 260 : 0);
   };
   const next = () => {
     if (!flipped || !current) return;
@@ -77,6 +86,7 @@ export function RipScreen() {
     advance();
   };
   const advance = () => {
+    sfx.cardSlide();
     setFlipped(false);
     setStillUrl(null);
     if (idx + 1 >= pulls.length) setPhase('done');
@@ -88,7 +98,7 @@ export function RipScreen() {
     <div style={S.root}>
       {phase === 'sealed' && (
         <div style={S.center}>
-          <div style={S.packWrap} onPointerDown={() => { tearing.current = true; }}
+          <div style={S.packWrap} onPointerDown={() => { unlockAudio(); tearing.current = true; }}
             onPointerMove={onTearMove} onPointerUp={() => { tearing.current = false; }}>
             {/* Tear strip: the top of the wrapper, jagged clip, slides off */}
             <div style={{

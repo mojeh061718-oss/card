@@ -6,13 +6,21 @@ import { GradingScreen } from './GradingScreen';
 import { MarketScreen } from './MarketScreen';
 import { SourcingScreen } from './SourcingScreen';
 import { NewsScreen, BreakingOverlay } from './NewsScreen';
+import { CareerSetup } from './CareerSetup';
+import { useCollection } from '../state/collection';
 
 type Route = 'hunt' | 'rip' | 'binder' | 'grade' | 'market' | 'news' | 'devlab';
 
 export function App() {
+  const careerStarted = useCollection(s => s.careerStarted);
+  const [setupDone, setSetupDone] = useState(false);
   const [route, setRoute] = useState<Route>(
     new URLSearchParams(location.search).has('lab') ? 'devlab' : 'rip',
   );
+  if (!careerStarted && !setupDone) {
+    return <CareerSetup onDone={() => setSetupDone(true)} />;
+  }
+
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, minHeight: 0 }}>

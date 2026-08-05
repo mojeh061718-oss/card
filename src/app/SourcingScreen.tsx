@@ -14,6 +14,7 @@ import { snapshotCard } from './cardview';
 import { formatMoney } from '../engine/economy/valuation';
 import type { LotOffer } from '../engine/economy/lots';
 import type { PulledCard } from '../engine/cards/series';
+import { sfx, unlockAudio, heatTier } from './feel';
 
 const LOT_ICON: Record<string, string> = {
   shoebox: '👟', garageSale: '📦', estate: '🏚️', storageUnit: '🔐', dealerTable: '🎪',
@@ -25,7 +26,9 @@ export function SourcingScreen() {
   const [digging, setDigging] = useState<{ offer: LotOffer; cards: PulledCard[] } | null>(null);
 
   const buy = (offer: LotOffer) => {
+    unlockAudio();
     if (cash < offer.price || dugLots.includes(offer.id)) return;
+    sfx.cash();
     spendCash(offer.price);
     const cards = world.digLot(offer);
     markLotDug(offer.id);
@@ -122,7 +125,12 @@ function DigOverlay({ offer, cards, onClose }: {
           setIdx(i => {
             if (i >= cards.length - 1) { setDone(true); return i; }
             // Stop the reel on anything worth a second look.
-            if (heats[i + 1] >= 4) { holding.current = false; return i + 1; }
+            if (heats[i + 1] >= 4) {
+              holding.current = false;
+              sfx.hit(heatTier(heats[i + 1]) as 1 | 2 | 3);
+              return i + 1;
+            }
+            sfx.riffle();
             return i + 1;
           });
         }

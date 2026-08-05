@@ -5,6 +5,15 @@ import { world } from './state/world';
 
 async function boot() {
   await hydrateCollection();
+
+  // Ask the browser to keep the save: installed web apps get far better
+  // storage durability, and this game's entire state is that one record.
+  if (navigator.storage?.persist) {
+    void navigator.storage.persisted().then(p => p || navigator.storage.persist());
+  }
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
   // Dev helper: ?seed-collection rips packs into the save for UI work.
   const params = new URLSearchParams(location.search);
   if (params.has('seed-collection') && useCollection.getState().cards.length === 0) {

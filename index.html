@@ -6,6 +6,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0c0c10" />
+    <meta name="apple-mobile-web-app-title" content="Cardboard" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3)"
+      href="/splash-1206x2622.png"
+    />
     <title>Cardboard</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -16,6 +24,9 @@
         -webkit-user-select: none; user-select: none;
       }
       #root { height: 100%; }
+      /* Standalone launch: no rubber-band, no text zoom on rotate. */
+      html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+      input, textarea { -webkit-user-select: text; user-select: text; }
     </style>
   </head>
   <body>

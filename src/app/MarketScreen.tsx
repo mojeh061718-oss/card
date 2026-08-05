@@ -12,6 +12,7 @@ import { world } from '../state/world';
 import { snapshotCard } from './cardview';
 import { formatMoney } from '../engine/economy/valuation';
 import { MARKETPLACE_FEE } from '../engine/economy/auction';
+import { sfx, unlockAudio } from './feel';
 
 export function MarketScreen() {
   const {
@@ -42,7 +43,7 @@ export function MarketScreen() {
           <div style={S.title}>MARKET</div>
           <div style={S.day}>DAY {day}</div>
           <span style={{ flex: 1 }} />
-          <button style={S.endDay} onClick={endDay}>END DAY ▸</button>
+          <button style={S.endDay} onClick={() => { unlockAudio(); endDay(); sfx.gavel(); }}>END DAY ▸</button>
         </div>
         <div style={S.moneyRow}>
           <div><span style={S.moneyLabel}>CASH</span> <span style={S.cash}>{formatMoney(cash)}</span></div>
@@ -102,8 +103,8 @@ export function MarketScreen() {
           card={selected}
           day={day}
           onClose={() => setSelected(null)}
-          onQuickSell={() => { quickSell(selected.uid); setSelected(null); }}
-          onList={(days, reserve) => { listAtAuction(selected.uid, days, reserve); setSelected(null); }}
+          onQuickSell={() => { sfx.cash(); quickSell(selected.uid); setSelected(null); }}
+          onList={(days, reserve) => { sfx.tap(); listAtAuction(selected.uid, days, reserve); setSelected(null); }}
         />
       )}
     </div>

@@ -75,6 +75,8 @@ interface CollectionState {
   /** Unread breaking story awaiting its takeover. */
   breaking: NewsItem | null;
   shopName: string;
+  /** False until the player has completed career setup. */
+  careerStarted: boolean;
   addPulls(pulls: PulledCard[]): void;
   submitForGrading(uids: number[], companyKey: string, tier: Tier): void;
   endDay(): void;
@@ -86,6 +88,8 @@ interface CollectionState {
   pushNews(items: NewsItem[]): void;
   clearBreaking(): void;
   setShopName(name: string): void;
+  setCash(amount: number): void;
+  startCareer(): void;
   listAtAuction(uid: number, days: number, reserve: number): void;
   dismissSale(uid: number): void;
 }
@@ -122,6 +126,7 @@ function scheduleSave(state: CollectionState): void {
         dugLots: state.dugLots,
         news: state.news.slice(0, 60),
         shopName: state.shopName,
+        careerStarted: state.careerStarted,
         populations: world.savePopulations(),
       }, 'save-v1');
     } catch (err) {
@@ -144,6 +149,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
   news: [],
   breaking: null,
   shopName: 'Corner Store Cards',
+  careerStarted: false,
   addPulls(pulls) {
     const { cards, nextUid } = get();
     const stamped: CardInstance[] = pulls.map((p, i) => ({
@@ -333,6 +339,14 @@ export const useCollection = create<CollectionState>((set, get) => ({
     set({ shopName: name.trim() || 'Corner Store Cards' });
     scheduleSave(get());
   },
+  setCash(amount) {
+    set({ cash: Math.max(0, amount) });
+    scheduleSave(get());
+  },
+  startCareer() {
+    set({ careerStarted: true });
+    scheduleSave(get());
+  },
   dismissSale(uid) {
     set({ saleFeed: get().saleFeed.filter(s => s.uid !== uid) });
     scheduleSave(get());
@@ -361,6 +375,7 @@ export async function hydrateCollection(): Promise<void> {
         dugLots: save.dugLots ?? [],
         news: save.news ?? [],
         shopName: save.shopName ?? 'Corner Store Cards',
+        careerStarted: save.careerStarted ?? false,
         hydrated: true,
       });
       // Rebuild the in-transit company map for already-arrived returns: the

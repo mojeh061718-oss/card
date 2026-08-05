@@ -10,6 +10,7 @@ import { world } from '../state/world';
 import { snapshotCard } from './cardview';
 import { renderSlab } from '../render/slab';
 import { COMPANIES, TIERS, type Tier } from '../engine/condition/grading';
+import { sfx, unlockAudio } from './feel';
 
 export function GradingScreen() {
   const { cards, day, submissions, returns, submitForGrading, endDay, revealReturn } = useCollection();
@@ -61,7 +62,7 @@ export function GradingScreen() {
                 if (!card) return null;
                 return (
                   <button key={uid} style={S.returnPkg}
-                    onClick={() => { const g = revealReturn(uid); if (g) setReveal(g); }}>
+                    onClick={() => { unlockAudio(); const g = revealReturn(uid); if (g) setReveal(g); }}>
                     <div style={{ fontSize: 26 }}>📦</div>
                     <div style={{ fontSize: 10, opacity: 0.7 }}>{world.displayName(card).player}</div>
                     <div style={{ fontSize: 9, color: '#e8c86a' }}>TAP TO REVEAL</div>
@@ -129,6 +130,7 @@ export function GradingScreen() {
               style={{ ...S.submit, opacity: picked.size ? 1 : 0.35 }}
               onClick={() => {
                 if (!picked.size) return;
+                sfx.tap();
                 submitForGrading([...picked], companyKey, tier);
                 setPicked(new Set());
               }}>
@@ -228,7 +230,11 @@ function RevealOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
   const g = grade.result.overall;
   const gradeColor = g === 10 ? '#ffd75e' : g >= 9 ? '#8ee08e' : g >= 8 ? '#e8c86a' : '#e08a6a';
   return (
-    <div style={S.overlay} onClick={() => (shown ? onClose() : setShown(true))}>
+    <div style={S.overlay} onClick={() => {
+      if (shown) { onClose(); return; }
+      sfx.slab();
+      setShown(true);
+    }}>
       <div style={{ ...S.center, gap: 16 }}>
         {!shown && (
           <>
