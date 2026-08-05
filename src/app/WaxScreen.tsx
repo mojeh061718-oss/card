@@ -259,11 +259,14 @@ function RipSession({ session, onClose }: {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     // Side effects (sfx) stay OUT of the setState updater — React may run
-    // updaters more than once.
+    // updaters more than once. Renders are quantized to 1/40 steps: the
+    // clip-path repaint is the most expensive thing on this screen and a
+    // 120Hz pointer stream would otherwise render every wiggle.
     const next = Math.max(tearRef.current, p);
     if (Math.floor(next * 12) > Math.floor(tearRef.current * 12)) sfx.tear();
+    const stepped = Math.floor(next * 40) !== Math.floor(tearRef.current * 40);
     tearRef.current = next;
-    setTear(next);
+    if (stepped || next > 0.92) setTear(next);
     if (p > 0.92) {
       tearing.current = false;
       setTimeout(() => { setPhase('stack'); setIdx(0); setFlipped(false); }, 380);
@@ -273,7 +276,9 @@ function RipSession({ session, onClose }: {
   const reveal = () => {
     if (!current || flipped) return;
     if (tier > 0) sfx.riser(tier as 1 | 2 | 3);
-    setStillUrl(snapshotCard(world.specFor(current), 640));
+    // 520px covers the 260pt flip stage at 2x; the tap→flip latency is the
+    // most-felt frame in the game, so resolution buys nothing here.
+    setStillUrl(snapshotCard(world.specFor(current), 520));
     setFlipped(true);
     setTimeout(() => (tier > 0 ? sfx.hit(tier as 1 | 2 | 3) : sfx.flip()), tier > 0 ? 260 : 0);
   };

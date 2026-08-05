@@ -713,8 +713,11 @@ export function renderAthleteLayer(
     c.width = off.width;
     c.height = off.height;
     const kctx = c.getContext('2d')!;
-    for (let a = 0; a < 16; a++) {
-      const ang = (a / 16) * Math.PI * 2;
+    // 9 dilation samples, not 16 — at a 2-4px radius the difference is
+    // invisible and this loop is the hottest part of the whole figure pass
+    // (each sample redraws the full figure canvas).
+    for (let a = 0; a < 9; a++) {
+      const ang = (a / 9) * Math.PI * 2;
       kctx.drawImage(off, Math.cos(ang) * radius, Math.sin(ang) * radius);
     }
     kctx.globalCompositeOperation = 'source-in';

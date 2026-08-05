@@ -264,7 +264,7 @@ await nav('EDIT').click();
 await page.waitForTimeout(600);
 await page.getByText('FILE', { exact: true }).click();
 await page.waitForTimeout(300);
-await page.locator('input[type=file]').setInputFiles(
+await page.locator('label:has-text("IMPORT NAMES JSON") input[type=file]').setInputFiles(
   new URL('../presets/real-world.json', import.meta.url).pathname,
 );
 await page.waitForTimeout(900);

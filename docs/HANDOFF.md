@@ -129,29 +129,21 @@ shipped a slice rather than the whole system.
 
 ### 4.1 Blocking the core promise
 
-**No player career simulation.** Players have `talent`, and it never changes.
-There are no seasons, no breakouts, no injuries, no awards, no retirement.
-`src/engine/news/wire.ts` writes injury and award *stories*, but nothing
-behind them moves a valuation. This is the single largest gap: the plan's
-answer to "how does this not get repetitive" was that card values move
-because of fundamentals, and right now they don't move at all.
-
-What it needs: a season sim advancing on the calendar, per-player development
-curves, and a hype multiplier in `intrinsicValue` that reads current form
-rather than static talent. Careful — `test/calibration.test.ts` pins price
-bands and will fail loudly if hype swings too hard.
-
-**Only two series exist, both 2027, both hard-coded.** `World`'s constructor
-calls `register()` twice. There is no mechanism to ship a new series as the
-calendar advances, so the game runs out of new cardboard immediately and
-"generate new cards each series" is unimplemented. The generator itself
-(`buildSeries` + `deriveDna`) is fully parameterized and ready; what's
-missing is a release calendar that registers series over time and retires old
-products from the shelf.
+> **Update (2026-08-05, `claude/graphics-upgrade-debug-bujemt`):** the first
+> two gaps below are now BUILT. A career sim (`engine/world/career.ts`)
+> gives every player a deterministic form curve (momentum noise, career
+> arc, seeded breakouts/injuries/slumps) driving a hype multiplier in
+> `world.valuation`; hype is exactly 1.0 for everyone on day 1 so the
+> calibration pins still describe the opening market. A release calendar
+> (`engine/cards/calendar.ts`) ships a new series every ~45 days,
+> alternating sports, with shelf lifecycle (`SHELF_LIFE_DAYS`) and
+> street-date wire stories; the launch pair is pinned so old saves keep
+> their series ids. Both are covered by `test/calendar-career.test.ts`.
 
 **No era progression.** The plan called for the whole aesthetic evolving
-across in-game decades (overproduction → premium → hyper-parallel). Nothing
-exists. Depends on the release calendar above.
+across in-game decades (overproduction → premium → hyper-parallel). The
+release calendar now exists to hang it on (`releaseAt` picks a ladder
+archetype per release), but eras do not yet bias that pick or the DNA.
 
 ### 4.2 Whole systems from the plan that never landed
 
@@ -170,15 +162,19 @@ exists. Depends on the release calendar above.
 | Printing plates (4 per card, each a 1/1) | `parallels.ts` ladder |
 | Crack-and-resubmit | `GradingScreen`; grading is one-way today |
 | Pop reports per (card, grade) | wire mentions them; no data model |
-| Save export / import | only *name overrides* export today, not the save |
+| ~~Save export / import~~ | **BUILT** — full save backup/restore from the EDIT tab (`exportSaveJson`/`importSaveJson`) |
 | Push notifications | deliberately deferred; flavor only, nothing depends on them |
 
 ### 4.3 Content depth
 
-- **One insert set.** `INSERT_SETS` contains only `Downtown` (/199, 20 cards).
-- **One product archetype per sport** (`chromium`, `prizmatic`).
-- **Six athlete poses** total across both sports. They are good, but a binder
-  page shows the repetition.
+- **Two insert sets.** `INSERT_SETS`: `Downtown` (/199, 20 cards, painted
+  skyline) and `Ignition` (/149, 12 cards, comic detonation). The pattern
+  for adding more is the `drawIgnition` branch in `layers.ts`.
+- **Four ladder archetypes now rotate via the release calendar**
+  (`chromium`, `prizmatic`, `premium`, `heritage`).
+- **Ten athlete poses** (five per sport). A binder page still shows some
+  repetition, but figures are now painted (cylinder-shaded volumes, lit
+  helmets with optional mirrored visors, real faces) rather than flat.
 - **No card backs.** `condition.ts` has a `wrongBack` error kind explicitly
   marked "flavor; back render later" — the error can occur and is unrenderable.
 - **Name pools** are 72 first / 70 last names, so surname collisions are
@@ -263,7 +259,28 @@ Measure before adding work to the rip or binder-scroll paths.
 - **PWA push cannot play a sound** and there is no silent push. The calendar
   model means nothing is gated on waiting, so this costs nothing.
 
-### 6.4 Smaller things
+### 6.4 New sharp edges from the 2026-08-05 pass
+
+- **Hype multiplies `world.valuation`, not `intrinsicValue`.** Engine tests
+  pin the *neutral* economy; the live game multiplies by
+  `playerForm(...).hype` (0.5–2.6, exactly 1.0 on day 1). If you add a
+  system that calls `intrinsicValue` directly, it will disagree with every
+  screen — go through `world.valuation`.
+- **`world.currentDay` must track the save's day.** `syncCalendar(day)`
+  advances it (endDay and hydrate both call it). A valuation taken before
+  hydrate finishes uses day 1 hype — harmless today because nothing prices
+  cards pre-hydrate; don't change that.
+- **`returns` + `returnCompanies` travel together.** The uid→company map
+  for arrived slabs persists in the save; if you add a path that puts uids
+  into `returns`, record the company or the reveal falls back to PSG.
+- **`ripSession` persists.** A rip in progress survives reload by design;
+  `endRip()` is what clears it. Anything that adds cards mid-ceremony
+  should pass `addPulls(pulls, { quiet: true })` and later
+  `releaseBreaking()`, or the breaking banner will spoil the reveal.
+- **Snapshot stills can be '' while the GL context is lost.** Callers must
+  treat falsy data URLs as "retry later" and never cache them.
+
+### 6.5 Smaller things
 
 - **`test/overrides.test.ts` mutates the `world` singleton.** The
   `applying a preset to the live world` block resets in `afterAll`. Vitest
@@ -316,20 +333,16 @@ Measure before adding work to the rip or binder-scroll paths.
 
 ## 8. Where to start
 
-If you want the highest-value work first, in order:
+If you want the highest-value work first, in order (items 1–4 of the
+original list — release calendar, career sim, inserts/poses, save
+export/import — shipped on 2026-08-05):
 
-1. **Release calendar + series generation over time.** Unblocks era
-   progression, makes sealed wax appreciation meaningful, and is the reason
-   the game currently has an ending. The generator is ready; this is
-   scheduling and shelf lifecycle.
-2. **Player career sim.** Makes values move for reasons. Watch
-   `test/calibration.test.ts`.
-3. **More insert sets and poses.** Cheapest visible variety per line of code.
-   `INSERT_SETS` takes a name, print run and card count; the Downtown branch
-   in `layers.ts` is the template for a new illustrated set.
-4. **Save export/import.** The single save record is the whole game and
-   IndexedDB is evictable. This is a small change that prevents a total loss.
-5. Everything in §4.2, by taste.
+1. **Era progression.** The release calendar exists; make decades bias the
+   archetype pick, print runs, and design DNA.
+2. **Set completion + trades + fixed-price listings** (§4.2) — the missing
+   mid-game goals between "rip wax" and "chase the Top 50".
+3. **Card shows / estate bidding** — the sourcing loop's next act.
+4. Everything else in §4.2, by taste.
 
 ### How to prove you didn't break it
 

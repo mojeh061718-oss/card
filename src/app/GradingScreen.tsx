@@ -58,7 +58,7 @@ export function GradingScreen() {
       <div style={S.scroll}>
         {returns.length > 0 && (
           <section style={S.section}>
-            <div style={S.sectionTitle}>📬 BACK FROM GRADING — {returns.length}</div>
+            <div style={S.sectionTitle}>BACK FROM GRADING — {returns.length} SEALED MAILER{returns.length > 1 ? 'S' : ''}</div>
             <div style={S.returnRow}>
               {returns.map(uid => {
                 const card = cards.find(c => c.uid === uid);
@@ -66,8 +66,24 @@ export function GradingScreen() {
                 return (
                   <button key={uid} style={S.returnPkg}
                     onClick={() => { unlockAudio(); const g = revealReturn(uid); if (g) setReveal(g); }}>
-                    <div style={{ fontSize: 26 }}>📦</div>
-                    <div style={{ fontSize: 10, opacity: 0.7 }}>{world.displayName(card).player}</div>
+                    {/* Cardboard mailer, drawn — not an emoji. */}
+                    <div style={{
+                      width: 44, height: 34, margin: '0 auto', position: 'relative',
+                      background: 'linear-gradient(160deg, #b08948 0%, #8f6c34 100%)',
+                      borderRadius: 4, boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                    }}>
+                      <div style={{
+                        position: 'absolute', left: '42%', top: 0, bottom: 0, width: '16%',
+                        background: 'rgba(240,236,220,0.75)',
+                      }} />
+                      <div style={{
+                        position: 'absolute', left: 3, bottom: 2, fontSize: 6, fontWeight: 800,
+                        color: 'rgba(60,40,10,0.8)', letterSpacing: 0.5,
+                      }}>
+                        FRAGILE
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, opacity: 0.7, marginTop: 4 }}>{world.displayName(card).player}</div>
                     <div style={{ fontSize: 9, color: '#e8c86a' }}>TAP TO REVEAL</div>
                   </button>
                 );
