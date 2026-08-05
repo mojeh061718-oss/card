@@ -154,7 +154,12 @@ src/
   state/           world singleton + persisted collection
 presets/           importable real-league name files (not bundled into play)
 tools/             screenshot harnesses, icon generator, preset builder, e2e run
+docs/              reference only — not built, not imported, not tested
 ```
+
+New to the codebase? **[`docs/HANDOFF.md`](docs/HANDOFF.md)** is the orientation
+doc: architectural invariants, an honest list of what is still missing, the
+calibration numbers that must not drift, and the known sharp edges.
 
 ## Renaming the world
 
