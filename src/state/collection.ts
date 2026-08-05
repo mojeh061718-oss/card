@@ -15,6 +15,9 @@ import { gradeCard, COMPANIES, type GradeResult, type Tier } from '../engine/con
 import { childSeedN, hashString, Rng } from '../engine/rng';
 import { runAuction, MARKETPLACE_FEE, type AuctionResult } from '../engine/economy/auction';
 import { dealerOffer } from '../engine/economy/valuation';
+import {
+  bigSaleStory, grailFoundStory, ambientStories, productDropStory, type NewsItem,
+} from '../engine/news/wire';
 
 export interface CardInstance extends PulledCard {
   /** Unique ownership id (monotonic per save). */
@@ -68,6 +71,10 @@ interface CollectionState {
   saleFeed: SaleRecord[];
   /** Lot offer ids already bought, so leads don't repeat. */
   dugLots: string[];
+  news: NewsItem[];
+  /** Unread breaking story awaiting its takeover. */
+  breaking: NewsItem | null;
+  shopName: string;
   addPulls(pulls: PulledCard[]): void;
   submitForGrading(uids: number[], companyKey: string, tier: Tier): void;
   endDay(): void;
@@ -76,6 +83,9 @@ interface CollectionState {
   quickSell(uid: number): SaleRecord | null;
   spendCash(amount: number): void;
   markLotDug(id: string): void;
+  pushNews(items: NewsItem[]): void;
+  clearBreaking(): void;
+  setShopName(name: string): void;
   listAtAuction(uid: number, days: number, reserve: number): void;
   dismissSale(uid: number): void;
 }
@@ -110,6 +120,8 @@ function scheduleSave(state: CollectionState): void {
         listings: state.listings,
         saleFeed: state.saleFeed,
         dugLots: state.dugLots,
+        news: state.news.slice(0, 60),
+        shopName: state.shopName,
         populations: world.savePopulations(),
       }, 'save-v1');
     } catch (err) {
@@ -129,12 +141,32 @@ export const useCollection = create<CollectionState>((set, get) => ({
   listings: [],
   saleFeed: [],
   dugLots: [],
+  news: [],
+  breaking: null,
+  shopName: 'Corner Store Cards',
   addPulls(pulls) {
     const { cards, nextUid } = get();
     const stamped: CardInstance[] = pulls.map((p, i) => ({
       ...p, uid: nextUid + i, pulledSeq: nextUid + i,
     }));
     set({ cards: [...cards, ...stamped], nextUid: nextUid + pulls.length });
+    // Anything genuinely scarce that surfaces is news, and a 1/1 stops the app.
+    const { day, shopName, news } = get();
+    const stories: NewsItem[] = [];
+    for (const p of pulls) {
+      if (world.printRunOf(p) > 25) continue;
+      const info = world.displayName(p);
+      stories.push(grailFoundStory(
+        day, info.player, info.tier, info.series, true, shopName,
+        childSeedN(hashString(world.identityKey(p)), day),
+      ));
+    }
+    if (stories.length > 0) {
+      set({
+        news: [...stories, ...news].slice(0, 60),
+        breaking: get().breaking ?? stories[0],
+      });
+    }
     scheduleSave(get());
   },
   submitForGrading(uids, companyKey, tier) {
@@ -193,6 +225,28 @@ export const useCollection = create<CollectionState>((set, get) => ({
       }
     }
 
+    // The wire picks up notable results plus ambient hobby traffic.
+    const stories: NewsItem[] = [];
+    for (const sale of newSales) {
+      if (sale.price >= 250) {
+        stories.push(bigSaleStory(
+          newDay, sale.player, sale.tier, sale.price,
+          !!sale.auction?.biddingWar, childSeedN(hashString(sale.player), newDay),
+        ));
+      }
+    }
+    if (newDay % 14 === 0) {
+      const sid = world.seriesIds[newDay % world.seriesIds.length];
+      stories.push(productDropStory(newDay, world.get(sid).def.name, BigInt(newDay)));
+    }
+    // Don't re-cover a player the wire touched in the last week.
+    const recentSubjects = get().news
+      .filter(n => n.day > newDay - 7 && n.subject)
+      .map(n => n.subject!);
+    stories.push(...ambientStories(
+      newDay, hashString('career-dev'), world.hotPlayers(12), 2, recentSubjects,
+    ));
+
     set({
       day: newDay,
       cash: cash + earned,
@@ -200,6 +254,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
       listings: openListings,
       cards: cards.filter(c => !soldUids.has(c.uid)),
       saleFeed: [...newSales, ...saleFeed].slice(0, 40),
+      news: [...stories, ...get().news].slice(0, 60),
       returns: [...returns, ...arrived.flatMap(s => s.uids.map(uid => uid))],
     });
     // Stash which company each arrived uid used, via a lookup on reveal.
@@ -266,6 +321,18 @@ export const useCollection = create<CollectionState>((set, get) => ({
     set({ dugLots: [...get().dugLots, id].slice(-200) });
     scheduleSave(get());
   },
+  pushNews(items) {
+    if (items.length === 0) return;
+    set({ news: [...items, ...get().news].slice(0, 60) });
+    scheduleSave(get());
+  },
+  clearBreaking() {
+    set({ breaking: null });
+  },
+  setShopName(name) {
+    set({ shopName: name.trim() || 'Corner Store Cards' });
+    scheduleSave(get());
+  },
   dismissSale(uid) {
     set({ saleFeed: get().saleFeed.filter(s => s.uid !== uid) });
     scheduleSave(get());
@@ -292,6 +359,8 @@ export async function hydrateCollection(): Promise<void> {
         listings: save.listings ?? [],
         saleFeed: save.saleFeed ?? [],
         dugLots: save.dugLots ?? [],
+        news: save.news ?? [],
+        shopName: save.shopName ?? 'Corner Store Cards',
         hydrated: true,
       });
       // Rebuild the in-transit company map for already-arrived returns: the

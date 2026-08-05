@@ -10,10 +10,11 @@
 import { seedFromText, Rng, childSeed } from '../engine/rng';
 import { generateLeague, type Player, type Team, type Sport } from '../engine/world/teams';
 import {
-  buildSeries, makePopulation, classifySlots, openPack, renderInputs, rankOf, decodeSlot,
+  buildSeries, makePopulation, classifySlots, openPack, renderInputs, rankOf, decodeSlot, slotOf,
   type SeriesDef, type PulledCard,
 } from '../engine/cards/series';
 import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/economy/lots';
+import { buildTop50, type Top50Entry } from '../engine/news/top50';
 import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
 import type { Population } from '../engine/cards/population';
@@ -210,6 +211,60 @@ class World {
       tier: `${card.isAuto ? 'AUTO · ' : ''}${tier}`,
       series: rt.def.name,
     };
+  }
+
+  /**
+   * The Top 50 board. Candidates are the genuinely scarce slots — anything
+   * with a print run of 199 or fewer, plus every auto — scored by value.
+   * Surfaced counts read live from the populations.
+   */
+  top50(ownedKeys: Set<string>): Top50Entry[] {
+    return buildTop50({
+      seriesIds: this.seriesIds,
+      candidates: (seriesId) => {
+        const rt = this.get(seriesId);
+        const out: { cardIndex: number; parallelId: number }[] = [];
+        for (const card of rt.def.checklist) {
+          for (const par of rt.def.ladder) {
+            if (par.printRun <= 199 || (card.isAuto && par.printRun <= 1500)) {
+              out.push({ cardIndex: card.index, parallelId: par.id });
+            }
+          }
+        }
+        return out;
+      },
+      valueOf: (seriesId, cardIndex, parallelId) =>
+        this.valuation({ seriesId, cardIndex, parallelId, serial: 1, numberedTo: null }),
+      surfacedOf: (seriesId, cardIndex, parallelId) => {
+        const rt = this.get(seriesId);
+        return rt.pop.drawnCount(slotOf(rt.def, cardIndex, parallelId));
+      },
+      describe: (seriesId, cardIndex, parallelId) => {
+        const rt = this.get(seriesId);
+        const card = rt.def.checklist[cardIndex];
+        const player = rt.players[card.playerId];
+        const team = rt.teams[player.teamId];
+        const par = rt.def.ladder[parallelId];
+        return {
+          player: `${player.first} ${player.last}`,
+          team: `${team.city} ${team.nickname}`,
+          seriesName: rt.def.name,
+          tierName: par.numberedTo === 1 ? 'Superfractor 1/1'
+            : par.numberedTo !== null ? `${par.name} /${par.numberedTo}` : par.name,
+          printRun: par.printRun,
+          isAuto: card.isAuto,
+          isRookie: card.isRookie,
+        };
+      },
+    }, ownedKeys);
+  }
+
+  /** Players whose markets are currently worth writing about. */
+  hotPlayers(count = 8): string[] {
+    const all = [...this.series.values()].flatMap(rt =>
+      rt.def.checklist.slice(0, 12).map(c => rt.players[c.playerId]));
+    return [...new Set(all.sort((a, b) => b.talent - a.talent)
+      .map(p => `${p.first} ${p.last}`))].slice(0, count);
   }
 
   /** Persistable population states, keyed by series id. */
