@@ -312,8 +312,10 @@ function RipSession({ session, onClose }: {
   };
 
   const all = packs.flat();
+  // Headliner = the most VALUABLE card. Heat flavors the reveal order, but
+  // the tally is about money, and a $0.25 rookie must not outrank a $7 hit.
   const best = useMemo(
-    () => [...all].sort((a, b) => world.heat(b) - world.heat(a)).slice(0, 12),
+    () => [...all].sort((a, b) => world.valuation(b) - world.valuation(a)).slice(0, 12),
     [all],
   );
   const totalValue = useMemo(

@@ -127,6 +127,9 @@ export function BinderScreen() {
       <header style={S.header}>
         <div style={S.title}>COLLECTION</div>
         <div style={S.count}>{cards.length} cards · {cards.filter(isHit).length} {cards.filter(isHit).length === 1 ? 'hit' : 'hits'}</div>
+        {/* Two labeled rows — a single row clipped the sort chips off the
+            right edge of the viewport, and icon-only buttons read as
+            mystery meat. */}
         <div style={S.chips}>
           {(['all', 'hits', 'rc', 'autos', 'graded'] as FilterKey[]).map(f => (
             <button key={f} onClick={() => setFilter(f)}
@@ -134,11 +137,13 @@ export function BinderScreen() {
               {f.toUpperCase()}
             </button>
           ))}
-          <span style={{ flex: 1 }} />
+        </div>
+        <div style={{ ...S.chips, marginTop: 6 }}>
+          <span style={{ fontSize: 9, letterSpacing: 1.5, opacity: 0.4, alignSelf: 'center' }}>SORT</span>
           {(['newest', 'heat', 'player'] as SortKey[]).map(k => (
             <button key={k} onClick={() => setSort(k)}
               style={{ ...S.chip, ...(sort === k ? S.chipOn : {}) }}>
-              {k === 'newest' ? '◷' : k === 'heat' ? '🔥' : 'A-Z'}
+              {k === 'newest' ? 'NEWEST' : k === 'heat' ? 'HEAT' : 'A–Z'}
             </button>
           ))}
         </div>

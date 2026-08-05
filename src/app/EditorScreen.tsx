@@ -85,6 +85,26 @@ export function EditorScreen() {
     }
   };
 
+  // One tap: the bundled real-league preset (every team + the top 75
+  // players per sport, applied by talent rank). Same explicit-user-action
+  // contract as a file import — nothing loads without this tap.
+  const importBundled = async () => {
+    try {
+      const res = await fetch('presets/real-world.json');
+      if (!res.ok) throw new Error(String(res.status));
+      const { set, dropped } = sanitizeOverrides(await res.json());
+      setOverrides(set);
+      sfx.tap();
+      setNotice(
+        `Real-league names applied — all teams, colors and the top 75 players per sport.` +
+        (dropped.length > 0 ? ` (${dropped.length} entries skipped.)` : '') +
+        ' Every card, banner and the Top 50 now use them.',
+      );
+    } catch {
+      setNotice('Could not load the bundled preset.');
+    }
+  };
+
   const S = styles;
   const editCount = Object.keys(overrides.teams).length
     + Object.keys(overrides.players).length
@@ -216,6 +236,18 @@ export function EditorScreen() {
               biggest market name first. Ready-made lists live in{' '}
               <code>presets/</code>.
             </p>
+            <button
+              style={{
+                ...S.action,
+                background: 'rgba(212,160,23,0.16)',
+                borderColor: 'rgba(212,160,23,0.55)',
+                color: '#e8c86a',
+                fontWeight: 900,
+              }}
+              onClick={importBundled}
+            >
+              ⚡ LOAD REAL-LEAGUE NAMES — ONE TAP
+            </button>
             <button style={S.action} onClick={exportFile}>EXPORT NAMES JSON</button>
             <label style={{ ...S.action, textAlign: 'center', cursor: 'pointer' }}>
               IMPORT NAMES JSON

@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  // Relative base: the game deploys to GitHub Pages under /<repo>/ as well
+  // as any root domain — every asset URL must survive both.
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {

@@ -12,7 +12,8 @@ async function boot() {
     void navigator.storage.persisted().then(p => p || navigator.storage.persist());
   }
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    void navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Relative: resolves under the deploy path (GitHub Pages serves /<repo>/).
+    void navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   // Dev helper: ?seed-collection rips packs into the save for UI work.
   const params = new URLSearchParams(location.search);

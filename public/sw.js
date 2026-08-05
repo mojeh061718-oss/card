@@ -9,7 +9,7 @@ const CACHE = 'cardboard-v1';
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
-      .then(cache => cache.addAll(['/', '/index.html', '/manifest.webmanifest']))
+      .then(cache => cache.addAll(['./', './index.html', './manifest.webmanifest']))
       .then(() => self.skipWaiting()),
   );
 });
@@ -32,10 +32,10 @@ self.addEventListener('fetch', event => {
       fetch(request)
         .then(res => {
           const copy = res.clone();
-          caches.open(CACHE).then(c => c.put('/index.html', copy));
+          caches.open(CACHE).then(c => c.put('./index.html', copy));
           return res;
         })
-        .catch(() => caches.match('/index.html').then(r => r ?? Response.error())),
+        .catch(() => caches.match('./index.html').then(r => r ?? Response.error())),
     );
     return;
   }

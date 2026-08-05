@@ -1,0 +1,597 @@
+{
+  "version": 1,
+  "teams": {
+    "football:0": {
+      "city": "Arizona",
+      "nickname": "Cardinals",
+      "abbrev": "ARI",
+      "primary": "#97233f",
+      "secondary": "#ffb612"
+    },
+    "football:1": {
+      "city": "Atlanta",
+      "nickname": "Falcons",
+      "abbrev": "ATL",
+      "primary": "#a71930",
+      "secondary": "#000000"
+    },
+    "football:2": {
+      "city": "Baltimore",
+      "nickname": "Ravens",
+      "abbrev": "BAL",
+      "primary": "#241773",
+      "secondary": "#9e7c0c"
+    },
+    "football:3": {
+      "city": "Buffalo",
+      "nickname": "Bills",
+      "abbrev": "BUF",
+      "primary": "#00338d",
+      "secondary": "#c60c30"
+    },
+    "football:4": {
+      "city": "Carolina",
+      "nickname": "Panthers",
+      "abbrev": "CAR",
+      "primary": "#0085ca",
+      "secondary": "#101820"
+    },
+    "football:5": {
+      "city": "Chicago",
+      "nickname": "Bears",
+      "abbrev": "CHI",
+      "primary": "#0b162a",
+      "secondary": "#c83803"
+    },
+    "football:6": {
+      "city": "Cincinnati",
+      "nickname": "Bengals",
+      "abbrev": "CIN",
+      "primary": "#fb4f14",
+      "secondary": "#000000"
+    },
+    "football:7": {
+      "city": "Cleveland",
+      "nickname": "Browns",
+      "abbrev": "CLE",
+      "primary": "#311d00",
+      "secondary": "#ff3c00"
+    },
+    "football:8": {
+      "city": "Dallas",
+      "nickname": "Cowboys",
+      "abbrev": "DAL",
+      "primary": "#003594",
+      "secondary": "#869397"
+    },
+    "football:9": {
+      "city": "Denver",
+      "nickname": "Broncos",
+      "abbrev": "DEN",
+      "primary": "#fb4f14",
+      "secondary": "#002244"
+    },
+    "football:10": {
+      "city": "Detroit",
+      "nickname": "Lions",
+      "abbrev": "DET",
+      "primary": "#0076b6",
+      "secondary": "#b0b7bc"
+    },
+    "football:11": {
+      "city": "Green Bay",
+      "nickname": "Packers",
+      "abbrev": "GB",
+      "primary": "#203731",
+      "secondary": "#ffb612"
+    },
+    "football:12": {
+      "city": "Houston",
+      "nickname": "Texans",
+      "abbrev": "HOU",
+      "primary": "#03202f",
+      "secondary": "#a71930"
+    },
+    "football:13": {
+      "city": "Indianapolis",
+      "nickname": "Colts",
+      "abbrev": "IND",
+      "primary": "#002c5f",
+      "secondary": "#a2aaad"
+    },
+    "football:14": {
+      "city": "Jacksonville",
+      "nickname": "Jaguars",
+      "abbrev": "JAX",
+      "primary": "#101820",
+      "secondary": "#d7a22a"
+    },
+    "football:15": {
+      "city": "Kansas City",
+      "nickname": "Chiefs",
+      "abbrev": "KC",
+      "primary": "#e31837",
+      "secondary": "#ffb81c"
+    },
+    "football:16": {
+      "city": "Las Vegas",
+      "nickname": "Raiders",
+      "abbrev": "LV",
+      "primary": "#000000",
+      "secondary": "#a5acaf"
+    },
+    "football:17": {
+      "city": "Los Angeles",
+      "nickname": "Chargers",
+      "abbrev": "LAC",
+      "primary": "#0080c6",
+      "secondary": "#ffc20e"
+    },
+    "football:18": {
+      "city": "Los Angeles",
+      "nickname": "Rams",
+      "abbrev": "LAR",
+      "primary": "#003594",
+      "secondary": "#ffa300"
+    },
+    "football:19": {
+      "city": "Miami",
+      "nickname": "Dolphins",
+      "abbrev": "MIA",
+      "primary": "#008e97",
+      "secondary": "#fc4c02"
+    },
+    "football:20": {
+      "city": "Minnesota",
+      "nickname": "Vikings",
+      "abbrev": "MIN",
+      "primary": "#4f2683",
+      "secondary": "#ffc62f"
+    },
+    "football:21": {
+      "city": "New England",
+      "nickname": "Patriots",
+      "abbrev": "NE",
+      "primary": "#002244",
+      "secondary": "#c60c30"
+    },
+    "football:22": {
+      "city": "New Orleans",
+      "nickname": "Saints",
+      "abbrev": "NO",
+      "primary": "#101820",
+      "secondary": "#d3bc8d"
+    },
+    "football:23": {
+      "city": "New York",
+      "nickname": "Giants",
+      "abbrev": "NYG",
+      "primary": "#0b2265",
+      "secondary": "#a71930"
+    },
+    "football:24": {
+      "city": "New York",
+      "nickname": "Jets",
+      "abbrev": "NYJ",
+      "primary": "#125740",
+      "secondary": "#000000"
+    },
+    "football:25": {
+      "city": "Philadelphia",
+      "nickname": "Eagles",
+      "abbrev": "PHI",
+      "primary": "#004c54",
+      "secondary": "#a5acaf"
+    },
+    "football:26": {
+      "city": "Pittsburgh",
+      "nickname": "Steelers",
+      "abbrev": "PIT",
+      "primary": "#ffb612",
+      "secondary": "#101820"
+    },
+    "football:27": {
+      "city": "San Francisco",
+      "nickname": "49ers",
+      "abbrev": "SF",
+      "primary": "#aa0000",
+      "secondary": "#b3995d"
+    },
+    "football:28": {
+      "city": "Seattle",
+      "nickname": "Seahawks",
+      "abbrev": "SEA",
+      "primary": "#002244",
+      "secondary": "#69be28"
+    },
+    "football:29": {
+      "city": "Tampa Bay",
+      "nickname": "Buccaneers",
+      "abbrev": "TB",
+      "primary": "#d50a0a",
+      "secondary": "#ff7900"
+    },
+    "football:30": {
+      "city": "Tennessee",
+      "nickname": "Titans",
+      "abbrev": "TEN",
+      "primary": "#0c2340",
+      "secondary": "#4b92db"
+    },
+    "football:31": {
+      "city": "Washington",
+      "nickname": "Commanders",
+      "abbrev": "WAS",
+      "primary": "#5a1414",
+      "secondary": "#ffb612"
+    },
+    "baseball:0": {
+      "city": "Arizona",
+      "nickname": "Diamondbacks",
+      "abbrev": "ARI",
+      "primary": "#a71930",
+      "secondary": "#e3d4ad"
+    },
+    "baseball:1": {
+      "city": "Atlanta",
+      "nickname": "Braves",
+      "abbrev": "ATL",
+      "primary": "#ce1141",
+      "secondary": "#13274f"
+    },
+    "baseball:2": {
+      "city": "Baltimore",
+      "nickname": "Orioles",
+      "abbrev": "BAL",
+      "primary": "#df4601",
+      "secondary": "#000000"
+    },
+    "baseball:3": {
+      "city": "Boston",
+      "nickname": "Red Sox",
+      "abbrev": "BOS",
+      "primary": "#bd3039",
+      "secondary": "#0c2340"
+    },
+    "baseball:4": {
+      "city": "Chicago",
+      "nickname": "Cubs",
+      "abbrev": "CHC",
+      "primary": "#0e3386",
+      "secondary": "#cc3433"
+    },
+    "baseball:5": {
+      "city": "Chicago",
+      "nickname": "White Sox",
+      "abbrev": "CWS",
+      "primary": "#27251f",
+      "secondary": "#c4ced4"
+    },
+    "baseball:6": {
+      "city": "Cincinnati",
+      "nickname": "Reds",
+      "abbrev": "CIN",
+      "primary": "#c6011f",
+      "secondary": "#000000"
+    },
+    "baseball:7": {
+      "city": "Cleveland",
+      "nickname": "Guardians",
+      "abbrev": "CLE",
+      "primary": "#00385d",
+      "secondary": "#e50022"
+    },
+    "baseball:8": {
+      "city": "Colorado",
+      "nickname": "Rockies",
+      "abbrev": "COL",
+      "primary": "#33006f",
+      "secondary": "#c4ced4"
+    },
+    "baseball:9": {
+      "city": "Detroit",
+      "nickname": "Tigers",
+      "abbrev": "DET",
+      "primary": "#0c2340",
+      "secondary": "#fa4616"
+    },
+    "baseball:10": {
+      "city": "Houston",
+      "nickname": "Astros",
+      "abbrev": "HOU",
+      "primary": "#002d62",
+      "secondary": "#eb6e1f"
+    },
+    "baseball:11": {
+      "city": "Kansas City",
+      "nickname": "Royals",
+      "abbrev": "KC",
+      "primary": "#004687",
+      "secondary": "#bd9b60"
+    },
+    "baseball:12": {
+      "city": "Los Angeles",
+      "nickname": "Angels",
+      "abbrev": "LAA",
+      "primary": "#ba0021",
+      "secondary": "#003263"
+    },
+    "baseball:13": {
+      "city": "Los Angeles",
+      "nickname": "Dodgers",
+      "abbrev": "LAD",
+      "primary": "#005a9c",
+      "secondary": "#ef3e42"
+    },
+    "baseball:14": {
+      "city": "Miami",
+      "nickname": "Marlins",
+      "abbrev": "MIA",
+      "primary": "#00a3e0",
+      "secondary": "#ef3340"
+    },
+    "baseball:15": {
+      "city": "Milwaukee",
+      "nickname": "Brewers",
+      "abbrev": "MIL",
+      "primary": "#12284b",
+      "secondary": "#ffc52f"
+    },
+    "baseball:16": {
+      "city": "Minnesota",
+      "nickname": "Twins",
+      "abbrev": "MIN",
+      "primary": "#002b5c",
+      "secondary": "#d31145"
+    },
+    "baseball:17": {
+      "city": "New York",
+      "nickname": "Mets",
+      "abbrev": "NYM",
+      "primary": "#002d72",
+      "secondary": "#ff5910"
+    },
+    "baseball:18": {
+      "city": "New York",
+      "nickname": "Yankees",
+      "abbrev": "NYY",
+      "primary": "#0c2340",
+      "secondary": "#c4ced3"
+    },
+    "baseball:19": {
+      "city": "Oakland",
+      "nickname": "Athletics",
+      "abbrev": "OAK",
+      "primary": "#003831",
+      "secondary": "#efb21e"
+    },
+    "baseball:20": {
+      "city": "Philadelphia",
+      "nickname": "Phillies",
+      "abbrev": "PHI",
+      "primary": "#e81828",
+      "secondary": "#002d72"
+    },
+    "baseball:21": {
+      "city": "Pittsburgh",
+      "nickname": "Pirates",
+      "abbrev": "PIT",
+      "primary": "#27251f",
+      "secondary": "#fdb827"
+    },
+    "baseball:22": {
+      "city": "San Diego",
+      "nickname": "Padres",
+      "abbrev": "SD",
+      "primary": "#2f241d",
+      "secondary": "#ffc425"
+    },
+    "baseball:23": {
+      "city": "San Francisco",
+      "nickname": "Giants",
+      "abbrev": "SF",
+      "primary": "#fd5a1e",
+      "secondary": "#27251f"
+    },
+    "baseball:24": {
+      "city": "Seattle",
+      "nickname": "Mariners",
+      "abbrev": "SEA",
+      "primary": "#0c2c56",
+      "secondary": "#005c5c"
+    },
+    "baseball:25": {
+      "city": "St. Louis",
+      "nickname": "Cardinals",
+      "abbrev": "STL",
+      "primary": "#c41e3a",
+      "secondary": "#0c2340"
+    },
+    "baseball:26": {
+      "city": "Tampa Bay",
+      "nickname": "Rays",
+      "abbrev": "TB",
+      "primary": "#092c5c",
+      "secondary": "#8fbce6"
+    },
+    "baseball:27": {
+      "city": "Texas",
+      "nickname": "Rangers",
+      "abbrev": "TEX",
+      "primary": "#003278",
+      "secondary": "#c0111f"
+    },
+    "baseball:28": {
+      "city": "Toronto",
+      "nickname": "Blue Jays",
+      "abbrev": "TOR",
+      "primary": "#134a8e",
+      "secondary": "#1d2d5c"
+    },
+    "baseball:29": {
+      "city": "Washington",
+      "nickname": "Nationals",
+      "abbrev": "WSH",
+      "primary": "#ab0003",
+      "secondary": "#14225a"
+    }
+  },
+  "players": {},
+  "series": {},
+  "rosterByRank": {
+    "football": [
+      "Patrick Mahomes",
+      "Josh Allen",
+      "Ja'Marr Chase",
+      "Justin Jefferson",
+      "Drake Maye",
+      "Lamar Jackson",
+      "Jahmyr Gibbs",
+      "Bijan Robinson",
+      "Puka Nacua",
+      "Saquon Barkley",
+      "Jaxon Smith-Njigba",
+      "Micah Parsons",
+      "Myles Garrett",
+      "Christian McCaffrey",
+      "Amon-Ra St. Brown",
+      "Matthew Stafford",
+      "Will Anderson Jr.",
+      "Maxx Crosby",
+      "James Cook",
+      "Aidan Hutchinson",
+      "Patrick Surtain II",
+      "Nik Bonitto",
+      "Penei Sewell",
+      "Tristan Wirfs",
+      "Trent Williams",
+      "Tom Brady",
+      "Joe Montana",
+      "Jerry Rice",
+      "Peyton Manning",
+      "Walter Payton",
+      "Barry Sanders",
+      "Emmitt Smith",
+      "Lawrence Taylor",
+      "Jim Brown",
+      "Johnny Unitas",
+      "Dan Marino",
+      "John Elway",
+      "Brett Favre",
+      "Aaron Rodgers",
+      "Drew Brees",
+      "Randy Moss",
+      "Terrell Owens",
+      "Deion Sanders",
+      "Ray Lewis",
+      "Reggie White",
+      "Bruce Smith",
+      "Rod Woodson",
+      "Ronnie Lott",
+      "Dick Butkus",
+      "Bart Starr",
+      "Joe Namath",
+      "Roger Staubach",
+      "Terry Bradshaw",
+      "Steve Young",
+      "Troy Aikman",
+      "Marshall Faulk",
+      "LaDainian Tomlinson",
+      "Adrian Peterson",
+      "Eric Dickerson",
+      "Tony Dorsett",
+      "Earl Campbell",
+      "Gale Sayers",
+      "Marcus Allen",
+      "Thurman Thomas",
+      "Curtis Martin",
+      "Michael Irvin",
+      "Cris Carter",
+      "Tim Brown",
+      "Steve Largent",
+      "Lynn Swann",
+      "Ozzie Newsome",
+      "Tony Gonzalez",
+      "Rob Gronkowski",
+      "Ed Reed",
+      "Champ Bailey"
+    ],
+    "baseball": [
+      "Shohei Ohtani",
+      "Paul Skenes",
+      "Aaron Judge",
+      "Juan Soto",
+      "Bobby Witt Jr.",
+      "Mookie Betts",
+      "Yordan Alvarez",
+      "Pete Crow-Armstrong",
+      "Kyle Schwarber",
+      "Corbin Carroll",
+      "Bryce Harper",
+      "James Wood",
+      "Junior Caminero",
+      "Jacob Misiorowski",
+      "Nick Kurtz",
+      "Mike Trout",
+      "Cristopher Sanchez",
+      "Corey Seager",
+      "Mason Miller",
+      "Cam Schlittler",
+      "Kevin McGonigle",
+      "JJ Wetherholt",
+      "Chase Burns",
+      "Ben Rice",
+      "Byron Buxton",
+      "Mickey Mantle",
+      "Babe Ruth",
+      "Willie Mays",
+      "Hank Aaron",
+      "Ted Williams",
+      "Ken Griffey Jr.",
+      "Roberto Clemente",
+      "Jackie Robinson",
+      "Lou Gehrig",
+      "Joe DiMaggio",
+      "Sandy Koufax",
+      "Nolan Ryan",
+      "Cal Ripken Jr.",
+      "Derek Jeter",
+      "Barry Bonds",
+      "Tony Gwynn",
+      "Rickey Henderson",
+      "Mike Piazza",
+      "Chipper Jones",
+      "Frank Thomas",
+      "Greg Maddux",
+      "Pedro Martinez",
+      "Randy Johnson",
+      "Roger Clemens",
+      "Tom Seaver",
+      "Bob Gibson",
+      "Stan Musial",
+      "Honus Wagner",
+      "Ty Cobb",
+      "Yogi Berra",
+      "Johnny Bench",
+      "Reggie Jackson",
+      "Mike Schmidt",
+      "George Brett",
+      "Eddie Murray",
+      "Ozzie Smith",
+      "Wade Boggs",
+      "Kirby Puckett",
+      "Dave Winfield",
+      "Ryne Sandberg",
+      "Don Mattingly",
+      "Ivan Rodriguez",
+      "Jeff Bagwell",
+      "Craig Biggio",
+      "Vladimir Guerrero",
+      "Manny Ramirez",
+      "David Ortiz",
+      "Albert Pujols",
+      "Ichiro Suzuki",
+      "Mariano Rivera"
+    ]
+  }
+}
