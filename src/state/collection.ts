@@ -12,7 +12,9 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { PulledCard } from '../engine/cards/series';
 import { world } from './world';
 import { gradeCard, COMPANIES, type GradeResult, type Tier } from '../engine/condition/grading';
-import { childSeedN, hashString } from '../engine/rng';
+import { childSeedN, hashString, Rng } from '../engine/rng';
+import { runAuction, MARKETPLACE_FEE, type AuctionResult } from '../engine/economy/auction';
+import { dealerOffer } from '../engine/economy/valuation';
 
 export interface CardInstance extends PulledCard {
   /** Unique ownership id (monotonic per save). */
@@ -21,6 +23,26 @@ export interface CardInstance extends PulledCard {
   pulledSeq: number;
   /** Slabbed grade, once returned. */
   grade?: { companyKey: string; result: GradeResult; gradedDay: number };
+}
+
+export interface Listing {
+  uid: number;
+  /** Days the auction runs. */
+  days: number;
+  reserve: number;
+  listedDay: number;
+  endsDay: number;
+}
+
+export interface SaleRecord {
+  uid: number;
+  player: string;
+  tier: string;
+  price: number;
+  net: number;
+  day: number;
+  kind: 'dealer' | 'auction';
+  auction?: AuctionResult;
 }
 
 export interface Submission {
@@ -37,14 +59,21 @@ interface CollectionState {
   nextUid: number;
   hydrated: boolean;
   day: number;
+  cash: number;
   submissions: Submission[];
   /** Slabs that came back and await the reveal ceremony. */
   returns: number[];
+  listings: Listing[];
+  /** Settled auctions awaiting acknowledgement. */
+  saleFeed: SaleRecord[];
   addPulls(pulls: PulledCard[]): void;
   submitForGrading(uids: number[], companyKey: string, tier: Tier): void;
   endDay(): void;
   /** Reveal one returned slab: applies the grade, returns the instance. */
   revealReturn(uid: number): CardInstance | null;
+  quickSell(uid: number): SaleRecord | null;
+  listAtAuction(uid: number, days: number, reserve: number): void;
+  dismissSale(uid: number): void;
 }
 
 const DB_NAME = 'cardboard';
@@ -71,8 +100,11 @@ function scheduleSave(state: CollectionState): void {
         cards: state.cards,
         nextUid: state.nextUid,
         day: state.day,
+        cash: state.cash,
         submissions: state.submissions,
         returns: state.returns,
+        listings: state.listings,
+        saleFeed: state.saleFeed,
         populations: world.savePopulations(),
       }, 'save-v1');
     } catch (err) {
@@ -86,8 +118,11 @@ export const useCollection = create<CollectionState>((set, get) => ({
   nextUid: 1,
   hydrated: false,
   day: 1,
+  cash: 2500,
   submissions: [],
   returns: [],
+  listings: [],
+  saleFeed: [],
   addPulls(pulls) {
     const { cards, nextUid } = get();
     const stamped: CardInstance[] = pulls.map((p, i) => ({
@@ -99,25 +134,66 @@ export const useCollection = create<CollectionState>((set, get) => ({
   submitForGrading(uids, companyKey, tier) {
     const co = COMPANIES.find(c => c.key === companyKey);
     if (!co || uids.length === 0) return;
-    const { day, submissions } = get();
+    const { day, submissions, cash } = get();
+    const fee = co.fees[tier] * uids.length;
+    if (fee > cash) return; // can't front the grading bill
     set({
+      cash: cash - fee,
       submissions: [...submissions, {
         uids, companyKey, tier,
         submittedDay: day,
         dueDay: day + co.turnaroundDays[tier],
-        feePaid: co.fees[tier] * uids.length,
+        feePaid: fee,
       }],
     });
     scheduleSave(get());
   },
   endDay() {
-    const { day, submissions, returns } = get();
+    const { day, submissions, returns, listings, cards, cash, saleFeed } = get();
     const newDay = day + 1;
     const arrived = submissions.filter(s => s.dueDay <= newDay);
     const pending = submissions.filter(s => s.dueDay > newDay);
+
+    // Settle auctions that closed overnight.
+    const closed = listings.filter(l => l.endsDay <= newDay);
+    const openListings = listings.filter(l => l.endsDay > newDay);
+    let earned = 0;
+    const newSales: SaleRecord[] = [];
+    const soldUids = new Set<number>();
+    for (const listing of closed) {
+      const card = cards.find(c => c.uid === listing.uid);
+      if (!card) continue;
+      const intrinsic = world.valuation(card, card.grade);
+      const rng = new Rng(childSeedN(
+        hashString(world.identityKey(card)), listing.listedDay * 977 + listing.uid,
+      ));
+      const result = runAuction(
+        intrinsic, world.printRunOf(card), world.interest(card), listing.reserve, rng,
+      );
+      const info = world.displayName(card);
+      if (result.sold) {
+        const net = result.finalPrice * (1 - MARKETPLACE_FEE);
+        earned += net;
+        soldUids.add(listing.uid);
+        newSales.push({
+          uid: listing.uid, player: info.player, tier: info.tier,
+          price: result.finalPrice, net, day: newDay, kind: 'auction', auction: result,
+        });
+      } else {
+        newSales.push({
+          uid: listing.uid, player: info.player, tier: info.tier,
+          price: 0, net: 0, day: newDay, kind: 'auction', auction: result,
+        });
+      }
+    }
+
     set({
       day: newDay,
+      cash: cash + earned,
       submissions: pending,
+      listings: openListings,
+      cards: cards.filter(c => !soldUids.has(c.uid)),
+      saleFeed: [...newSales, ...saleFeed].slice(0, 40),
       returns: [...returns, ...arrived.flatMap(s => s.uids.map(uid => uid))],
     });
     // Stash which company each arrived uid used, via a lookup on reveal.
@@ -146,6 +222,40 @@ export const useCollection = create<CollectionState>((set, get) => ({
     scheduleSave(get());
     return graded;
   },
+  quickSell(uid) {
+    const { cards, cash, day, saleFeed } = get();
+    const card = cards.find(c => c.uid === uid);
+    if (!card) return null;
+    const intrinsic = world.valuation(card, card.grade);
+    const { comps } = world.comps(card, day, card.grade);
+    const rng = new Rng(childSeedN(hashString(world.identityKey(card)), day));
+    const price = dealerOffer(intrinsic, comps.length, rng);
+    const info = world.displayName(card);
+    const record: SaleRecord = {
+      uid, player: info.player, tier: info.tier,
+      price, net: price, day, kind: 'dealer',
+    };
+    set({
+      cards: cards.filter(c => c.uid !== uid),
+      cash: cash + price,
+      saleFeed: [record, ...saleFeed].slice(0, 40),
+    });
+    scheduleSave(get());
+    return record;
+  },
+  listAtAuction(uid, days, reserve) {
+    const { listings, day, cards } = get();
+    if (!cards.some(c => c.uid === uid)) return;
+    if (listings.some(l => l.uid === uid)) return;
+    set({
+      listings: [...listings, { uid, days, reserve, listedDay: day, endsDay: day + days }],
+    });
+    scheduleSave(get());
+  },
+  dismissSale(uid) {
+    set({ saleFeed: get().saleFeed.filter(s => s.uid !== uid) });
+    scheduleSave(get());
+  },
 }));
 
 /** uid -> companyKey for slabs in transit back to the shop. */
@@ -162,8 +272,11 @@ export async function hydrateCollection(): Promise<void> {
         cards: save.cards ?? [],
         nextUid: save.nextUid ?? 1,
         day: save.day ?? 1,
+        cash: save.cash ?? 2500,
         submissions: save.submissions ?? [],
         returns: save.returns ?? [],
+        listings: save.listings ?? [],
+        saleFeed: save.saleFeed ?? [],
         hydrated: true,
       });
       // Rebuild the in-transit company map for already-arrived returns: the

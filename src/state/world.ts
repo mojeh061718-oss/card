@@ -17,6 +17,8 @@ import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
 import type { Population } from '../engine/cards/population';
 import { conditionFor, pressProfile, type Condition, type PressProfile } from '../engine/condition/condition';
+import { intrinsicValue, generateComps, compValue, type Comp } from '../engine/economy/valuation';
+import { COMPANIES, type GradeResult } from '../engine/condition/grading';
 
 export interface SeriesRuntime {
   def: SeriesDef;
@@ -88,6 +90,66 @@ class World {
       auto: card.isAuto ? { ink: card.autoInk ?? 'blueSharpie', sticker: card.autoSticker } : null,
       artSeed: artSeedFor(rt.def.seed, pull.cardIndex),
     };
+  }
+
+  /** Stable identity string for a physical copy — keys comps and caches. */
+  identityKey(pull: PulledCard): string {
+    return `${pull.seriesId}:${pull.cardIndex}:${pull.parallelId}:${pull.serial}`;
+  }
+
+  /** Series desirability: premium/short-print brands carry more weight. */
+  private setFactor(rt: SeriesRuntime): number {
+    return 1 + 20000 / rt.def.archetype.baseRunPerCard * 0.05;
+  }
+
+  valuation(
+    pull: PulledCard,
+    grade?: { companyKey: string; result: GradeResult } | null,
+  ): number {
+    const rt = this.get(pull.seriesId);
+    const card = rt.def.checklist[pull.cardIndex];
+    const player = rt.players[card.playerId];
+    const parallel = rt.def.ladder[pull.parallelId];
+    const company = grade ? COMPANIES.find(c => c.key === grade.companyKey) : null;
+    return intrinsicValue({
+      player, parallel,
+      isRookie: card.isRookie,
+      isAuto: card.isAuto,
+      setFactor: this.setFactor(rt),
+      grade: grade && company ? { result: grade.result, company } : null,
+      errorKind: this.conditionOf(pull).error,
+    });
+  }
+
+  gradeLabel(grade?: { companyKey: string; result: GradeResult } | null): string {
+    if (!grade) return 'RAW';
+    const co = COMPANIES.find(c => c.key === grade.companyKey);
+    return `${co?.name ?? '?'} ${grade.result.overall.toFixed(1).replace('.0', '')}`;
+  }
+
+  comps(
+    pull: PulledCard, today: number,
+    grade?: { companyKey: string; result: GradeResult } | null,
+  ): { comps: Comp[]; median: number | null; intrinsic: number } {
+    const rt = this.get(pull.seriesId);
+    const parallel = rt.def.ladder[pull.parallelId];
+    const intrinsic = this.valuation(pull, grade);
+    const key = `${this.identityKey(pull)}:${grade ? grade.companyKey + grade.result.overall : 'raw'}`;
+    const comps = generateComps(key, intrinsic, parallel.printRun, today, this.gradeLabel(grade));
+    return { comps, median: compValue(comps), intrinsic };
+  }
+
+  /** Market interest 0..1 — drives auction crowd size. */
+  interest(pull: PulledCard): number {
+    const rt = this.get(pull.seriesId);
+    const card = rt.def.checklist[pull.cardIndex];
+    const player = rt.players[card.playerId];
+    const talentPull = Math.max(0, player.talent - 55) / 45;
+    return Math.min(1, talentPull * 0.7 + (card.isRookie ? 0.2 : 0) + (card.isAuto ? 0.2 : 0));
+  }
+
+  printRunOf(pull: PulledCard): number {
+    return this.get(pull.seriesId).def.ladder[pull.parallelId].printRun;
   }
 
   heat(pull: PulledCard): number {
