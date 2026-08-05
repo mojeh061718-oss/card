@@ -63,12 +63,15 @@ export async function importSetArt(
       const wantHires = hiresNums?.has(num) ?? false;
       try {
         const cached = await db.get('img', key) as Blob | undefined;
-        const needsUpgrade = wantHires && cached !== undefined && cached.size < 300_000;
-        if (cached === undefined || needsUpgrade) {
+        // A `__hi:` marker records that the stored blob IS the hires
+        // variant — size heuristics would re-download small files forever.
+        const isHi = cached !== undefined && await db.get('img', `__hi:${key}`) === true;
+        if (cached === undefined || (wantHires && !isHi)) {
           const slug = wantHires ? `${num}_hires` : String(num);
           const res = await fetch(urlPattern.replace('{num}', slug));
           if (!res.ok) throw new Error(String(res.status));
           await db.put('img', await res.blob(), key);
+          if (wantHires) await db.put('img', true, `__hi:${key}`);
         }
         done++;
         onProgress(done, failed, num);

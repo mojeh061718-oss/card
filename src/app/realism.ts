@@ -78,8 +78,8 @@ export async function runRealismImport(
     });
   });
 
-  // 3. Official card scans. Holos, chases and rares come down at high
-  // resolution — the cards you actually chase must be crisp full-screen.
+  // 3. Official card scans — EVERY card at the CDN's high-resolution
+  // variant. No shortcuts on graphics: commons deserve device pixels too.
   const poke = await fetch('presets/pokemon-concept.json').then(r => r.json());
   let scansDone = 0, scansFailed = 0, hires = 0;
   const sets = (poke.sets ?? []) as {
@@ -90,8 +90,7 @@ export async function runRealismImport(
   for (const s of sets) {
     const nums = s.cards.map(c => c.num);
     const nameOf = new Map(s.cards.map(c => [c.num, c.name]));
-    const hiresNums = new Set(
-      s.cards.filter(c => ['holo', 'chase', 'rare'].includes(c.rarity)).map(c => c.num));
+    const hiresNums = new Set(nums);
     const hot = new Set(
       s.cards.filter(c => ['holo', 'chase'].includes(c.rarity)).map(c => c.num));
     const before = scansDone + scansFailed;

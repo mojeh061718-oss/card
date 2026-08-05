@@ -70,9 +70,8 @@ export function PokeLab() {
     if (!active || importing) return;
     setImporting({ done: 0, failed: 0 });
     const nums = active.cards.map(c => c.num);
-    // Preset rarities include 'chase' (renderer maps it to holo upstream).
-    const hires = new Set(
-      active.cards.filter(c => ['holo', 'chase'].includes(c.rarity as string)).map(c => c.num));
+    // Everything at high resolution — no shortcuts on graphics.
+    const hires = new Set(active.cards.map(c => c.num));
     const result = await importSetArt(
       active.key, active.officialArt, nums,
       (done, failed) => setImporting({ done, failed }),
