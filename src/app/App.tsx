@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { DevLab } from './DevLab';
 import { RipScreen } from './RipScreen';
+import { BinderScreen } from './BinderScreen';
 
-type Route = 'rip' | 'devlab';
+type Route = 'rip' | 'binder' | 'devlab';
 
 export function App() {
   const [route, setRoute] = useState<Route>(
@@ -11,18 +12,18 @@ export function App() {
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, minHeight: 0 }}>
-        {route === 'devlab' ? <DevLab /> : <RipScreen />}
+        {route === 'devlab' ? <DevLab /> : route === 'binder' ? <BinderScreen /> : <RipScreen />}
       </div>
       <nav style={{
         display: 'flex', justifyContent: 'center', gap: 28, padding: '10px 0 4px',
         borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, letterSpacing: 2,
       }}>
-        {(['rip', 'devlab'] as Route[]).map(r => (
+        {(['rip', 'binder', 'devlab'] as Route[]).map(r => (
           <button key={r} onClick={() => setRoute(r)} style={{
             background: 'none', border: 'none', color: route === r ? '#d4a017' : 'rgba(244,242,236,0.5)',
             fontWeight: 700, letterSpacing: 2, fontSize: 12,
           }}>
-            {r === 'rip' ? 'RIP' : 'LAB'}
+            {r === 'rip' ? 'RIP' : r === 'binder' ? 'BINDER' : 'LAB'}
           </button>
         ))}
       </nav>

@@ -296,7 +296,7 @@ export function drawAthlete(
     const word = style.wordmark.toUpperCase();
     let px = 0.033 * u;
     ctx.font = `700 ${px}px "Arial Narrow", Arial, sans-serif`;
-    const maxW = 0.19 * u;
+    const maxW = 0.145 * u;
     const measured = ctx.measureText(word).width;
     if (measured > maxW) px *= maxW / measured;
     ctx.font = `700 ${px}px "Arial Narrow", Arial, sans-serif`;

@@ -6,51 +6,13 @@
  */
 
 import { useMemo, useRef, useState } from 'react';
-import { seedFromText, Rng, childSeed } from '../engine/rng';
-import { generateLeague } from '../engine/world/teams';
-import {
-  buildSeries, makePopulation, classifySlots, openPack, renderInputs, rankOf,
-  type SeriesDef, type PulledCard,
-} from '../engine/cards/series';
-import { deriveDna } from '../render/dna';
-import { artSeedFor, type CardRenderSpec } from '../render/layers';
+import type { PulledCard } from '../engine/cards/series';
 import { renderPackWrapper, renderCardBack } from '../render/pack';
 import { snapshotCard, LiveCard } from './cardview';
+import { world } from '../state/world';
+import { useCollection } from '../state/collection';
 
-const WORLD_SEED = seedFromText('career-dev');
-
-interface RipWorld {
-  series: SeriesDef;
-  specFor(pull: PulledCard): CardRenderSpec;
-  rip(): PulledCard[];
-  heat(pull: PulledCard): number;
-}
-
-function buildRipWorld(): RipWorld {
-  const fb = generateLeague(WORLD_SEED, 'football', 2027);
-  const series = buildSeries(WORLD_SEED, 2027, 'Pinnacle Press', 'Chromium', 'football', fb.players);
-  const dna = deriveDna(series.seed, series.line);
-  const pop = makePopulation(series);
-  const classes = classifySlots(series);
-  const rng = Rng.from(childSeed(WORLD_SEED, 'shop-rips'), 'packs');
-  return {
-    series,
-    specFor(pull) {
-      const { player, team, card, parallel } = renderInputs(series, pull, fb.players, fb.teams);
-      return {
-        player, team, dna, parallel,
-        serial: parallel.numberedTo !== null ? pull.serial : null,
-        seriesName: series.name,
-        cardNumber: card.cardNumber,
-        isRookie: card.isRookie,
-        auto: card.isAuto ? { ink: card.autoInk ?? 'blueSharpie', sticker: card.autoSticker } : null,
-        artSeed: artSeedFor(series.seed, pull.cardIndex),
-      };
-    },
-    rip: () => openPack(series, pop, rng, classes, 10, []),
-    heat: (pull) => rankOf(series, pull),
-  };
-}
+const RIP_SERIES = '2027-pinnacle-press-chromium-football';
 
 /** Heat tier → glow color bleeding through the card back. */
 function glowFor(heat: number): string | null {
@@ -64,9 +26,10 @@ function glowFor(heat: number): string | null {
 type Phase = 'sealed' | 'stack' | 'takeover' | 'done';
 
 export function RipScreen() {
-  const world = useMemo(buildRipWorld, []);
-  const wrapperUrl = useMemo(() => renderPackWrapper(world.series, 640, 900).toDataURL(), [world]);
-  const backUrl = useMemo(() => renderCardBack(world.series, 500).toDataURL(), [world]);
+  const rt = useMemo(() => world.get(RIP_SERIES), []);
+  const addPulls = useCollection(s => s.addPulls);
+  const wrapperUrl = useMemo(() => renderPackWrapper(rt.def, 640, 900).toDataURL(), [rt]);
+  const backUrl = useMemo(() => renderCardBack(rt.def, 500).toDataURL(), [rt]);
 
   const [phase, setPhase] = useState<Phase>('sealed');
   const [tear, setTear] = useState(0);
@@ -77,7 +40,9 @@ export function RipScreen() {
   const tearing = useRef(false);
 
   const startRip = () => {
-    setPulls(world.rip());
+    const drawn = world.ripPack(RIP_SERIES);
+    addPulls(drawn);
+    setPulls(drawn);
     setIdx(0);
     setFlipped(false);
     setStillUrl(null);
@@ -141,7 +106,7 @@ export function RipScreen() {
             }} />
             {tear === 0 && <div style={S.tearHint}>drag across the top to rip ⟶</div>}
           </div>
-          <div style={S.caption}>{world.series.name} — Hobby Pack</div>
+          <div style={S.caption}>{rt.def.name} — Hobby Pack</div>
         </div>
       )}
 
@@ -168,7 +133,7 @@ export function RipScreen() {
           <div style={S.oneBanner}>ONE OF ONE</div>
           <LiveCard spec={world.specFor(current)} width={300} />
           <div style={S.oneSub}>
-            {world.series.name} · Superfractor · #{current.serial}/1
+            {rt.def.name} · Superfractor · #{current.serial}/1
           </div>
           <div style={{ ...S.caption, color: '#ffd75e' }}>tap to continue</div>
         </div>
