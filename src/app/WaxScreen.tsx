@@ -8,11 +8,10 @@
  */
 
 import { useMemo, useRef, useState } from 'react';
-import type { PulledCard } from '../engine/cards/series';
 import { renderPackWrapper, renderCardBack } from '../render/pack';
-import { snapshotCard, LiveCard } from './cardview';
+import { snapshotCard, cachedSnapshot, LiveCard } from './cardview';
 import { world } from '../state/world';
-import { useCollection, type SealedItem } from '../state/collection';
+import { useCollection, type SealedItem, type RipSessionState } from '../state/collection';
 import { formatMoney } from '../engine/economy/valuation';
 import { sfx, unlockAudio, heatTier } from './feel';
 
@@ -60,16 +59,23 @@ function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: st
 }
 
 export function WaxScreen() {
-  const { cash, day, sealed, bought, buyWax, openSealed, addPulls, endDay } = useCollection();
-  const [session, setSession] = useState<{ item: SealedItem; packs: PulledCard[][] } | null>(null);
+  const {
+    cash, day, sealed, bought, buyWax, openSealed, addPulls,
+    releaseBreaking, endDay, ripSession, beginRip, endRip,
+  } = useCollection();
 
-  const shelf = useMemo(() => world.seriesIds.flatMap(seriesId =>
+  // supplyRevision: ripping moves scarcity-lifted prices, so the shelf must
+  // reprice after a break, not just at the day tick.
+  const supplyRev = world.supplyRevision;
+  const shelf = useMemo(() => world.shelfSeries(day).flatMap(seriesId =>
     world.products.map(p => {
       const price = world.waxPrice(seriesId, p.key, day);
       const limit = world.allocation(seriesId, p.key, day);
       const used = bought[`${p.key}:${seriesId}:${day}`] ?? 0;
       return { seriesId, product: p, price, limit, used };
-    })), [day, bought]);
+    })), [day, bought, supplyRev]);
+
+  const upcoming = useMemo(() => world.upcomingReleases(day, 14), [day]);
 
   const buy = (seriesId: string, productKey: string, price: number) => {
     unlockAudio();
@@ -81,8 +87,18 @@ export function WaxScreen() {
     unlockAudio();
     const packs = world.openProduct(item.seriesId, item.productKey);
     openSealed(item.id);
-    addPulls(packs.flat());
-    setSession({ item, packs });
+    // quiet: the breaking banner must not name the hit before the flip.
+    addPulls(packs.flat(), { quiet: true });
+    // Persisted: closing the app mid-box resumes the reveal on next boot.
+    beginRip({
+      seriesId: item.seriesId, productKey: item.productKey,
+      pricePaid: item.pricePaid, packs,
+    });
+  };
+
+  const closeSession = () => {
+    endRip();
+    releaseBreaking();
   };
 
   const S = styles;
@@ -164,6 +180,33 @@ export function WaxScreen() {
           })}
         </section>
 
+        {upcoming.length > 0 && (
+          <section style={S.section}>
+            <div style={S.sectionTitle}>COMING SOON — mark the calendar</div>
+            {upcoming.map(r => (
+              <div key={`up-${r.index}`} style={{ ...S.shelfRow, opacity: 0.6 }}>
+                <div style={{
+                  width: 38, height: 54, flexShrink: 0, borderRadius: 4,
+                  border: '1px dashed rgba(232,200,106,0.5)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9, color: '#e8c86a', fontWeight: 800,
+                }}>
+                  D{r.releaseDay}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <div style={S.shelfName}>{r.year} {r.brand} {r.line}</div>
+                  <div style={S.shelfMeta}>{r.sport} · new checklist, new rainbow</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ ...S.shelfStock, color: '#e8c86a' }}>
+                    DROPS IN {r.releaseDay - day} DAY{r.releaseDay - day > 1 ? 'S' : ''}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
         {sealed.length === 0 && (
           <div style={S.tip}>
             Buy a pack to get started. A box costs more than its packs but
@@ -172,11 +215,10 @@ export function WaxScreen() {
         )}
       </div>
 
-      {session && (
+      {ripSession && (
         <RipSession
-          item={session.item}
-          packs={session.packs}
-          onClose={() => setSession(null)}
+          session={ripSession}
+          onClose={closeSession}
         />
       )}
     </div>
@@ -186,11 +228,12 @@ export function WaxScreen() {
 type Phase = 'sealed' | 'stack' | 'takeover' | 'done';
 
 /** Rip one product: tear each pack, flip each card, then the tally. */
-function RipSession({ item, packs, onClose }: {
-  item: SealedItem; packs: PulledCard[][]; onClose: () => void;
+function RipSession({ session, onClose }: {
+  session: RipSessionState; onClose: () => void;
 }) {
-  const rt = useMemo(() => world.get(item.seriesId), [item]);
-  const product = world.product(item.productKey);
+  const packs = session.packs;
+  const rt = useMemo(() => world.get(session.seriesId), [session]);
+  const product = world.product(session.productKey);
   const wrapperUrl = useMemo(() => renderPackWrapper(rt.def, 640, 900).toDataURL(), [rt]);
   const backUrl = useMemo(() => renderCardBack(rt.def, 500).toDataURL(), [rt]);
 
@@ -210,14 +253,17 @@ function RipSession({ item, packs, onClose }: {
     : heat >= 2.2 ? '#4f9dde' : null;
   const isOne = current?.numberedTo === 1;
 
+  const tearRef = useRef(0);
   const onTearMove = (e: React.PointerEvent) => {
     if (!tearing.current) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    setTear(t => {
-      if (Math.floor(p * 12) > Math.floor(t * 12)) sfx.tear();
-      return Math.max(t, p);
-    });
+    // Side effects (sfx) stay OUT of the setState updater — React may run
+    // updaters more than once.
+    const next = Math.max(tearRef.current, p);
+    if (Math.floor(next * 12) > Math.floor(tearRef.current * 12)) sfx.tear();
+    tearRef.current = next;
+    setTear(next);
     if (p > 0.92) {
       tearing.current = false;
       setTimeout(() => { setPhase('stack'); setIdx(0); setFlipped(false); }, 380);
@@ -246,6 +292,7 @@ function RipSession({ item, packs, onClose }: {
     // Pack finished — next pack, or the box tally.
     if (packIdx + 1 < packs.length) {
       setPackIdx(packIdx + 1);
+      tearRef.current = 0;
       setTear(0);
       setPhase('sealed');
     } else {
@@ -322,7 +369,23 @@ function RipSession({ item, packs, onClose }: {
               )}
             </div>
           </div>
-          <div style={S.caption}>{flipped ? 'tap for next card' : 'tap to flip'}</div>
+          {flipped ? (
+            // The number is the payoff — say it the moment the card lands.
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontSize: 17, fontWeight: 900,
+                color: glow ?? (world.valuation(current) >= 20 ? '#8ee08e' : 'rgba(244,242,236,0.75)'),
+              }}>
+                {formatMoney(world.valuation(current))}
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.55, marginTop: 2 }}>
+                {world.displayName(current).tier}
+              </div>
+              <div style={{ ...S.caption, marginTop: 6 }}>tap for next card</div>
+            </div>
+          ) : (
+            <div style={S.caption}>tap to flip</div>
+          )}
         </div>
       )}
 
@@ -338,21 +401,48 @@ function RipSession({ item, packs, onClose }: {
       {phase === 'done' && (
         <div style={S.doneStage}>
           <div style={S.counter}>{product.name.toUpperCase()} COMPLETE</div>
-          <div style={{
-            fontSize: 32, fontWeight: 900,
-            color: totalValue >= item.pricePaid ? '#8ee08e' : '#e08a6a',
-          }}>
-            {totalValue >= item.pricePaid ? '+' : ''}{formatMoney(totalValue - item.pricePaid)}
-          </div>
-          <div style={{ fontSize: 12, opacity: 0.6 }}>
-            {all.length} cards worth {formatMoney(totalValue)} · paid {formatMoney(item.pricePaid)}
-          </div>
-          <div style={{ ...S.sectionTitle, marginTop: 14 }}>BEST OF THE BREAK</div>
-          <div style={S.grid}>
-            {best.map((p, i) => (
-              <img key={i} src={snapshotCard(world.specFor(p), 220)} alt=""
-                style={{ width: '100%', borderRadius: 7 }} />
-            ))}
+          {/* Lead with the HIT — real breakers talk about the pull, not the
+              invoice. The honest net still prints, in its place: last. */}
+          {best[0] && (
+            <>
+              <div style={{ ...S.sectionTitle, marginTop: 8 }}>THE HEADLINER</div>
+              <img
+                src={cachedSnapshot(world.specFor(best[0]), world.identityKey(best[0]), 420)}
+                alt=""
+                style={{ width: 172, borderRadius: 10, boxShadow: '0 16px 44px rgba(0,0,0,0.6)' }}
+              />
+              <div style={{ fontSize: 15, fontWeight: 900, marginTop: 4 }}>
+                {world.displayName(best[0]).player}
+              </div>
+              <div style={{ fontSize: 10, color: '#e8c86a', fontWeight: 700 }}>
+                {world.displayName(best[0]).tier}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#8ee08e' }}>
+                {formatMoney(world.valuation(best[0]))}
+              </div>
+            </>
+          )}
+          {best.length > 1 && (
+            <>
+              <div style={{ ...S.sectionTitle, marginTop: 12 }}>REST OF THE BREAK</div>
+              <div style={S.grid}>
+                {best.slice(1).map((p, i) => (
+                  <div key={i}>
+                    <img src={cachedSnapshot(world.specFor(p), world.identityKey(p), 220)} alt=""
+                      style={{ width: '100%', borderRadius: 7 }} />
+                    <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(142,224,142,0.9)', marginTop: 2 }}>
+                      {formatMoney(world.valuation(p))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 12 }}>
+            {all.length} cards worth {formatMoney(totalValue)} · paid {formatMoney(session.pricePaid)} ·{' '}
+            <span style={{ color: totalValue >= session.pricePaid ? '#8ee08e' : '#e08a6a', fontWeight: 800 }}>
+              {totalValue >= session.pricePaid ? '+' : ''}{formatMoney(totalValue - session.pricePaid)}
+            </span>
           </div>
           <button style={S.button} onClick={onClose}>ADD TO COLLECTION</button>
         </div>

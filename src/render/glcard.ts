@@ -351,6 +351,10 @@ export function createCardGL(canvas: HTMLCanvasElement): CardGL {
         gl.deleteProgram(gpu.prog);
         gpu = null;
       }
+      // Release the context NOW rather than at GC — browsers cap live WebGL
+      // contexts (~16, fewer on iOS) and evict the oldest, which is how the
+      // shared snapshot context gets killed under LiveCard churn.
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
     },
   };
 }

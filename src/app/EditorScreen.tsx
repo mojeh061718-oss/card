@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import { world } from '../state/world';
-import { useCollection } from '../state/collection';
+import { useCollection, exportSaveJson, importSaveJson } from '../state/collection';
 import type { Sport } from '../engine/world/teams';
 import { sanitizeOverrides, teamKey, playerKey, emptyOverrides } from '../state/overrides';
 import { sfx } from './feel';
@@ -230,6 +230,39 @@ export function EditorScreen() {
             >
               RESET TO GENERATED NAMES
             </button>
+
+            <p style={{ ...S.note, marginTop: 16 }}>
+              FULL SAVE BACKUP — your whole career lives in one browser
+              record, and the browser is allowed to evict it. Export a backup
+              file once in a while; importing one replaces the current game
+              and reloads.
+            </p>
+            <button
+              style={S.action}
+              onClick={() => {
+                const blob = new Blob([exportSaveJson()], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `cardboard-save-day${useCollection.getState().day}.json`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                setNotice('Save exported. Keep that file somewhere safe.');
+              }}
+            >
+              EXPORT FULL SAVE
+            </button>
+            <label style={{ ...S.action, textAlign: 'center', cursor: 'pointer' }}>
+              IMPORT FULL SAVE (REPLACES CURRENT GAME)
+              <input
+                type="file" accept="application/json" style={{ display: 'none' }}
+                onChange={async e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  const err = await importSaveJson(await f.text());
+                  if (err) setNotice(err);
+                }}
+              />
+            </label>
           </div>
         )}
       </div>

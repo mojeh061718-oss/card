@@ -83,16 +83,20 @@ function buildSpecs(): GallerySpec[] {
   // Illustrated case hits — their own layout entirely.
   mk('DOWNTOWN /199', 'football', 0, dnaA, P(0), 42, true, null, 10, 'Downtown');
   mk('DOWNTOWN /199', 'baseball', 1, dnaB, P(0), 7, false, null, 11, 'Downtown');
+  mk('IGNITION /149', 'football', 1, dnaA, P(0), 88, true, null, 12, 'Ignition');
+  mk('IGNITION /149', 'baseball', 0, dnaB, P(0), 23, false, null, 13, 'Ignition');
   return specs;
 }
 
 export function DevLab() {
   const [stills, setStills] = useState<{ label: string; url: string }[]>([]);
   // ?focus=N opens the lab on a specific card, which is how the screenshot
-  // harness inspects one treatment at full size.
-  const [focusIdx, setFocusIdx] = useState(
-    Number(new URLSearchParams(location.search).get('focus') ?? 8),
-  );
+  // harness inspects one treatment at full size. Clamped: an out-of-range or
+  // garbage value must not throw and blank the whole app (no error boundary).
+  const [focusIdx, setFocusIdx] = useState(() => {
+    const raw = Number(new URLSearchParams(location.search).get('focus') ?? 8);
+    return Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 8;
+  });
   const focusRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<CardGL | null>(null);
   const specsRef = useRef<GallerySpec[] | null>(null);
@@ -133,7 +137,7 @@ export function DevLab() {
     canvas.height = Math.round((FOCUS_W / (2.5 / 3.5)) * dpr);
     if (!glRef.current) glRef.current = createCardGL(canvas);
     const gl = glRef.current;
-    const spec = specs[focusIdx].spec;
+    const spec = specs[Math.min(focusIdx, specs.length - 1)].spec;
     const layers = renderCardLayers(spec, 750);
     gl.setLayers(layers.print, layers.foilMask);
 
@@ -184,6 +188,13 @@ export function DevLab() {
     };
   }, [focusIdx, stills.length]);
 
+  // The focus context is a real GL context — release it when LAB unmounts
+  // instead of leaving it for GC to find.
+  useEffect(() => () => {
+    glRef.current?.destroy();
+    glRef.current = null;
+  }, []);
+
   return (
     <div style={{ padding: 16, maxWidth: 1200, margin: '0 auto' }}>
       <h1 style={{ fontSize: 18, letterSpacing: 2, opacity: 0.8, marginBottom: 4 }}>
@@ -214,7 +225,7 @@ export function DevLab() {
           }}
         >
           {stills.map((s, i) => (
-            <figure key={s.label} onClick={() => setFocusIdx(i)} style={{ cursor: 'pointer' }}>
+            <figure key={`${i}-${s.label}`} onClick={() => setFocusIdx(i)} style={{ cursor: 'pointer' }}>
               <img
                 src={s.url}
                 alt={s.label}

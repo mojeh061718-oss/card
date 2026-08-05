@@ -7,6 +7,7 @@
 import { useEffect, useRef } from 'react';
 import { renderCardLayers, type CardRenderSpec } from '../render/layers';
 import { createCardGL, type CardGL } from '../render/glcard';
+import { world } from '../state/world';
 
 // One scratch context for every still in the app, allocated once at a fixed
 // size and NEVER resized: resizing a WebGL canvas leaks GPU memory on iOS
@@ -28,11 +29,18 @@ function scratch(): CardGL {
   return scratchGL;
 }
 
-/** Render a card to a data-URL still at the given width. */
+/**
+ * Render a card to a data-URL still at the given width.
+ *
+ * Returns '' while the shared GL context is lost (iOS backgrounding): the
+ * drawing buffer is blank then, and a blank still must NEVER be handed out
+ * as if it were the card — callers skip caching falsy results.
+ */
 export function snapshotCard(spec: CardRenderSpec, widthPx = 600, tiltX = 0.18, tiltY = -0.08): string {
+  const gl = scratch();
+  if (gl.isLost()) return '';
   const w = Math.min(widthPx, SCRATCH_W);
   const layers = renderCardLayers(spec, w);
-  const gl = scratch();
   gl.setLayers(layers.print, layers.foilMask);
   // WebGL's viewport origin is bottom-left, so the drawn region lands at the
   // bottom of the canvas in DOM coordinates.
@@ -58,14 +66,47 @@ export function snapshotCard(spec: CardRenderSpec, widthPx = 600, tiltX = 0.18, 
   return readback.toDataURL('image/png');
 }
 
+/**
+ * Shared LRU of card stills, keyed by copy identity + size + names
+ * revision. Screens that render dozens of `<img>`s per frame (SELL, WAX
+ * tally, SOURCING) must go through here — inline snapshotCard calls in JSX
+ * re-rasterize the whole inventory on every render.
+ */
+const snapCache = new Map<string, string>();
+const SNAP_CAP = 600;
+
+export function cachedSnapshot(spec: CardRenderSpec, identity: string, widthPx = 220): string {
+  const key = `${identity}:${widthPx}:${world.namesRevision}`;
+  const hit = snapCache.get(key);
+  if (hit) {
+    snapCache.delete(key);
+    snapCache.set(key, hit); // LRU refresh
+    return hit;
+  }
+  const url = snapshotCard(spec, widthPx);
+  if (!url) return ''; // context lost — never cache a blank
+  if (snapCache.size >= SNAP_CAP) {
+    snapCache.delete(snapCache.keys().next().value!);
+  }
+  snapCache.set(key, url);
+  return url;
+}
+
 /** Live animated card — owns a private GL context while mounted. */
 export function LiveCard({ spec, width, className }: {
   spec: CardRenderSpec; width: number; className?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const tilt = useRef({ x: 0, y: 0, active: false });
+  // Callers pass a fresh spec object every render; keying the effect on the
+  // card's identity (not object identity) stops a parent re-render from
+  // tearing down and rebuilding the whole GL context mid-animation.
+  const specKey = `${spec.seriesName}|${spec.cardNumber}|${spec.parallel.id}|${spec.serial}|${spec.artSeed}|${world.namesRevision}`;
+  const specRef = useRef(spec);
+  specRef.current = spec;
 
   useEffect(() => {
+    const spec = specRef.current;
     const canvas = ref.current!;
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     const layers = renderCardLayers(spec, Math.min(900, width * dpr));
@@ -117,7 +158,8 @@ export function LiveCard({ spec, width, className }: {
       canvas.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [spec, width]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey, width]);
 
   return (
     <canvas

@@ -60,6 +60,7 @@ const AUTO_INKS: InkKind[] = ['blueSharpie', 'blueSharpie', 'blackSharpie', 'sil
  */
 export const INSERT_SETS = [
   { name: 'Downtown', printRun: 199, cards: 20 },
+  { name: 'Ignition', printRun: 149, cards: 12 },
 ] as const;
 
 /** Build the series definition (pure; population state lives separately). */

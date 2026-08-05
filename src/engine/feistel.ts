@@ -27,8 +27,11 @@ export class FeistelPermutation {
     if (!Number.isInteger(n) || n < 1) {
       throw new RangeError(`Feistel domain must be a positive integer, got ${n}`);
     }
-    if (n > 2 ** 48) {
-      throw new RangeError(`Feistel domain too large: ${n}`);
+    // The recombine uses 32-bit shifts, which silently overflow (negative
+    // outputs escaping cycle-walking) once 2*halfBits exceeds 31 — so the
+    // honest ceiling is 2^30, far above any real print run.
+    if (n > 2 ** 30) {
+      throw new RangeError(`Feistel domain too large: ${n} (max 2^30)`);
     }
     this.n = n;
     // Smallest even bit-width covering n, split into two halves.

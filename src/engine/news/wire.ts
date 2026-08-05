@@ -42,15 +42,24 @@ export function outletFor(seed: bigint): string {
 export function grailFoundStory(
   day: number, player: string, tier: string, seriesName: string,
   finderIsPlayer: boolean, shopName: string, seed: bigint,
+  value?: number,
 ): NewsItem {
   const rng = new Rng(seed);
   const city = rng.pick(CITIES);
   const headline = finderIsPlayer
     ? `${tier} ${player} SURFACES AT ${shopName.toUpperCase()}`
     : `${tier} ${player} PULLED IN ${city.toUpperCase()}`;
+  // Honest money talk: a /5 of a bench guy is not "six figures", and players
+  // who cross-reference the wire with SELL will notice.
+  const offerLine = value === undefined
+    ? 'Offers are already coming in.'
+    : value >= 100000 ? 'Offers are already reported to be in the six figures.'
+      : value >= 10000 ? 'Five-figure offers landed within the hour.'
+        : value >= 1000 ? `Early offers are said to be around $${(Math.round(value / 100) * 100).toLocaleString()}.`
+          : 'Collectors of the player are circling, though the market for it is a thin one.';
   const body = finderIsPlayer
     ? `The hobby's most-wanted list just got shorter. ${shopName} has surfaced the ${seriesName} ${tier} of ${player} — a card collectors have chased since the product released. Expect the phone to ring.`
-    : `A collector in ${city} has surfaced the ${seriesName} ${tier} of ${player}. The card had never been seen publicly. Offers are already reported to be in the six figures.`;
+    : `A collector in ${city} has surfaced the ${seriesName} ${tier} of ${player}. The card had never been seen publicly. ${offerLine}`;
   return {
     id: `grail-${day}-${player}-${tier}`,
     day, kind: 'grailFound', headline, body, breaking: true,
@@ -89,6 +98,34 @@ export function playerHeatStory(day: number, player: string, seed: bigint): News
     body: t.body.replaceAll('{P}', player),
     breaking: false,
     subject: player,
+  };
+}
+
+/**
+ * A performance story from the career sim — real form movement behind it,
+ * so the market reaction the body promises actually happens in valuations.
+ */
+export function performanceStory(
+  day: number, player: string, line: string, delta: number,
+  event: 'breakout' | 'injury' | 'slump' | null, seed: bigint,
+): NewsItem {
+  const rng = new Rng(seed);
+  const up = delta > 0;
+  const head = event === 'injury'
+    ? `${player.toUpperCase()} LEAVES GAME — MARKET HOLDS ITS BREATH`
+    : event === 'breakout'
+      ? `${player.toUpperCase()} HAS ARRIVED`
+      : up
+        ? rng.pick([`${player.toUpperCase()} GOES OFF`, `MONSTER DAY FOR ${player.toUpperCase()}`])
+        : rng.pick([`ROUGH WEEK FOR ${player.toUpperCase()}`, `${player.toUpperCase()} COMES BACK TO EARTH`]);
+  const move = Math.min(45, Math.abs(Math.round(delta * 2.8)));
+  const body = `${player} ${line}. ` + (up
+    ? `Cards moved before the final whistle — the market is paying roughly ${move}% more than last week.`
+    : `Sellers hit the bid all evening; the market is off roughly ${move}% on the week.`);
+  return {
+    id: `perf-${day}-${player}`,
+    day, kind: 'playerHeat', headline: head, body,
+    breaking: false, subject: player,
   };
 }
 

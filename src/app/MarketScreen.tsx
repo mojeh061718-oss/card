@@ -9,10 +9,30 @@
 import { useMemo, useState } from 'react';
 import { useCollection, type CardInstance, type SaleRecord } from '../state/collection';
 import { world } from '../state/world';
-import { snapshotCard } from './cardview';
+import { cachedSnapshot } from './cardview';
 import { formatMoney } from '../engine/economy/valuation';
 import { MARKETPLACE_FEE } from '../engine/economy/auction';
+import type { PulledCard } from '../engine/cards/series';
 import { sfx, unlockAudio } from './feel';
+
+/**
+ * Hot/cold badge from the career sim — the visible reason a price moved.
+ */
+function HypeChip({ pull }: { pull: PulledCard }) {
+  const rt = world.get(pull.seriesId);
+  const player = rt.players[rt.def.checklist[pull.cardIndex].playerId];
+  const { hype, event } = world.formOf(player);
+  if (event === 'injury') {
+    return <span style={{ fontSize: 9, color: '#e08a6a', fontWeight: 800 }}>🩹 INJURED</span>;
+  }
+  if (hype >= 1.15) {
+    return <span style={{ fontSize: 9, color: '#ffb35e', fontWeight: 800 }}>🔥 HOT +{Math.round((hype - 1) * 100)}%</span>;
+  }
+  if (hype <= 0.87) {
+    return <span style={{ fontSize: 9, color: '#7ab8e8', fontWeight: 800 }}>🧊 COLD −{Math.round((1 - hype) * 100)}%</span>;
+  }
+  return null;
+}
 
 export function MarketScreen() {
   const {
@@ -20,6 +40,9 @@ export function MarketScreen() {
     quickSell, listAtAuction, dismissSale, endDay, buyFind,
   } = useCollection();
   const [selected, setSelected] = useState<CardInstance | null>(null);
+  // Two-tap buys: first tap arms, second tap (on the same listing) spends.
+  // One stray tap in a scrolling list must never cost $660.
+  const [armedBuy, setArmedBuy] = useState<string | null>(null);
 
   const listedUids = useMemo(() => new Set(listings.map(l => l.uid)), [listings]);
   const sellable = useMemo(
@@ -69,12 +92,20 @@ export function MarketScreen() {
               const card = cards.find(c => c.uid === l.uid);
               if (!card) return null;
               const info = world.displayName(card);
+              // A live listing should have a heartbeat: watchers accumulate
+              // daily, scaled by the same interest that will drive bidding.
+              const watchers = Math.round(
+                1 + world.interest(card) * 7 + (day - l.listedDay) * (1.5 + world.interest(card) * 2),
+              );
               return (
                 <div key={l.uid} style={S.queueRow}>
                   <span style={{ fontWeight: 700 }}>{info.player}</span>
                   <span style={{ opacity: 0.55, fontSize: 10 }}>{info.tier}</span>
-                  <span style={{ marginLeft: 'auto', color: '#e8c86a' }}>
-                    ends in {l.endsDay - day}d · reserve {formatMoney(l.reserve)}
+                  <span style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                    <span style={{ color: '#8ee08e', fontWeight: 700 }}>👀 {watchers} watching</span>
+                    <span style={{ color: '#e8c86a', display: 'block', fontSize: 10 }}>
+                      ends in {l.endsDay - day}d · reserve {formatMoney(l.reserve)}
+                    </span>
                   </span>
                 </div>
               );
@@ -96,38 +127,47 @@ export function MarketScreen() {
                 const value = world.valuation(find.pull);
                 const overAsk = find.ask / value;
                 const affordable = cash >= find.ask;
+                const findKey = `${find.listedDay}-${world.identityKey(find.pull)}`;
+                const armed = armedBuy === findKey;
                 return (
                   <button
-                    key={`${find.listedDay}-${world.identityKey(find.pull)}`}
+                    key={findKey}
                     data-testid="market-find"
-                    style={{ ...S.findRow, opacity: affordable ? 1 : 0.5 }}
+                    style={{
+                      ...S.findRow, opacity: affordable ? 1 : 0.5,
+                      ...(armed ? { borderColor: '#8ee08e', background: 'rgba(142,224,142,0.1)' } : {}),
+                    }}
                     disabled={!affordable}
                     onClick={() => {
+                      if (!armed) { setArmedBuy(findKey); sfx.tap(); return; }
+                      setArmedBuy(null);
                       if (buyFind(find.listedDay, world.identityKey(find.pull))) sfx.cash();
                     }}
                   >
                     <img
-                      src={snapshotCard(world.specFor(find.pull), 150)}
+                      src={cachedSnapshot(world.specFor(find.pull), world.identityKey(find.pull), 150)}
                       alt=""
                       style={{ width: 40, borderRadius: 4, display: 'block' }}
                     />
                     <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                      <div style={{ fontSize: 12, fontWeight: 800 }}>{info.player}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800 }}>{info.player} <HypeChip pull={find.pull} /></div>
                       <div style={{ fontSize: 10, color: '#e8c86a' }}>{info.tier}</div>
                       <div style={{ fontSize: 9, opacity: 0.45 }}>
                         {run <= 25 ? 'GRAIL · ' : ''}{run.toLocaleString()} printed
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 900, color: '#e8c86a' }}>
-                        {formatMoney(find.ask)}
+                      <div style={{ fontSize: 13, fontWeight: 900, color: armed ? '#8ee08e' : '#e8c86a' }}>
+                        {armed ? `BUY ${formatMoney(find.ask)}?` : formatMoney(find.ask)}
                       </div>
                       <div style={{
                         fontSize: 9,
-                        color: overAsk > 1.5 ? '#e08a6a' : overAsk < 1.15 ? '#8ee08e' : 'rgba(244,242,236,0.5)',
+                        color: armed ? '#8ee08e'
+                          : overAsk > 1.5 ? '#e08a6a' : overAsk < 1.15 ? '#8ee08e' : 'rgba(244,242,236,0.5)',
                       }}>
-                        {overAsk > 1.5 ? 'well over comp'
-                          : overAsk < 1.15 ? 'near comp' : 'over comp'}
+                        {armed ? 'tap again to confirm'
+                          : overAsk > 1.5 ? 'well over comp'
+                            : overAsk < 1.15 ? 'near comp' : 'over comp'}
                       </div>
                     </div>
                   </button>
@@ -137,12 +177,15 @@ export function MarketScreen() {
         )}
 
         <section style={S.section}>
-          <div style={S.sectionTitle}>YOUR INVENTORY — tap a card to price it</div>
+          <div style={S.sectionTitle}>
+            YOUR INVENTORY — tap a card to price it
+            {cards.length > 60 ? ` · showing top 60 of ${cards.length} by value` : ''}
+          </div>
           <div style={S.grid}>
             {sellable.map(({ card, value }) => (
               <button key={card.uid} data-testid="inventory-card" style={S.cell}
                 onClick={() => setSelected(card)}>
-                <img src={snapshotCard(world.specFor(card), 180)} alt="" style={S.cellImg} />
+                <img src={cachedSnapshot(world.specFor(card), world.identityKey(card), 180)} alt="" style={S.cellImg} />
                 <div style={S.cellValue}>{formatMoney(value)}</div>
               </button>
             ))}
@@ -218,9 +261,9 @@ function PriceSheet({ card, day, onClose, onQuickSell, onList }: {
     <div style={S.overlay} onClick={onClose}>
       <div style={S.sheet} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', gap: 12 }}>
-          <img src={snapshotCard(world.specFor(card), 220)} alt="" style={{ width: 92, borderRadius: 7 }} />
+          <img src={cachedSnapshot(world.specFor(card), world.identityKey(card), 220)} alt="" style={{ width: 92, borderRadius: 7 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>{info.player}</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{info.player} <HypeChip pull={card} /></div>
             <div style={{ fontSize: 11, color: '#e8c86a', fontWeight: 700 }}>{info.tier}</div>
             <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>{info.series}</div>
             <div style={{ fontSize: 10, opacity: 0.5 }}>{world.gradeLabel(card.grade)}</div>
@@ -278,6 +321,16 @@ function PriceSheet({ card, day, onClose, onQuickSell, onList }: {
           <div style={{ fontSize: 10, opacity: 0.45, marginTop: 2 }}>
             High reserve protects you but risks no sale. Fee {Math.round(MARKETPLACE_FEE * 100)}%.
           </div>
+          {dealerQuote >= (median ?? intrinsic) * (1 - MARKETPLACE_FEE) && (
+            <div style={{
+              fontSize: 10, color: '#e8c86a', marginTop: 6, lineHeight: 1.5,
+              background: 'rgba(232,200,106,0.08)', borderRadius: 6, padding: '6px 8px',
+            }}>
+              ⚠ Thin market — after the fee, an auction here will likely net
+              less than the dealer's {formatMoney(dealerQuote)}. Auctions pay
+              off on cards people fight over.
+            </div>
+          )}
           <button style={S.listBtn} onClick={() => onList(days, reserve)}>
             LIST AT AUCTION
           </button>

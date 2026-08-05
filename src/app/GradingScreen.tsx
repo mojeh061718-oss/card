@@ -13,7 +13,7 @@ import { COMPANIES, TIERS, type Tier } from '../engine/condition/grading';
 import { sfx, unlockAudio } from './feel';
 
 export function GradingScreen() {
-  const { cards, day, submissions, returns, submitForGrading, endDay, revealReturn } = useCollection();
+  const { cards, day, submissions, returns, listings, submitForGrading, endDay, revealReturn } = useCollection();
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [companyKey, setCompanyKey] = useState('psg');
   const [tier, setTier] = useState<Tier>(1);
@@ -26,10 +26,13 @@ export function GradingScreen() {
   );
   const candidates = useMemo(
     () => cards
-      .filter(c => !c.grade && !inTransit.has(c.uid) && !returns.includes(c.uid))
+      .filter(c => !c.grade && !inTransit.has(c.uid) && !returns.includes(c.uid)
+        // A card live at auction can settle-and-sell overnight — it can't
+        // also be boxed up for the grader.
+        && !listings.some(l => l.uid === c.uid))
       .sort((a, b) => world.heat(b) - world.heat(a))
       .slice(0, 60),
-    [cards, inTransit, returns],
+    [cards, inTransit, returns, listings],
   );
   const company = COMPANIES.find(c => c.key === companyKey)!;
 

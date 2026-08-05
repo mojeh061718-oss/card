@@ -90,13 +90,20 @@ export function buildLadder(archetype: LadderArchetype, rng: Rng): ParallelDef[]
     });
   }
   // Assign colors walking down the pool; occasionally swap in a fancy finish.
+  // Each color is used at most once per ladder — "Rose /99" and "Rose /75"
+  // in the same rainbow reads like a data error.
   const colors = [...RAINBOW_COLORS];
+  const usedColors = new Set<number>();
   const runs = archetype.numberedRuns;
   for (let i = 0; i < runs.length; i++) {
-    const colorIdx = Math.min(
+    let colorIdx = Math.min(
       colors.length - 1,
       Math.floor((i / runs.length) * colors.length) + rng.int(2),
     );
+    while (usedColors.has(colorIdx) && usedColors.size < colors.length) {
+      colorIdx = (colorIdx + 1) % colors.length;
+    }
+    usedColors.add(colorIdx);
     const color = colors[colorIdx];
     const fancy = rng.chance(0.35);
     const finish: FoilFinish = fancy ? rng.pick(MID_FINISHES) : 'refractor';

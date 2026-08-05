@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCollection } from '../state/collection';
 import { world } from '../state/world';
-import { snapshotCard } from './cardview';
+import { cachedSnapshot } from './cardview';
 import { formatMoney } from '../engine/economy/valuation';
 import type { LotOffer } from '../engine/economy/lots';
 import type { PulledCard } from '../engine/cards/series';
@@ -21,7 +21,7 @@ const LOT_ICON: Record<string, string> = {
 };
 
 export function SourcingScreen() {
-  const { cash, day, addPulls, spendCash, endDay, dugLots, markLotDug } = useCollection();
+  const { cash, day, addPulls, releaseBreaking, spendCash, endDay, dugLots, markLotDug } = useCollection();
   const offers = useMemo(() => world.lotOffers(day), [day]);
   const [digging, setDigging] = useState<{ offer: LotOffer; cards: PulledCard[] } | null>(null);
 
@@ -32,8 +32,14 @@ export function SourcingScreen() {
     spendCash(offer.price);
     const cards = world.digLot(offer);
     markLotDug(offer.id);
-    addPulls(cards);
+    // quiet: a grail in the pile must be found by the reel, not a banner.
+    addPulls(cards, { quiet: true });
     setDigging({ offer, cards });
+  };
+
+  const closeDig = () => {
+    setDigging(null);
+    releaseBreaking();
   };
 
   const S = styles;
@@ -88,7 +94,7 @@ export function SourcingScreen() {
         <DigOverlay
           offer={digging.offer}
           cards={digging.cards}
-          onClose={() => setDigging(null)}
+          onClose={closeDig}
         />
       )}
     </div>
@@ -100,6 +106,7 @@ function DigOverlay({ offer, cards, onClose }: {
   offer: LotOffer; cards: PulledCard[]; onClose: () => void;
 }) {
   const [idx, setIdx] = useState(0);
+  const idxRef = useRef(0);
   const [done, setDone] = useState(false);
   const holding = useRef(false);
   const rafRef = useRef(0);
@@ -119,20 +126,23 @@ function DigOverlay({ offer, cards, onClose }: {
       last = now;
       if (holding.current) {
         acc += dt;
-        // ~14 cards/sec while held.
+        // ~14 cards/sec while held. Side effects live OUT here, not in a
+        // setState updater React may replay.
         while (acc > 70) {
           acc -= 70;
-          setIdx(i => {
-            if (i >= cards.length - 1) { setDone(true); return i; }
-            // Stop the reel on anything worth a second look.
-            if (heats[i + 1] >= 4) {
-              holding.current = false;
-              sfx.hit(heatTier(heats[i + 1]) as 1 | 2 | 3);
-              return i + 1;
-            }
+          const i = idxRef.current;
+          if (i >= cards.length - 1) { setDone(true); break; }
+          const next = i + 1;
+          // Stop the reel on anything worth a second look.
+          if (heats[next] >= 4) {
+            holding.current = false;
+            sfx.hit(heatTier(heats[next]) as 1 | 2 | 3);
+          } else {
             sfx.riffle();
-            return i + 1;
-          });
+          }
+          idxRef.current = next;
+          setIdx(next);
+          if (!holding.current) break;
         }
       } else {
         acc = 0;
@@ -146,7 +156,7 @@ function DigOverlay({ offer, cards, onClose }: {
   const current = cards[idx];
   const heat = heats[idx] ?? 0;
   const glow = heat >= 11 ? '#ffd75e' : heat >= 7 ? '#d4a017' : heat >= 4 ? '#a06bff' : heat >= 2.2 ? '#4f9dde' : null;
-  const url = useMemo(() => current ? snapshotCard(world.specFor(current), 420) : null, [current]);
+  const url = useMemo(() => current ? cachedSnapshot(world.specFor(current), world.identityKey(current), 420) : null, [current]);
 
   const S = styles;
   if (done) {
@@ -173,8 +183,13 @@ function DigOverlay({ offer, cards, onClose }: {
               <div style={{ ...S.sectionTitle, marginTop: 12 }}>WORTH KEEPING</div>
               <div style={S.keeperGrid}>
                 {keepers.slice(0, 12).map(({ c, i }) => (
-                  <img key={i} src={snapshotCard(world.specFor(c), 200)} alt=""
-                    style={{ width: '100%', borderRadius: 6 }} />
+                  <div key={i}>
+                    <img src={cachedSnapshot(world.specFor(c), world.identityKey(c), 200)} alt=""
+                      style={{ width: '100%', borderRadius: 6 }} />
+                    <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(142,224,142,0.9)', marginTop: 2 }}>
+                      {formatMoney(world.valuation(c))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </>
@@ -200,7 +215,7 @@ function DigOverlay({ offer, cards, onClose }: {
         <div style={S.digHint}>
           {heat >= 4 ? '👀 hold on — look at this one' : 'hold anywhere to dig'}
         </div>
-        <button style={S.skipBtn} onClick={() => { setIdx(cards.length - 1); setDone(true); }}>
+        <button style={S.skipBtn} onClick={() => { idxRef.current = cards.length - 1; setIdx(cards.length - 1); setDone(true); }}>
           SKIP TO RESULTS
         </button>
       </div>

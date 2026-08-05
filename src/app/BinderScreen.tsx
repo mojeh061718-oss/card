@@ -12,6 +12,7 @@ import { world } from '../state/world';
 import { snapshotCard, LiveCard } from './cardview';
 import { renderSlab } from '../render/slab';
 import { COMPANIES } from '../engine/condition/grading';
+import { formatMoney } from '../engine/economy/valuation';
 
 const THUMB_W = 220;
 const CACHE_MAX = 360;
@@ -27,6 +28,9 @@ function thumbFor(card: CardInstance): string {
     return hit;
   }
   const url = snapshotCard(world.specFor(card), THUMB_W);
+  // '' means the GL context is lost — the still is blank. Hand it back for
+  // this frame but NEVER cache it, or the binder shows blank cards forever.
+  if (!url) return '';
   thumbCache.set(key, url);
   if (thumbCache.size > CACHE_MAX) {
     thumbCache.delete(thumbCache.keys().next().value!);
@@ -34,6 +38,7 @@ function thumbFor(card: CardInstance): string {
   return url;
 }
 
+const SLAB_CACHE_MAX = 200;
 const slabCache = new Map<number, string>();
 const slabPending = new Set<number>();
 
@@ -49,15 +54,26 @@ function ensureSlab(card: CardInstance, onReady: () => void): string | null {
   const cached = slabCache.get(card.uid);
   if (cached) return cached;
   if (slabPending.has(card.uid) || !card.grade) return null;
+  const still = snapshotCard(world.specFor(card), 320);
+  if (!still) return null; // context lost — retry on a later render
   slabPending.add(card.uid);
   const co = COMPANIES.find(c => c.key === card.grade!.companyKey)!;
   const info = world.displayName(card);
-  void renderSlab(snapshotCard(world.specFor(card), 320), co, card.grade.result, {
+  // If a rename lands while the async render is in flight, the result was
+  // drawn with the old world — drop it instead of poisoning the fresh cache.
+  const revAtStart = world.namesRevision;
+  void renderSlab(still, co, card.grade.result, {
     player: info.player, seriesLine: info.series, tierLine: info.tier,
   }, 360).then(canvas => {
-    slabCache.set(card.uid, canvas.toDataURL());
-    slabPending.delete(card.uid);
+    if (world.namesRevision === revAtStart) {
+      slabCache.set(card.uid, canvas.toDataURL());
+      if (slabCache.size > SLAB_CACHE_MAX) {
+        slabCache.delete(slabCache.keys().next().value!);
+      }
+    }
     onReady();
+  }).finally(() => {
+    slabPending.delete(card.uid);
   });
   return null;
 }
@@ -232,6 +248,25 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
       </div>
       <div style={S.detailName}>{info.player}</div>
       <div style={S.detailTier}>{info.tier}</div>
+      {(() => {
+        // Estimated value + form, so the binder finally SAYS what a card is
+        // worth and why it might be moving.
+        const player = rt.players[rt.def.checklist[card.cardIndex].playerId];
+        const { hype, event } = world.formOf(player);
+        const value = world.valuation(card, card.grade);
+        return (
+          <div style={{ fontSize: 15, fontWeight: 900, color: '#8ee08e', marginTop: 2 }}>
+            EST {formatMoney(value)}
+            {event === 'injury' && <span style={{ color: '#e08a6a', fontSize: 10 }}> · 🩹 INJURED</span>}
+            {event !== 'injury' && hype >= 1.15 && (
+              <span style={{ color: '#ffb35e', fontSize: 10 }}> · 🔥 HOT +{Math.round((hype - 1) * 100)}%</span>
+            )}
+            {event !== 'injury' && hype <= 0.87 && (
+              <span style={{ color: '#7ab8e8', fontSize: 10 }}> · 🧊 COLD −{Math.round((1 - hype) * 100)}%</span>
+            )}
+          </div>
+        );
+      })()}
       {card.grade && (
         <div style={{ fontSize: 12, color: '#8ee08e', fontWeight: 700 }}>
           {COMPANIES.find(c => c.key === card.grade!.companyKey)!.name} {card.grade.result.overall.toFixed(1).replace('.0', '')}

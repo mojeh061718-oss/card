@@ -16,7 +16,8 @@ import { childSeedN, hashString, Rng } from '../engine/rng';
 import { runAuction, MARKETPLACE_FEE, type AuctionResult } from '../engine/economy/auction';
 import { dealerOffer } from '../engine/economy/valuation';
 import {
-  bigSaleStory, grailFoundStory, ambientStories, productDropStory, type NewsItem,
+  bigSaleStory, grailFoundStory, ambientStories, productDropStory,
+  performanceStory, type NewsItem,
 } from '../engine/news/wire';
 import type { PulledCard as Pull } from '../engine/cards/series';
 import { emptyOverrides, sanitizeOverrides, type OverrideSet } from './overrides';
@@ -59,6 +60,18 @@ export interface SealedItem {
   pricePaid: number;
 }
 
+/**
+ * A rip ceremony in progress. Persisted so closing the app mid-box (a
+ * guaranteed event on a phone) RESUMES the reveal instead of silently
+ * dumping a $500 box into the binder unseen.
+ */
+export interface RipSessionState {
+  seriesId: string;
+  productKey: string;
+  pricePaid: number;
+  packs: PulledCard[][];
+}
+
 /** A card somebody else pulled and put up for sale. */
 export interface MarketFind {
   pull: Pull;
@@ -91,17 +104,26 @@ interface CollectionState {
   dugLots: string[];
   sealed: SealedItem[];
   nextSealedId: number;
+  /** Rip ceremony awaiting its reveals (survives reloads). */
+  ripSession: RipSessionState | null;
   /** productKey:seriesId:day -> units bought, for daily allocation limits. */
   bought: Record<string, number>;
   marketFinds: MarketFind[];
   news: NewsItem[];
   /** Unread breaking story awaiting its takeover. */
   breaking: NewsItem | null;
+  /**
+   * Breaking story held back while a reveal ceremony (rip, dig) is running —
+   * the banner must never name the hit before the flip does.
+   */
+  pendingBreaking: NewsItem | null;
   shopName: string;
   overrides: OverrideSet;
   /** False until the player has completed career setup. */
   careerStarted: boolean;
-  addPulls(pulls: PulledCard[]): void;
+  addPulls(pulls: PulledCard[], opts?: { quiet?: boolean }): void;
+  /** Promote a held-back breaking story once the reveal ceremony is over. */
+  releaseBreaking(): void;
   submitForGrading(uids: number[], companyKey: string, tier: Tier): void;
   endDay(): void;
   /** Reveal one returned slab: applies the grade, returns the instance. */
@@ -114,6 +136,8 @@ interface CollectionState {
   setShopName(name: string): void;
   setOverrides(set: OverrideSet): void;
   buyWax(seriesId: string, productKey: string, price: number): SealedItem | null;
+  beginRip(session: RipSessionState): void;
+  endRip(): void;
   buyFind(listedDay: number, uidKey: string): boolean;
   openSealed(id: number): void;
   setCash(amount: number): void;
@@ -136,36 +160,76 @@ async function getDb(): Promise<IDBPDatabase> {
   return db;
 }
 
+/**
+ * When hydrate fails we must never write: the first debounced save would
+ * overwrite the (possibly intact) existing record with defaults — total loss
+ * of the only copy of the game.
+ */
+let saveBlocked = false;
+
+function saveRecord(state: CollectionState): Record<string, unknown> {
+  return {
+    version: 1,
+    cards: state.cards,
+    nextUid: state.nextUid,
+    day: state.day,
+    cash: state.cash,
+    submissions: state.submissions,
+    returns: state.returns,
+    returnCompanies: Object.fromEntries(arrivedCompanies),
+    listings: state.listings,
+    saleFeed: state.saleFeed,
+    dugLots: state.dugLots,
+    sealed: state.sealed,
+    marketFinds: state.marketFinds,
+    nextSealedId: state.nextSealedId,
+    ripSession: state.ripSession,
+    bought: state.bought,
+    news: state.news.slice(0, 60),
+    shopName: state.shopName,
+    overrides: state.overrides,
+    careerStarted: state.careerStarted,
+    populations: world.savePopulations(),
+  };
+}
+
 function scheduleSave(state: CollectionState): void {
+  if (saveBlocked) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
       const d = await getDb();
-      await d.put(STORE, {
-        version: 1,
-        cards: state.cards,
-        nextUid: state.nextUid,
-        day: state.day,
-        cash: state.cash,
-        submissions: state.submissions,
-        returns: state.returns,
-        listings: state.listings,
-        saleFeed: state.saleFeed,
-        dugLots: state.dugLots,
-        sealed: state.sealed,
-        marketFinds: state.marketFinds,
-        nextSealedId: state.nextSealedId,
-        bought: state.bought,
-        news: state.news.slice(0, 60),
-        shopName: state.shopName,
-        overrides: state.overrides,
-        careerStarted: state.careerStarted,
-        populations: world.savePopulations(),
-      }, 'save-v1');
+      await d.put(STORE, saveRecord(state), 'save-v1');
     } catch (err) {
       console.warn('save failed', err);
     }
   }, 400);
+}
+
+/** Serialize the current save for download. Null if nothing to export. */
+export function exportSaveJson(): string {
+  return JSON.stringify(saveRecord(useCollection.getState()));
+}
+
+/**
+ * Import a previously exported save: validate, write to IndexedDB, then
+ * reload so the whole app rehydrates from it.
+ */
+export async function importSaveJson(text: string): Promise<string | null> {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return 'That file is not valid JSON.';
+  }
+  if (parsed?.version !== 1 || !Array.isArray(parsed.cards)) {
+    return 'That file is not a Cardboard save.';
+  }
+  const d = await getDb();
+  await d.put(STORE, parsed, 'save-v1');
+  saveBlocked = true; // nothing may overwrite the imported record pre-reload
+  location.reload();
+  return null;
 }
 
 export const useCollection = create<CollectionState>((set, get) => ({
@@ -181,14 +245,16 @@ export const useCollection = create<CollectionState>((set, get) => ({
   dugLots: [],
   sealed: [],
   nextSealedId: 1,
+  ripSession: null,
   bought: {},
   marketFinds: [],
   news: [],
   breaking: null,
+  pendingBreaking: null,
   shopName: 'Corner Store Cards',
   overrides: emptyOverrides(),
   careerStarted: false,
-  addPulls(pulls) {
+  addPulls(pulls, opts) {
     const { cards, nextUid } = get();
     const stamped: CardInstance[] = pulls.map((p, i) => ({
       ...p, uid: nextUid + i, pulledSeq: nextUid + i,
@@ -206,23 +272,41 @@ export const useCollection = create<CollectionState>((set, get) => ({
       ));
     }
     if (stories.length > 0) {
+      // During a rip/dig ceremony the banner is held back — it must not
+      // name the hit while the pack is still sealed.
+      const key = opts?.quiet ? 'pendingBreaking' as const : 'breaking' as const;
       set({
         news: [...stories, ...news].slice(0, 60),
-        breaking: get().breaking ?? stories[0],
+        [key]: get()[key] ?? stories[0],
       });
     }
     scheduleSave(get());
   },
+  releaseBreaking() {
+    const { pendingBreaking, breaking } = get();
+    if (!pendingBreaking) return;
+    set({ breaking: breaking ?? pendingBreaking, pendingBreaking: null });
+  },
   submitForGrading(uids, companyKey, tier) {
     const co = COMPANIES.find(c => c.key === companyKey);
     if (!co || uids.length === 0) return;
-    const { day, submissions, cash } = get();
-    const fee = co.fees[tier] * uids.length;
+    const { day, submissions, cash, cards, returns, listings } = get();
+    // A card can only be in one place: owned, ungraded-in-hand, not already
+    // at a grader, not sitting in returns, not live at auction.
+    const busy = new Set<number>([
+      ...submissions.flatMap(s => s.uids),
+      ...returns,
+      ...listings.map(l => l.uid),
+    ]);
+    const valid = [...new Set(uids)].filter(uid =>
+      !busy.has(uid) && cards.some(c => c.uid === uid && !c.grade));
+    if (valid.length === 0) return;
+    const fee = co.fees[tier] * valid.length;
     if (fee > cash) return; // can't front the grading bill
     set({
       cash: cash - fee,
       submissions: [...submissions, {
-        uids, companyKey, tier,
+        uids: valid, companyKey, tier,
         submittedDay: day,
         dueDay: day + co.turnaroundDays[tier],
         feePaid: fee,
@@ -233,6 +317,9 @@ export const useCollection = create<CollectionState>((set, get) => ({
   endDay() {
     const { day, submissions, returns, listings, cards, cash, saleFeed } = get();
     const newDay = day + 1;
+    // Advance the release calendar first: today's drops join the world
+    // before anyone rips, prices, or reports on them.
+    const droppedToday = world.syncCalendar(newDay);
     const arrived = submissions.filter(s => s.dueDay <= newDay);
     const pending = submissions.filter(s => s.dueDay > newDay);
 
@@ -282,6 +369,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
         stories.push(grailFoundStory(
           newDay, info.player, info.tier, info.series, false, get().shopName,
           childSeedN(hashString(world.identityKey(pull)), newDay),
+          world.valuation(pull),
         ));
       }
       // A slice of what surfaces gets listed for sale by whoever found it.
@@ -304,16 +392,38 @@ export const useCollection = create<CollectionState>((set, get) => ({
         ));
       }
     }
-    if (newDay % 14 === 0) {
-      const sid = world.seriesIds[newDay % world.seriesIds.length];
-      stories.push(productDropStory(newDay, world.get(sid).def.name, BigInt(newDay)));
+    // Real product drops from the release calendar, plus street-date hype
+    // exactly a week out so a drop never lands unannounced.
+    for (const sid of droppedToday) {
+      stories.push(productDropStory(newDay, world.seriesName(sid), BigInt(newDay)));
+    }
+    for (const r of world.upcomingReleases(newDay, 7)) {
+      if (r.releaseDay === newDay + 7) {
+        stories.push({
+          id: `tease-${newDay}-${r.brand}-${r.line}`,
+          day: newDay, kind: 'productDrop',
+          headline: `${r.year} ${r.brand.toUpperCase()} ${r.line.toUpperCase()} STREET DATE SET`,
+          body: `Distributors confirm ${r.year} ${r.brand} ${r.line} (${r.sport}) lands in one week. Allocations are already spoken for — expect the shelf to move.`,
+          breaking: false,
+        });
+      }
+    }
+    // Career-sim performance stories: real form movement, real market moves.
+    const movers = world.moversToday(newDay, 2);
+    for (const m of movers) {
+      stories.push(performanceStory(
+        newDay, `${m.player.first} ${m.player.last}`,
+        world.statLineFor(m, newDay), m.delta, m.event,
+        childSeedN(hashString(`perf:${m.player.sport}:${m.player.id}`), newDay),
+      ));
     }
     // Don't re-cover a player the wire touched in the last week.
-    const recentSubjects = get().news
-      .filter(n => n.day > newDay - 7 && n.subject)
-      .map(n => n.subject!);
+    const recentSubjects = [
+      ...get().news.filter(n => n.day > newDay - 7 && n.subject).map(n => n.subject!),
+      ...movers.map(m => `${m.player.first} ${m.player.last}`),
+    ];
     stories.push(...ambientStories(
-      newDay, hashString('career-dev'), world.hotPlayers(12), 2, recentSubjects,
+      newDay, hashString('career-dev'), world.hotPlayers(12), 1, recentSubjects,
     ));
 
     set({
@@ -340,7 +450,14 @@ export const useCollection = create<CollectionState>((set, get) => ({
     const { cards, returns, day } = get();
     const card = cards.find(c => c.uid === uid);
     const companyKey = arrivedCompanies.get(uid);
-    if (!card || !companyKey) return null;
+    if (!card || !companyKey) {
+      // The card is gone (or the company unknowable) — prune the orphan so
+      // it can't wedge the reveal queue forever.
+      set({ returns: returns.filter(r => r !== uid) });
+      arrivedCompanies.delete(uid);
+      scheduleSave(get());
+      return null;
+    }
     const co = COMPANIES.find(c => c.key === companyKey)!;
     const condition = world.conditionOf(card);
     // Submission seed: unique per (card identity, grading event) — cracking
@@ -356,9 +473,13 @@ export const useCollection = create<CollectionState>((set, get) => ({
     return graded;
   },
   quickSell(uid) {
-    const { cards, cash, day, saleFeed } = get();
+    const { cards, cash, day, saleFeed, submissions, returns, listings } = get();
     const card = cards.find(c => c.uid === uid);
     if (!card) return null;
+    // Can't sell a card that is physically at the grader or live at auction.
+    if (submissions.some(s => s.uids.includes(uid))) return null;
+    if (returns.includes(uid)) return null;
+    if (listings.some(l => l.uid === uid)) return null;
     const intrinsic = world.valuation(card, card.grade);
     const { comps } = world.comps(card, day, card.grade);
     const rng = new Rng(childSeedN(hashString(world.identityKey(card)), day));
@@ -377,9 +498,11 @@ export const useCollection = create<CollectionState>((set, get) => ({
     return record;
   },
   listAtAuction(uid, days, reserve) {
-    const { listings, day, cards } = get();
+    const { listings, day, cards, submissions, returns } = get();
     if (!cards.some(c => c.uid === uid)) return;
     if (listings.some(l => l.uid === uid)) return;
+    if (submissions.some(s => s.uids.includes(uid))) return;
+    if (returns.includes(uid)) return;
     set({
       listings: [...listings, { uid, days, reserve, listedDay: day, endsDay: day + days }],
     });
@@ -422,6 +545,14 @@ export const useCollection = create<CollectionState>((set, get) => ({
     set({ sealed: get().sealed.filter(s => s.id !== id) });
     scheduleSave(get());
   },
+  beginRip(session) {
+    set({ ripSession: session });
+    scheduleSave(get());
+  },
+  endRip() {
+    set({ ripSession: null });
+    scheduleSave(get());
+  },
   spendCash(amount) {
     set({ cash: Math.max(0, get().cash - amount) });
     scheduleSave(get());
@@ -443,9 +574,12 @@ export const useCollection = create<CollectionState>((set, get) => ({
     scheduleSave(get());
   },
   setOverrides(set) {
-    world.applyOverrides(set);
-    set = world.currentOverrides;
-    useCollection.setState({ overrides: set });
+    // Sanitize on EVERY path, not just import/hydrate — a malformed hex or
+    // blank name typed into the editor corrupts all of a team's art until
+    // reload otherwise.
+    const clean = sanitizeOverrides(set).set;
+    world.applyOverrides(clean);
+    useCollection.setState({ overrides: world.currentOverrides });
     scheduleSave(useCollection.getState());
   },
   setCash(amount) {
@@ -471,6 +605,9 @@ export async function hydrateCollection(): Promise<void> {
     const d = await getDb();
     const save = await d.get(STORE, 'save-v1');
     if (save?.version === 1) {
+      // The calendar must catch up to the save's day BEFORE populations
+      // restore, or late-released series would boot with fresh supply.
+      world.syncCalendar(save.day ?? 1);
       world.restorePopulations(save.populations ?? {});
       // Names must be applied before any card renders from the save.
       world.applyOverrides(sanitizeOverrides(save.overrides ?? {}).set);
@@ -487,6 +624,7 @@ export async function hydrateCollection(): Promise<void> {
         sealed: save.sealed ?? [],
         marketFinds: save.marketFinds ?? [],
         nextSealedId: save.nextSealedId ?? 1,
+        ripSession: save.ripSession ?? null,
         bought: save.bought ?? {},
         news: save.news ?? [],
         shopName: save.shopName ?? 'Corner Store Cards',
@@ -494,14 +632,20 @@ export async function hydrateCollection(): Promise<void> {
         careerStarted: save.careerStarted ?? false,
         hydrated: true,
       });
-      // Rebuild the in-transit company map for already-arrived returns: the
-      // submission record is gone, so map from grade-less returns is not
-      // possible — drop them back into pending with a 1-day due instead.
-      const orphaned: number[] = (save.returns ?? []).filter(() => true);
+      // Restore the uid→company map for arrived-but-unrevealed slabs. The
+      // save carries it since the returnCompanies field shipped; legacy
+      // saves without it re-queue the orphans as a free overnight PSG
+      // submission (the old, lossy fallback).
+      arrivedCompanies = new Map(
+        Object.entries((save.returnCompanies ?? {}) as Record<string, string>)
+          .map(([uid, co]) => [Number(uid), co] as [number, string]),
+      );
+      const orphaned: number[] = (save.returns ?? [])
+        .filter((uid: number) => !arrivedCompanies.has(uid));
       if (orphaned.length > 0) {
         const state = useCollection.getState();
         useCollection.setState({
-          returns: [],
+          returns: state.returns.filter(uid => arrivedCompanies.has(uid)),
           submissions: [...state.submissions, {
             uids: orphaned, companyKey: 'psg', tier: 0 as Tier,
             submittedDay: state.day, dueDay: state.day, feePaid: 0,
@@ -511,7 +655,8 @@ export async function hydrateCollection(): Promise<void> {
       return;
     }
   } catch (err) {
-    console.warn('hydrate failed', err);
+    console.warn('hydrate failed — saving disabled to protect the existing record', err);
+    saveBlocked = true;
   }
   useCollection.setState({ hydrated: true });
 }

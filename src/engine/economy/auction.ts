@@ -98,9 +98,11 @@ export function runAuction(
   const top = serious[0];
   const second = serious[1];
   const increment = (p: number) => Math.max(1, p * 0.03);
+  // A lone serious bidder still has to beat a $1 opening bid — a zero
+  // reserve must never hand the card away for $0.00.
   const finalPrice = second
     ? Math.min(top.wtp, second.wtp + increment(second.wtp))
-    : Math.max(reserve, reserve * (1 + rng.float() * 0.08));
+    : Math.min(top.wtp, Math.max(reserve * (1 + rng.float() * 0.08), reserve, 1));
 
   // Reconstruct a plausible bid ladder for the UI, with late snipes.
   const bids: Bid[] = [];

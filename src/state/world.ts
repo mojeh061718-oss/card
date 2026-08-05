@@ -26,6 +26,8 @@ import type { Population } from '../engine/cards/population';
 import { conditionFor, pressProfile, type Condition, type PressProfile } from '../engine/condition/condition';
 import { intrinsicValue, generateComps, compValue, type Comp } from '../engine/economy/valuation';
 import { COMPANIES, type GradeResult } from '../engine/condition/grading';
+import { releasesThrough, SHELF_LIFE_DAYS, type Release } from '../engine/cards/calendar';
+import { playerForm, hotMovers, statLine, type Mover } from '../engine/world/career';
 
 export interface SeriesRuntime {
   def: SeriesDef;
@@ -54,6 +56,11 @@ class World {
    */
   namesRevision = 0;
   private nameListeners: (() => void)[] = [];
+  /** Bumped whenever any population is drawn from — shelf prices key on it. */
+  supplyRevision = 0;
+  /** The collection's current day, mirrored here so valuations can read form. */
+  currentDay = 1;
+  private releaseDays = new Map<string, number>();
 
   constructor() {
     this.baseLeagues = {
@@ -65,13 +72,18 @@ class World {
       baseball: this.baseLeagues.baseball,
     };
     this.packRng = Rng.from(childSeed(WORLD_SEED, 'shop-rips'), 'packs');
-    this.register(2027, 'Pinnacle Press', 'Chromium', 'football', 'chromium');
-    this.register(2027, 'Apex', 'Prizmatic', 'baseball', 'prizmatic');
+    // Launch pair. Everything after arrives via the release calendar.
+    this.syncCalendar(1);
+    // The baseball flagship is announced from day 1 (it was in the original
+    // build and e2e/lab flows expect both), but its releaseDay still gates
+    // the shelf and world rips.
+    this.registerRelease(releasesThrough(WORLD_SEED, 46)[1]);
   }
 
-  private register(year: number, brand: string, line: string, sport: Sport, archetype: string) {
-    const lg = this.leagues[sport];
-    const def = buildSeries(WORLD_SEED, year, brand, line, sport, lg.players, archetype);
+  private registerRelease(r: Release): string | null {
+    const lg = this.leagues[r.sport];
+    const def = buildSeries(WORLD_SEED, r.year, r.brand, r.line, r.sport, lg.players, r.archetypeKey);
+    if (this.series.has(def.id)) return null;
     this.series.set(def.id, {
       def,
       dna: deriveDna(def.seed, def.line),
@@ -81,6 +93,40 @@ class World {
       teams: lg.teams,
       press: pressProfile(def.seed),
     });
+    this.releaseDays.set(def.id, r.releaseDay);
+    return def.id;
+  }
+
+  /**
+   * Advance the release calendar: register every series whose release day
+   * has arrived. Returns the ids of series that release exactly on `day`,
+   * so the caller can put the drop on the wire.
+   */
+  syncCalendar(day: number): string[] {
+    this.currentDay = Math.max(this.currentDay, day);
+    const dropped: string[] = [];
+    for (const r of releasesThrough(WORLD_SEED, day)) {
+      const id = this.registerRelease(r);
+      if (id && r.releaseDay === day) dropped.push(id);
+    }
+    return dropped;
+  }
+
+  /** Releases coming inside `horizon` days — shelf teasers and wire hype. */
+  upcomingReleases(day: number, horizon = 14): Release[] {
+    return releasesThrough(WORLD_SEED, day, horizon)
+      .filter(r => r.releaseDay > day);
+  }
+
+  /** Is this product still on the distributor sheet? */
+  onShelf(seriesId: string, day: number): boolean {
+    const rel = this.releaseDay(seriesId);
+    return day >= rel && day < rel + SHELF_LIFE_DAYS;
+  }
+
+  /** Series ids currently buyable on the shelf. */
+  shelfSeries(day: number): string[] {
+    return this.seriesIds.filter(id => this.onShelf(id, day));
   }
 
   /**
@@ -157,6 +203,7 @@ class World {
 
   ripPack(seriesId: string): PulledCard[] {
     const rt = this.get(seriesId);
+    this.supplyRevision++;
     return openPack(rt.def, rt.pop, this.packRng, rt.classes, 10, []);
   }
 
@@ -170,6 +217,7 @@ class World {
     const rt = this.get(seriesId);
     const product = PRODUCTS.find(p => p.key === productKey);
     if (!product) throw new Error(`Unknown product ${productKey}`);
+    this.supplyRevision++;
     if (product.packs === 1) {
       return [openPack(rt.def, rt.pop, this.packRng, rt.classes, product.cardsPerPack, [])];
     }
@@ -226,7 +274,9 @@ class World {
   }
 
   lotOffers(day: number): LotOffer[] {
-    return generateLotOffers(WORLD_SEED, day, this.seriesIds);
+    // Estate finds can only contain product that has actually been released.
+    const released = this.seriesIds.filter(id => this.releaseDay(id) <= day);
+    return generateLotOffers(WORLD_SEED, day, released);
   }
 
   /**
@@ -235,6 +285,7 @@ class World {
    */
   digLot(offer: LotOffer): PulledCard[] {
     const rt = this.get(offer.seriesId);
+    this.supplyRevision++;
     const rng = new Rng(offer.seed);
     const w = lotClassWeights(offer);
     const out: PulledCard[] = [];
@@ -306,7 +357,7 @@ class World {
     const effective = card.insertName
       ? { ...parallel, printRun: this.printRunOf(pull), desirability: parallel.desirability }
       : parallel;
-    return intrinsicValue({
+    const base = intrinsicValue({
       player, parallel: effective,
       isRookie: card.isRookie,
       isAuto: card.isAuto,
@@ -315,6 +366,29 @@ class World {
       errorKind: this.conditionOf(pull).error,
       insert: !!card.insertName,
     });
+    // The career sim moves the market: current form vs the day-1 baseline.
+    return base * this.hypeOf(player);
+  }
+
+  /** Value multiplier for a player's cards today, from the career sim. */
+  hypeOf(player: Player): number {
+    return playerForm(WORLD_SEED, player, this.currentDay).hype;
+  }
+
+  /** Current form reading for a player (for UI chips + stories). */
+  formOf(player: Player): ReturnType<typeof playerForm> {
+    return playerForm(WORLD_SEED, player, this.currentDay);
+  }
+
+  /** This week's biggest form movers across both leagues. */
+  moversToday(day: number, count = 3): Mover[] {
+    const pool = [...this.leagues.football.players, ...this.leagues.baseball.players];
+    return hotMovers(WORLD_SEED, pool, day, count);
+  }
+
+  /** Stat line for a mover's wire story. */
+  statLineFor(mover: Mover, day: number): string {
+    return statLine(mover.player, day, mover.delta > 0);
   }
 
   gradeLabel(grade?: { companyKey: string; result: GradeResult } | null): string {
@@ -327,11 +401,11 @@ class World {
     pull: PulledCard, today: number,
     grade?: { companyKey: string; result: GradeResult } | null,
   ): { comps: Comp[]; median: number | null; intrinsic: number } {
-    const rt = this.get(pull.seriesId);
-    const parallel = rt.def.ladder[pull.parallelId];
     const intrinsic = this.valuation(pull, grade);
     const key = `${this.identityKey(pull)}:${grade ? grade.companyKey + grade.result.overall : 'raw'}`;
-    const comps = generateComps(key, intrinsic, parallel.printRun, today, this.gradeLabel(grade));
+    // Print run of the actual copy — an insert /199 must not show the base
+    // rung's market depth.
+    const comps = generateComps(key, intrinsic, this.printRunOf(pull), today, this.gradeLabel(grade));
     return { comps, median: compValue(comps), intrinsic };
   }
 
@@ -385,9 +459,11 @@ class World {
    */
   ripWorld(day: number): { pull: PulledCard; seriesId: string }[] {
     const surfaced: { pull: PulledCard; seriesId: string }[] = [];
+    this.supplyRevision++;
     for (const [seriesId, rt] of this.series) {
       const P = rt.def.ladder.length;
-      const ageDays = Math.max(0, day - this.releaseDay(seriesId));
+      // Unreleased product is still in the warehouse — nobody rips it.
+      const ageDays = day - this.releaseDay(seriesId);
       if (ageDays < 0) continue;
       const { notable } = ripWorldDay(
         rt.pop, this.packRng, rt.pop.totalPrinted, ageDays,
@@ -412,9 +488,9 @@ class World {
     return surfaced;
   }
 
-  /** In-game day a product hit shelves. Staggered so releases feel like a calendar. */
+  /** In-game day a product hit shelves, from the release calendar. */
   releaseDay(seriesId: string): number {
-    return this.seriesIds.indexOf(seriesId) * 45 + 1;
+    return this.releaseDays.get(seriesId) ?? 1;
   }
 
   /**
@@ -423,6 +499,9 @@ class World {
    * Surfaced counts read live from the populations.
    */
   top50(ownedKeys: Set<string>): Top50Entry[] {
+    // Announced series ride the board even before street date — checklist
+    // previews are how the chase starts. (Registration itself is
+    // release-gated, so nothing leaks from the far future.)
     return buildTop50({
       seriesIds: this.seriesIds,
       candidates: (seriesId) => {

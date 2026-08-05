@@ -21,7 +21,80 @@ import type { Condition } from '../engine/condition/condition';
 import { drawSkyline, drawBase } from './skyline';
 import { INSERT_SETS } from '../engine/cards/series';
 
-const INSERT_RUN = INSERT_SETS[0].printRun;
+const insertRunOf = (name: string): number =>
+  INSERT_SETS.find(s => s.name === name)?.printRun ?? 199;
+
+/**
+ * "Ignition" insert background — a comic-book detonation. Layered jagged
+ * bursts from a hot white core through team color out to char, radial speed
+ * lines, and a halftone screen: the loud, panel-art cousin of Downtown.
+ */
+function drawIgnition(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  seed: bigint, primary: string, secondary: string,
+): void {
+  const rng = new Rng(seed);
+  const cx = w * 0.5, cy = h * 0.40;
+
+  // Scorched backdrop.
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, h * 0.75);
+  bg.addColorStop(0, shade(mixHex(primary, '#3a1206', 0.7), 0.05));
+  bg.addColorStop(1, '#120608');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // Radial speed lines.
+  ctx.strokeStyle = withAlpha('#ffd9a0', 0.28);
+  for (let i = 0; i < 44; i++) {
+    const a = (i / 44) * Math.PI * 2 + rng.float() * 0.1;
+    const r0 = h * (0.30 + rng.float() * 0.14);
+    const r1 = r0 + h * (0.12 + rng.float() * 0.35);
+    ctx.lineWidth = Math.max(1, w * (0.0015 + rng.float() * 0.004));
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+    ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.stroke();
+  }
+
+  // Jagged burst layers, outside in.
+  const burst = (radius: number, jag: number, points: number, rot: number, fill: string, outline?: string) => {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const a = (i / (points * 2)) * Math.PI * 2 + rot;
+      const r = i % 2 === 0 ? radius : radius * (1 - jag) * (0.9 + rng.float() * 0.2);
+      const px = cx + Math.cos(a) * r * 1.02;
+      const py = cy + Math.sin(a) * r * 0.92; // slightly squashed, panel-style
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (outline) {
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = Math.max(2, w * 0.006);
+      ctx.stroke();
+    }
+  };
+  burst(h * 0.46, 0.42, 16, 0.12, withAlpha(shade(primary, -0.06), 0.9), 'rgba(16,6,4,0.85)');
+  burst(h * 0.36, 0.40, 13, 0.35, mixHex(secondary, '#ff7b2e', 0.55), 'rgba(16,6,4,0.7)');
+  burst(h * 0.27, 0.38, 11, 0.62, '#ffb23e');
+  burst(h * 0.185, 0.34, 9, 0.95, '#ffe28a');
+  burst(h * 0.105, 0.3, 8, 1.4, '#fff8e6');
+
+  // Halftone screen over the corners — printed-comic texture.
+  ctx.fillStyle = withAlpha('#1a0a06', 0.5);
+  const step = w * 0.02;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const d = Math.hypot(x - cx, y - cy) / (h * 0.62);
+      if (d < 0.85) continue;
+      const r = Math.min(step * 0.36, step * 0.5 * (d - 0.8));
+      ctx.beginPath();
+      ctx.arc(x + (Math.floor(y / step) % 2) * step * 0.5, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
 
 export const CARD_ASPECT = 2.5 / 3.5;
 
@@ -370,12 +443,13 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     : accentBase;
 
   const isDowntown = spec.insertName === 'Downtown';
+  const isInsert = !!spec.insertName;
   const poses = posesFor(player.sport);
   const pose = poses[Number(spec.artSeed % BigInt(poses.length))];
-  const figX = isDowntown ? w * 0.04 : w * 0.02;
-  const figY = isDowntown ? h * 0.045 : h * 0.06;
-  const figW = isDowntown ? w * 0.92 : w * 0.96;
-  const figH = isDowntown ? h * 0.84 : h * 0.78;
+  const figX = isInsert ? w * 0.04 : w * 0.02;
+  const figY = isInsert ? h * 0.045 : h * 0.06;
+  const figW = isInsert ? w * 0.92 : w * 0.96;
+  const figH = isInsert ? h * 0.84 : h * 0.78;
   // Where the cleats actually land, in card space. Poses differ, so this is
   // measured rather than assumed — otherwise the figure floats.
   const footFrac = Math.max(
@@ -389,13 +463,16 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     // Illustrated insert: the city IS the design. No pattern engine, no
     // vignette — a painted skyline the figure stands in front of.
     drawSkyline(ctx, w, h, childSeedN(spec.artSeed, 4242), team.primary, 0.86);
+  } else if (isInsert) {
+    // Ignition (and future illustrated sets): a bespoke painted panel.
+    drawIgnition(ctx, w, h, childSeedN(spec.artSeed, 5151), team.primary, team.secondary);
   } else {
     patternPainters[dna.pattern](ctx, w, h, primary, accent, dna, rng);
   }
 
   // Hero glow: a hot accent core behind the figure lifts the whole card and
   // separates the subject the way studio lighting does on real photography.
-  if (!isDowntown) {
+  if (!isInsert) {
   const glow = ctx.createRadialGradient(w / 2, h * 0.40, 0, w / 2, h * 0.40, w * 0.62);
   glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.45), 0.5));
   glow.addColorStop(0.55, withAlpha(accent, 0.16));
@@ -415,7 +492,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   if (isDowntown) {
     // Plinth sits exactly on the measured foot line so the figure stands.
     drawBase(ctx, w * 0.5, footY, w * 0.3, team.primary);
-  } else if (dna.layout === 'diagonalSplit') {
+  } else if (!isInsert && dna.layout === 'diagonalSplit') {
     ctx.beginPath();
     ctx.moveTo(0, h * 0.78);
     ctx.lineTo(w, h * 0.5);
@@ -424,7 +501,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     ctx.closePath();
     ctx.fillStyle = withAlpha(shade(primary, -0.16), 0.85);
     ctx.fill();
-  } else if (dna.layout === 'archWindow') {
+  } else if (!isInsert && dna.layout === 'archWindow') {
     // Arch glow behind figure
     ctx.beginPath();
     ctx.moveTo(w * 0.14, h * 0.86);
@@ -473,7 +550,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
 
   // --- Frame ---
   const ink = inkOn(primary);
-  if (dna.borderFrac > 0 && !isDowntown) {
+  if (dna.borderFrac > 0 && !isInsert) {
     const bw = w * dna.borderFrac;
     ctx.save();
     roundedCardPath(ctx, w, h, cornerR);
@@ -503,10 +580,10 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   const famLabel = dna.labelFont.match(/"[^"]+".*$/)
     ?? [dna.labelFont.replace(/^[\d ]+/, '')];
 
-  // --- Downtown banner: pill + name, the insert's signature lockup ---
-  if (isDowntown) {
+  // --- Insert banner: pill + name, the illustrated sets' signature lockup ---
+  if (isInsert) {
     const barY = h * 0.885, barH = h * 0.072;
-    ctx.fillStyle = '#12241c';
+    ctx.fillStyle = isDowntown ? '#12241c' : '#1c0b06';
     ctx.fillRect(0, barY, w, barH);
     ctx.strokeStyle = withAlpha('#ffffff', 0.5);
     ctx.lineWidth = Math.max(1, w * 0.0035);
@@ -526,16 +603,16 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     ctx.lineWidth = Math.max(1, w * 0.003);
     ctx.stroke();
     ctx.font = `700 ${pillH * 0.56}px Georgia, "Times New Roman", serif`;
-    ctx.fillStyle = '#12241c';
+    ctx.fillStyle = isDowntown ? '#12241c' : '#1c0b06';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Downtown', pillX + pillW / 2, pillY + pillH * 0.54, pillW * 0.9);
+    ctx.fillText(spec.insertName!, pillX + pillW / 2, pillY + pillH * 0.54, pillW * 0.9);
 
     // Serial first — it is fixed-width and must never be crowded out.
     const rightEdge = w * 0.965;
     let textLimit = rightEdge;
     if (spec.serial !== null) {
-      const serialText = `${spec.serial}/${INSERT_RUN}`;
+      const serialText = `${spec.serial}/${insertRunOf(spec.insertName!)}`;
       ctx.font = `900 ${barH * 0.3}px "Courier New", monospace`;
       ctx.textAlign = 'right';
       ctx.fillStyle = '#e8c86a';
@@ -569,7 +646,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   const displayPx = Math.round(npH * 0.62);
   const labelPx = Math.round(npH * 0.3);
   const nameText = `${player.first.toUpperCase()} ${player.last.toUpperCase()}`;
-  if (!isDowntown) {
+  if (!isInsert) {
   ctx.save();
   switch (dna.nameplate) {
     case 'bar': {
@@ -769,7 +846,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   // Framed layouts print the fine text inside the border band (real cards
   // run copyright lines through the border); full-bleed puts it at the foot.
   const bwFine = w * dna.borderFrac;
-  const fineY = isDowntown ? h * 0.972
+  const fineY = isInsert ? h * 0.972
     : dna.borderFrac > 0 ? h - bwFine * 0.95 : h * 0.968;
   const finePx = dna.borderFrac > 0
     ? Math.max(9, Math.min(w * 0.024, bwFine * 0.85))
@@ -785,7 +862,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   ctx.restore();
 
   // --- Team badge: a real logo lockup, not a letter in a circle ---
-  if (!isDowntown) {
+  if (!isInsert) {
     drawTeamBadge(
       ctx,
       dna.nameplate === 'chip' ? w * 0.115 : w * 0.9,
