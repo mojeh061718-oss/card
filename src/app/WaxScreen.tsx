@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { renderPackWrapper, renderCardBack } from '../render/pack';
+import { renderBreakTable } from '../render/table';
 import { snapshotCard, cachedSnapshot, LiveCard } from './cardview';
 import { world } from '../state/world';
 import { useCollection, type SealedItem, type RipSessionState } from '../state/collection';
@@ -274,7 +275,7 @@ export function WaxScreen() {
   );
 }
 
-type Phase = 'sealed' | 'stack' | 'takeover' | 'done';
+type Phase = 'table' | 'sealed' | 'stack' | 'takeover' | 'done';
 
 /** One-shot gold confetti burst for monster pulls — pure canvas, ~1s. */
 function ConfettiBurst({ trigger }: { trigger: number }) {
@@ -339,12 +340,60 @@ function RipSession({ session, onClose }: {
   const backUrl = useMemo(() => renderCardBack(rt.def, 500).toDataURL(), [rt]);
 
   const [packIdx, setPackIdx] = useState(0);
+  const [opened, setOpened] = useState<Set<number>>(new Set());
+  const [grabbed, setGrabbed] = useState<number | null>(null);
+
+  // The break table: a top-down desk the packs physically sit on.
+  const tableUrl = useMemo(() => {
+    const w = Math.min(1000, window.innerWidth * 2);
+    const h = Math.round(w * ((window.innerHeight - 100) / window.innerWidth));
+    return renderBreakTable(w, h, session.seriesId).toDataURL();
+  }, [session.seriesId]);
+  // One wrapper thumb per pack (TCG wraps rotate their featured art).
+  const packThumbs = useMemo(
+    () => packs.map((_, i) => renderPackWrapper(rt.def, 128, 180, i).toDataURL()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rt, packs.length, world.namesRevision],
+  );
+  // Deterministic scatter: grid with jitter and a lazy rotation, like packs
+  // tossed on the mat rather than machine-aligned.
+  const layout = useMemo(() => {
+    const n = packs.length;
+    const cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 12 ? 3 : 6;
+    const rows = Math.ceil(n / cols);
+    return packs.map((_, i) => {
+      const cx = (i % cols + 0.5) / cols;
+      const cy = (Math.floor(i / cols) + 0.5) / rows;
+      const j1 = Math.sin(i * 12.9898) * 0.5;
+      const j2 = Math.sin(i * 78.233) * 0.5;
+      return {
+        left: 8 + cx * 84 + j1 * (cols > 1 ? 3 : 0),
+        top: 20 + cy * 56 + j2 * (rows > 1 ? 2.5 : 0),
+        rot: j1 * 14,
+        w: n <= 1 ? 46 : n <= 4 ? 34 : n <= 12 ? 26 : 14.5,
+      };
+    });
+  }, [packs.length]);
+
+  const grabPack = (i: number) => {
+    if (opened.has(i) || grabbed !== null) return;
+    unlockAudio();
+    sfx.cardSlide();
+    setPackIdx(i);
+    setIdx(0);
+    setFlipped(false);
+    setStillUrl(null);
+    tearRef.current = 0;
+    setTear(0);
+    setGrabbed(i);
+    setTimeout(() => { setGrabbed(null); setPhase('sealed'); }, 420);
+  };
   // TCG wraps rotate their featured art per pack in a box.
   const wrapperUrl = useMemo(
     () => renderPackWrapper(rt.def, 640, 900, packIdx).toDataURL(),
     [rt, packIdx],
   );
-  const [phase, setPhase] = useState<Phase>('sealed');
+  const [phase, setPhase] = useState<Phase>('table');
   const [tear, setTear] = useState(0);
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -421,15 +470,14 @@ function RipSession({ session, onClose }: {
       setTimeout(() => revealAt(idx + 1), 150);
       return;
     }
-    // Pack finished — next pack, or the box tally.
-    if (packIdx + 1 < packs.length) {
-      setPackIdx(packIdx + 1);
-      tearRef.current = 0;
-      setTear(0);
-      setPhase('sealed');
-    } else {
-      setPhase('done');
-    }
+    // Pack finished — back to the table for the next grab, or the tally.
+    const nowOpened = new Set(opened);
+    nowOpened.add(packIdx);
+    setOpened(nowOpened);
+    tearRef.current = 0;
+    setTear(0);
+    if (nowOpened.size >= packs.length) setPhase('done');
+    else setPhase('table');
   };
 
   const dragEl = useRef<HTMLDivElement>(null);
@@ -530,6 +578,56 @@ function RipSession({ session, onClose }: {
   const S = styles;
   return (
     <div style={S.overlay}>
+      {phase === 'table' && (
+        <div style={S.tableWrap}>
+          <img src={tableUrl} alt="" style={S.tableBg} />
+          <div style={S.tableTitle}>
+            {rt.def.name}
+            <span style={S.tableCount}> · {packs.length - opened.size} of {packs.length} sealed</span>
+          </div>
+          <div style={S.tableHint}>
+            {grabbed !== null ? '' : 'grab a pack off the mat'}
+          </div>
+          {packs.map((_, i) => {
+            const L = layout[i];
+            const isOpen = opened.has(i);
+            const isGrabbed = grabbed === i;
+            return (
+              <img
+                key={i}
+                data-table-pack={isOpen ? undefined : i}
+                src={packThumbs[i]}
+                alt=""
+                onClick={() => grabPack(i)}
+                style={{
+                  position: 'absolute',
+                  left: `${L.left}%`, top: `${L.top}%`,
+                  width: `${L.w}%`,
+                  transform: isGrabbed
+                    ? 'translate(-50%, -50%) scale(2.6) rotate(0deg)'
+                    : `translate(-50%, -50%) rotate(${L.rot}deg)${isOpen ? ' scale(0.94)' : ''}`,
+                  ...(isGrabbed ? { left: '50%', top: '42%' } : {}),
+                  transition: 'transform 380ms cubic-bezier(0.3, 1.2, 0.4, 1), left 380ms ease, top 380ms ease, filter 300ms',
+                  filter: isOpen
+                    ? 'grayscale(0.85) brightness(0.45)'
+                    : isGrabbed
+                      ? 'drop-shadow(0 26px 30px rgba(0,0,0,0.7)) brightness(1.08)'
+                      : 'drop-shadow(0 7px 9px rgba(0,0,0,0.6))',
+                  zIndex: isGrabbed ? 6 : isOpen ? 1 : 2,
+                  borderRadius: 6,
+                  touchAction: 'manipulation',
+                }}
+              />
+            );
+          })}
+          {packs.length > 1 && (
+            <button style={{ ...S.skip, position: 'absolute', bottom: '4%', left: '50%', transform: 'translateX(-50%)' }} onClick={ripAll}>
+              SKIP TO RESULTS
+            </button>
+          )}
+        </div>
+      )}
+
       {phase === 'sealed' && (
         <div style={S.center}>
           {packs.length > 1 && (
@@ -694,6 +792,18 @@ const styles: Record<string, React.CSSProperties> = {
   shelfPrice: { fontSize: 15, fontWeight: 900, color: '#e8c86a' },
   shelfStock: { fontSize: 9, opacity: 0.45, marginTop: 2 },
   tip: { fontSize: 11, opacity: 0.4, lineHeight: 1.6, textAlign: 'center', padding: '0 20px' },
+  tableWrap: { position: 'relative', flex: 1, overflow: 'hidden' },
+  tableBg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
+  tableTitle: {
+    position: 'absolute', top: '4.5%', left: 0, right: 0, textAlign: 'center',
+    fontSize: 15, fontWeight: 900, letterSpacing: 0.5, textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+  },
+  tableCount: { fontWeight: 700, fontSize: 12, color: '#e8c86a' },
+  tableHint: {
+    position: 'absolute', top: '11.8%', left: 0, right: 0, textAlign: 'center',
+    fontSize: 12, color: 'rgba(244,242,236,0.75)', letterSpacing: 1,
+    textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+  },
   overlay: { position: 'fixed', inset: 0, zIndex: 55, background: 'radial-gradient(120% 90% at 50% 0%, #16161f 0%, #0a0a0d 70%)', display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(52px + env(safe-area-inset-bottom))' },
   center: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16 },
   packCounter: { fontSize: 11, letterSpacing: 3, color: '#e8c86a' },

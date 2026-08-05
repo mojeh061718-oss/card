@@ -94,7 +94,7 @@ export function GradingScreen() {
 
         {submissions.length > 0 && (
           <section style={S.section}>
-            <div style={S.sectionTitle}>⏳ AT THE GRADERS</div>
+            <div style={S.sectionTitle}>AT THE GRADERS</div>
             {submissions.map((s, i) => {
               const co = COMPANIES.find(c => c.key === s.companyKey)!;
               return (
@@ -216,7 +216,7 @@ function LoupeOverlay({ card, onClose }: { card: CardInstance; onClose: () => vo
   return (
     <div style={S.overlay}>
       <div style={S.loupeHead}>
-        <span style={{ fontSize: 12, opacity: 0.7 }}>🔍 check centering, corners, edges, surface</span>
+        <span style={{ fontSize: 12, opacity: 0.7 }}>Check centering, corners, edges, surface</span>
         <button style={S.close} onClick={onClose}>DONE</button>
       </div>
       <div style={S.loupePane}>
@@ -261,7 +261,14 @@ function RevealOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
         {!shown && (
           <>
             <div style={{ fontSize: 13, letterSpacing: 3, opacity: 0.7 }}>{company.name} · CERT {grade.result.certNo}</div>
-            <div style={{ fontSize: 60 }}>📦</div>
+            <div style={{
+              width: 84, height: 62, margin: '0 auto', position: 'relative',
+              background: 'linear-gradient(160deg, #b08948 0%, #8f6c34 100%)',
+              borderRadius: 7, boxShadow: '0 8px 22px rgba(0,0,0,0.55)',
+            }}>
+              <div style={{ position: 'absolute', left: '42%', top: 0, bottom: 0, width: '16%', background: 'rgba(240,236,220,0.75)' }} />
+              <div style={{ position: 'absolute', left: 6, bottom: 4, fontSize: 9, fontWeight: 800, color: 'rgba(60,40,10,0.8)', letterSpacing: 0.5 }}>FRAGILE</div>
+            </div>
             <div style={{ color: '#e8c86a', fontSize: 13 }}>tap to open</div>
           </>
         )}

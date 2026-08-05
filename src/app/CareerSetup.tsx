@@ -92,7 +92,7 @@ export function CareerSetup({ onDone }: { onDone: () => void }) {
 
         <div style={S.realismPanel}>
           <div style={S.realismTitle}>
-            🌎 REALISM CONCEPT{realismDone ? ' — LOADED' : ''}
+            REALISM CONCEPT{realismDone ? ' — LOADED' : ''}
           </div>
           <p style={S.realismBlurb}>
             {realismDone
@@ -124,7 +124,7 @@ export function CareerSetup({ onDone }: { onDone: () => void }) {
                   opacity: 1 - i * 0.22,
                   fontWeight: t.hot ? 800 : 600,
                 }}>
-                  {t.hot ? '🔥 ' : '✓ '}{t.label}
+                  {t.hot ? '★ ' : '✓ '}{t.label}
                 </div>
               ))}
             </div>

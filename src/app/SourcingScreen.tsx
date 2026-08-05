@@ -16,8 +16,13 @@ import type { LotOffer } from '../engine/economy/lots';
 import type { PulledCard } from '../engine/cards/series';
 import { sfx, unlockAudio, heatTier } from './feel';
 
-const LOT_ICON: Record<string, string> = {
-  shoebox: '👟', garageSale: '📦', estate: '🏚️', storageUnit: '🔐', dealerTable: '🎪',
+/** Lot type badge — a colored monogram chip, not an emoji. */
+const LOT_BADGE: Record<string, { label: string; color: string }> = {
+  shoebox: { label: 'SB', color: '#b06a3c' },
+  garageSale: { label: 'GS', color: '#5b8a4a' },
+  estate: { label: 'ES', color: '#7a5aa8' },
+  storageUnit: { label: 'SU', color: '#4a7a9a' },
+  dealerTable: { label: 'DT', color: '#c0392b' },
 };
 
 export function SourcingScreen() {
@@ -69,7 +74,13 @@ export function SourcingScreen() {
               disabled={dug || !affordable}
               onClick={() => buy(offer)}
             >
-              <div style={S.lotIcon}>{LOT_ICON[offer.kind]}</div>
+              <div style={{
+                ...S.lotIcon,
+                background: `linear-gradient(160deg, ${LOT_BADGE[offer.kind]?.color ?? '#666'} 0%, rgba(0,0,0,0.55) 130%)`,
+                color: '#f4f2ec', fontSize: 13, fontWeight: 900, letterSpacing: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 9, border: '1px solid rgba(255,255,255,0.18)',
+              }}>{LOT_BADGE[offer.kind]?.label ?? '??'}</div>
               <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                 <div style={S.lotLabel}>{offer.label}</div>
                 <div style={S.lotBlurb}>"{offer.blurb}"</div>
@@ -173,7 +184,7 @@ function DigOverlay({ offer, cards, onClose }: {
             {cards.length} cards worth {formatMoney(value)} · paid {formatMoney(offer.price)}
           </div>
           {offer.jackpot && (
-            <div style={S.jackpot}>🏆 UNTOUCHED COLLECTION — the hits were still in there</div>
+            <div style={S.jackpot}>UNTOUCHED COLLECTION — the hits were still in there</div>
           )}
           {offer.pickedOver && (
             <div style={S.picked}>Somebody got here first. Pure filler.</div>
@@ -213,7 +224,7 @@ function DigOverlay({ offer, cards, onClose }: {
           {url && <img src={url} alt="" style={{ width: 240, borderRadius: 10, display: 'block' }} />}
         </div>
         <div style={S.digHint}>
-          {heat >= 4 ? '👀 hold on — look at this one' : 'hold anywhere to dig'}
+          {heat >= 4 ? 'hold on — look at this one' : 'hold anywhere to dig'}
         </div>
         <button style={S.skipBtn} onClick={() => { idxRef.current = cards.length - 1; setIdx(cards.length - 1); setDone(true); }}>
           SKIP TO RESULTS

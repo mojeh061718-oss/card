@@ -83,6 +83,9 @@ check('sealed wax lands in inventory',
   (await page.locator('button:has-text("RIP IT")').count()) > 0);
 await page.locator('button:has-text("RIP IT")').first().click();
 await page.waitForTimeout(700);
+// The break table: grab a pack off the mat before tearing.
+await page.locator('[data-table-pack]').first().click();
+await page.waitForTimeout(800);
 await page.evaluate(() => {
   window.__frames = [];
   let last = performance.now();

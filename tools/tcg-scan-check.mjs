@@ -105,6 +105,9 @@ await boosterRow.first().click();
 await page.waitForTimeout(500);
 await page.locator('button:has-text("RIP IT")').first().click();
 await page.waitForTimeout(700);
+// The break table: grab a pack off the mat before tearing.
+await page.locator('[data-table-pack]').first().click();
+await page.waitForTimeout(800);
 const pack = await page.locator('div[style*="touch-action"]').first().boundingBox();
 const ty = pack.y + pack.height * 0.06;
 await page.mouse.move(pack.x + 4, ty);

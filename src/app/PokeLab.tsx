@@ -205,7 +205,7 @@ export function PokeLab() {
           style={{ ...chip, borderColor: '#d4a017', color: '#e8c86a' }}>
           {importing
             ? `IMPORTING… ${importing.done + importing.failed}/${active.cards.length}`
-            : '⚡ IMPORT OFFICIAL ART — ONE TAP'}
+            : 'IMPORT OFFICIAL ART — ONE TAP'}
         </button>
         <button onClick={() => setOfficial(o => !o)}
           style={{ ...chip, ...(official ? chipOn : {}) }}>

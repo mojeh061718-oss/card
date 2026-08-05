@@ -271,7 +271,7 @@ export function EditorScreen() {
               onClick={realismOneTap}
             >
               {realismBusy ? 'IMPORTING REALISM CONCEPT…'
-                : `🌎 REALISM CONCEPT — ONE TAP${photoCount() > 0 ? ` (${photoCount()} photos cached)` : ''}`}
+                : `REALISM CONCEPT — ONE TAP${photoCount() > 0 ? ` (${photoCount()} photos cached)` : ''}`}
             </button>
             <p style={S.note}>
               One tap loads everything: real-league names and colors, real
@@ -290,7 +290,7 @@ export function EditorScreen() {
               }}
               onClick={importBundled}
             >
-              ⚡ LOAD REAL-LEAGUE NAMES ONLY
+              LOAD REAL-LEAGUE NAMES ONLY
             </button>
             <button style={S.action} onClick={exportFile}>EXPORT NAMES JSON</button>
             <label style={{ ...S.action, textAlign: 'center', cursor: 'pointer' }}>

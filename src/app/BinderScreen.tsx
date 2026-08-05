@@ -279,12 +279,12 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
         return (
           <div style={{ fontSize: 15, fontWeight: 900, color: '#8ee08e', marginTop: 2 }}>
             EST {formatMoney(value)}
-            {event === 'injury' && <span style={{ color: '#e08a6a', fontSize: 10 }}> · 🩹 INJURED</span>}
+            {event === 'injury' && <span style={{ color: '#e08a6a', fontSize: 10 }}> · INJURED</span>}
             {event !== 'injury' && hype >= 1.15 && (
-              <span style={{ color: '#ffb35e', fontSize: 10 }}> · 🔥 HOT +{Math.round((hype - 1) * 100)}%</span>
+              <span style={{ color: '#ffb35e', fontSize: 10 }}> · HOT +{Math.round((hype - 1) * 100)}%</span>
             )}
             {event !== 'injury' && hype <= 0.87 && (
-              <span style={{ color: '#7ab8e8', fontSize: 10 }}> · 🧊 COLD −{Math.round((1 - hype) * 100)}%</span>
+              <span style={{ color: '#7ab8e8', fontSize: 10 }}> · COLD −{Math.round((1 - hype) * 100)}%</span>
             )}
           </div>
         );
@@ -308,13 +308,13 @@ function DetailOverlay({ card, onClose }: { card: CardInstance; onClose: () => v
         <div style={S.gradePanel} onClick={e => e.stopPropagation()}>
           {atGrader ? (
             <div style={S.gradeStatus}>
-              ⏳ At {COMPANIES.find(c => c.key === atGrader.companyKey)?.name} —
+              At {COMPANIES.find(c => c.key === atGrader.companyKey)?.name} —
               back in {Math.max(0, atGrader.dueDay - day)} day{atGrader.dueDay - day !== 1 ? 's' : ''}
             </div>
           ) : arrived ? (
-            <div style={S.gradeStatus}>📦 Slab arrived — reveal it from HOME → GRADE</div>
+            <div style={S.gradeStatus}>Slab arrived — reveal it from HOME → GRADE</div>
           ) : listed ? (
-            <div style={S.gradeStatus}>🔨 Live at auction — settles overnight</div>
+            <div style={S.gradeStatus}>Live at auction — settles overnight</div>
           ) : (
             <>
               <div style={S.gradeTitle}>SEND FOR GRADING</div>

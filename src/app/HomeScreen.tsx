@@ -109,7 +109,7 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
 
   const S = styles;
   const tiles: { key: string; title: string; sub: string }[] = [
-    { key: 'wax', title: 'WAX', sub: 'Rip today\'s wax ✂️' },
+    { key: 'wax', title: 'WAX', sub: 'Rip today\'s wax' },
     { key: 'hunt', title: 'HUNT', sub: 'Dig for buried treasure' },
     { key: 'binder', title: 'BOOK', sub: `${cards.length} card${cards.length === 1 ? '' : 's'} in the binder` },
     { key: 'grade', title: 'GRADE', sub: returns.length > 0 ? `${returns.length} slab${returns.length > 1 ? 's' : ''} to reveal!` : 'Bulk submit · reveal slabs' },
@@ -185,7 +185,7 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
         )}
 
         <button style={S.endDay} onClick={sleep}>
-          🌙 CLOSE UP SHOP — END DAY {day}
+          CLOSE UP SHOP · END DAY {day}
         </button>
       </div>
 
@@ -214,10 +214,10 @@ export function HomeScreen({ go }: { go: (route: string) => void }) {
               </div>
             </div>
             {night.headline && (
-              <div style={S.nightHeadline}>📰 {night.headline}</div>
+              <div style={S.nightHeadline}>WIRE · {night.headline}</div>
             )}
             <button style={S.nightOpen} onClick={() => setNight(null)}>
-              ☀️ OPEN THE SHOP — DAY {night.endedDay + 1}
+              OPEN THE SHOP · DAY {night.endedDay + 1}
             </button>
           </div>
         </div>

@@ -23,13 +23,13 @@ function HypeChip({ pull }: { pull: PulledCard }) {
   const player = rt.players[rt.def.checklist[pull.cardIndex].playerId];
   const { hype, event } = world.formOf(player);
   if (event === 'injury') {
-    return <span style={{ fontSize: 9, color: '#e08a6a', fontWeight: 800 }}>🩹 INJURED</span>;
+    return <span style={{ fontSize: 9, color: '#e08a6a', fontWeight: 800 }}>INJURED</span>;
   }
   if (hype >= 1.15) {
-    return <span style={{ fontSize: 9, color: '#ffb35e', fontWeight: 800 }}>🔥 HOT +{Math.round((hype - 1) * 100)}%</span>;
+    return <span style={{ fontSize: 9, color: '#ffb35e', fontWeight: 800 }}>HOT +{Math.round((hype - 1) * 100)}%</span>;
   }
   if (hype <= 0.87) {
-    return <span style={{ fontSize: 9, color: '#7ab8e8', fontWeight: 800 }}>🧊 COLD −{Math.round((1 - hype) * 100)}%</span>;
+    return <span style={{ fontSize: 9, color: '#7ab8e8', fontWeight: 800 }}>COLD −{Math.round((1 - hype) * 100)}%</span>;
   }
   return null;
 }
@@ -102,7 +102,7 @@ export function MarketScreen() {
                   <span style={{ fontWeight: 700 }}>{info.player}</span>
                   <span style={{ opacity: 0.55, fontSize: 10 }}>{info.tier}</span>
                   <span style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                    <span style={{ color: '#8ee08e', fontWeight: 700 }}>👀 {watchers} watching</span>
+                    <span style={{ color: '#8ee08e', fontWeight: 700 }}>{watchers} watching</span>
                     <span style={{ color: '#e8c86a', display: 'block', fontSize: 10 }}>
                       ends in {l.endsDay - day}d · reserve {formatMoney(l.reserve)}
                     </span>
@@ -218,7 +218,7 @@ function SaleRow({ sale, onDismiss }: { sale: SaleRecord; onDismiss: () => void 
       onClick={onDismiss}>
       <div style={{ textAlign: 'left', flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: 12 }}>
-          {war && '🔥 '}{sale.player}
+          {war && 'WAR · '}{sale.player}
         </div>
         <div style={{ fontSize: 10, opacity: 0.55 }}>
           {sale.tier} · {sale.kind === 'dealer' ? 'dealer' : `auction · ${sale.auction?.bidderCount ?? 0} watching`}
@@ -326,7 +326,7 @@ function PriceSheet({ card, day, onClose, onQuickSell, onList }: {
               fontSize: 10, color: '#e8c86a', marginTop: 6, lineHeight: 1.5,
               background: 'rgba(232,200,106,0.08)', borderRadius: 6, padding: '6px 8px',
             }}>
-              ⚠ Thin market — after the fee, an auction here will likely net
+              Thin market — after the fee, an auction here will likely net
               less than the dealer's {formatMoney(dealerQuote)}. Auctions pay
               off on cards people fight over.
             </div>
