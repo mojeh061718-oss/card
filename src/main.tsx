@@ -43,8 +43,9 @@ async function boot() {
   }
   // Scripted-test hook, only alongside the dev flags above.
   if (params.has('seed-collection') || params.has('enable-tcg')) {
+    const { snapshotCard } = await import('./app/cardview');
     (window as unknown as Record<string, unknown>).__cardboard = {
-      world, useCollection, photoFor, scanFor,
+      world, useCollection, photoFor, scanFor, snapshotCard,
     };
   }
   createRoot(document.getElementById('root')!).render(<App />);

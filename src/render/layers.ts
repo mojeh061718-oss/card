@@ -29,77 +29,279 @@ import { renderPokeCard, type PokeCardSpec } from './pokecard';
  * a ground shadow; baseball headshots (JPEG crops) cover a beveled window
  * with a team-color duotone so mixed sources still read as one set.
  */
-function drawPhotoHero(
+/**
+ * REALISM CONCEPT photo template — the whole card front is DESIGNED around
+ * the imported photo instead of dropping it into the procedural layout.
+ * Three pieces: the stage (team-color studio backdrop), the subject (the
+ * photo, treated per source: ESPN cutouts vs. MLB studio headshots), and a
+ * broadcast-style nameplate lockup. Rookie shields, serial badges, autos,
+ * frames and foil all still land on top from the shared pipeline.
+ */
+function drawPhotoStage(
   ctx: CanvasRenderingContext2D,
-  photo: HTMLImageElement,
-  x: number, y: number, w: number, h: number,
-  sport: string, primary: string, accent: string,
+  w: number, h: number,
+  primary: string, accent: string, nickname: string, rng: Rng,
 ): void {
-  if (sport === 'football') {
-    // Glow pedestal behind the cutout.
-    const glow = ctx.createRadialGradient(x + w / 2, y + h * 0.5, 0, x + w / 2, y + h * 0.5, w * 0.55);
-    glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.5), 0.55));
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(x, y, w, h);
+  // Deep team-color studio gradient.
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, mixHex(shade(primary, -0.52), '#05060c', 0.35));
+  g.addColorStop(0.45, shade(primary, -0.08));
+  g.addColorStop(1, mixHex(shade(primary, -0.5), '#04050a', 0.4));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
 
-    const scale = Math.min((w * 0.92) / photo.naturalWidth, (h * 0.8) / photo.naturalHeight);
-    const dw = photo.naturalWidth * scale, dh = photo.naturalHeight * scale;
-    const dx = x + (w - dw) / 2, dy = y + h * 0.72 - dh;
-    // Ground shadow under the cutout.
+  // Twin light beams from the top corners converge behind the subject.
+  ctx.save();
+  ctx.globalAlpha = 0.11;
+  for (const side of [-1, 1]) {
     ctx.save();
-    const gy = y + h * 0.74;
-    ctx.translate(x + w / 2, gy);
-    ctx.scale(1, 0.14);
-    const ground = ctx.createRadialGradient(0, 0, 0, 0, 0, dw * 0.4);
-    ground.addColorStop(0, 'rgba(4,4,12,0.45)');
-    ground.addColorStop(1, 'rgba(4,4,12,0)');
-    ctx.fillStyle = ground;
+    ctx.translate(w / 2 + side * w * 0.42, -h * 0.05);
+    ctx.rotate(side * 0.42);
+    const beam = ctx.createLinearGradient(0, 0, 0, h * 0.9);
+    beam.addColorStop(0, mixHex(accent, '#ffffff', 0.6));
+    beam.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = beam;
+    ctx.fillRect(-w * 0.16, 0, w * 0.32, h * 0.9);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Fine diagonal pinstripes — print texture, not flat digital fill.
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = Math.max(1, w * 0.0022);
+  for (let x = -h; x < w + h; x += w * 0.03) {
     ctx.beginPath();
-    ctx.arc(0, 0, dw * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = w * 0.03;
-    ctx.shadowOffsetY = h * 0.012;
-    ctx.drawImage(photo, dx, dy, dw, dh);
-    ctx.restore();
-  } else {
-    // Beveled photo window, cover-cropped, team duotone.
-    const px = x + w * 0.04, py = y + h * 0.02;
-    const pw = w * 0.92, ph = h * 0.72;
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(px, py, pw, ph, w * 0.03);
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = w * 0.04;
-    ctx.fillStyle = shade(primary, -0.2);
-    ctx.fill();
-    ctx.restore();
-    ctx.clip();
-    const cover = Math.max(pw / photo.naturalWidth, ph / photo.naturalHeight);
-    const dw = photo.naturalWidth * cover, dh = photo.naturalHeight * cover;
-    ctx.drawImage(photo, px + (pw - dw) / 2, py + (ph - dh) * 0.25, dw, dh);
-    // Duotone wash + bottom fade toward the nameplate.
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = withAlpha(mixHex(primary, '#ffffff', 0.25), 0.28);
-    ctx.fillRect(px, py, pw, ph);
-    ctx.globalCompositeOperation = 'source-over';
-    const fade = ctx.createLinearGradient(0, py + ph * 0.6, 0, py + ph);
-    fade.addColorStop(0, 'rgba(0,0,0,0)');
-    fade.addColorStop(1, withAlpha(shade(primary, -0.25), 0.85));
-    ctx.fillStyle = fade;
-    ctx.fillRect(px, py, pw, ph);
-    ctx.restore();
-    // Keyline.
-    ctx.beginPath();
-    ctx.roundRect(px, py, pw, ph, w * 0.03);
-    ctx.strokeStyle = withAlpha('#f7f5ef', 0.85);
-    ctx.lineWidth = Math.max(1.5, w * 0.004);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + h * 0.45, h);
     ctx.stroke();
   }
+  ctx.restore();
+
+  // Giant vertical team watermark along the left rail.
+  ctx.save();
+  ctx.translate(w * 0.075, h * 0.06);
+  ctx.rotate(Math.PI / 2);
+  ctx.font = `900 ${w * 0.155}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.strokeStyle = withAlpha('#ffffff', 0.08);
+  ctx.lineWidth = Math.max(1, w * 0.003);
+  ctx.strokeText(nickname.toUpperCase(), 0, 0);
+  ctx.restore();
+
+  // Stage light where the subject stands.
+  const glow = ctx.createRadialGradient(w / 2, h * 0.38, 0, w / 2, h * 0.38, w * 0.66);
+  glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.55), 0.4));
+  glow.addColorStop(0.6, withAlpha(accent, 0.1));
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
+  // A few drifting bokeh sparks — arena atmosphere.
+  ctx.save();
+  for (let i = 0; i < 14; i++) {
+    ctx.globalAlpha = 0.05 + rng.float() * 0.09;
+    ctx.fillStyle = i % 3 ? '#ffffff' : accent;
+    ctx.beginPath();
+    ctx.arc(rng.float() * w, rng.float() * h * 0.6, w * (0.004 + rng.float() * 0.012), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Darken the floor so the lockup zone reads.
+  const floor = ctx.createLinearGradient(0, h * 0.6, 0, h);
+  floor.addColorStop(0, 'rgba(0,0,8,0)');
+  floor.addColorStop(1, 'rgba(0,0,8,0.5)');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, 0, w, h);
+}
+
+/**
+ * Cutout detection, cached per decoded image. Source doesn't tell the
+ * truth (some ESPN "cutouts" ship with a baked backdrop), so sample the
+ * downscaled alpha channel instead: a real cutout goes transparent at the
+ * corners and rails. Blob-URL images are same-origin, so no tainting.
+ */
+const cutoutCache = new WeakMap<HTMLImageElement, boolean>();
+function isCutout(img: HTMLImageElement): boolean {
+  const hit = cutoutCache.get(img);
+  if (hit !== undefined) return hit;
+  let cut = false;
+  try {
+    const c = document.createElement('canvas');
+    c.width = 8; c.height = 8;
+    const cctx = c.getContext('2d')!;
+    cctx.drawImage(img, 0, 0, 8, 8);
+    const d = cctx.getImageData(0, 0, 8, 8).data;
+    let clear = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] < 16) clear++;
+    cut = clear >= 6;
+  } catch { /* decode hiccup — treat as opaque */ }
+  cutoutCache.set(img, cut);
+  return cut;
+}
+
+function drawPhotoSubject(
+  ctx: CanvasRenderingContext2D,
+  photo: HTMLImageElement,
+  w: number, h: number,
+  primary: string, accent: string,
+): void {
+  if (isCutout(photo)) {
+    // Transparent busts stage like a broadcast graphic — rim glow, big
+    // scale, bottom edge tucked under the lockup.
+    const maxW = w * 0.96, maxH = h * 0.62;
+    const scale = Math.min(maxW / photo.naturalWidth, maxH / photo.naturalHeight);
+    const dw = photo.naturalWidth * scale, dh = photo.naturalHeight * scale;
+    const dx = (w - dw) / 2, dy = h * 0.865 - dh;
+
+    const rim = ctx.createRadialGradient(w / 2, dy + dh * 0.55, dw * 0.1, w / 2, dy + dh * 0.55, dw * 0.62);
+    rim.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.5), 0.5));
+    rim.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rim;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = w * 0.045;
+    ctx.shadowOffsetY = h * 0.014;
+    ctx.drawImage(photo, dx, dy, dw, dh);
+    ctx.restore();
+    return;
+  }
+
+  // Opaque studio photos (MLB headshots, backdropped ESPN shots) fit BY
+  // WIDTH — never a face-zooming cover crop — run full-bleed from the top
+  // and DISSOLVE into the stage, with a light team-color grade so photo
+  // and design read as one printed piece, never a pasted rectangle.
+  // 88% width pulls tight studio headshots back a touch; the side margins
+  // dissolve into the stage so no hard photo edge ever shows.
+  const dw = w * 0.88;
+  const scale = dw / photo.naturalWidth;
+  const dh = Math.min(photo.naturalHeight * scale, h * 0.7);
+  const off = document.createElement('canvas');
+  off.width = w; off.height = Math.round(dh);
+  const octx = off.getContext('2d')!;
+  octx.drawImage(photo, (w - dw) / 2, 0, dw, photo.naturalHeight * scale);
+
+  // Team-color grade: gentle — unify tones without staining skin.
+  octx.globalCompositeOperation = 'multiply';
+  octx.fillStyle = withAlpha(mixHex(primary, '#ffffff', 0.55), 0.16);
+  octx.fillRect(0, 0, w, dh);
+  octx.globalCompositeOperation = 'soft-light';
+  octx.fillStyle = withAlpha(accent, 0.12);
+  octx.fillRect(0, 0, w, dh);
+  octx.globalCompositeOperation = 'destination-out';
+  // Bottom dissolve, late — the face stays clean, only the chest fades.
+  const fade = octx.createLinearGradient(0, dh * 0.76, 0, dh);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(1, 'rgba(0,0,0,1)');
+  octx.fillStyle = fade;
+  octx.fillRect(0, 0, w, dh);
+  // Side dissolves blend the margins into the stage.
+  for (const [x0, x1] of [[(w - dw) / 2 + w * 0.06, 0], [(w + dw) / 2 - w * 0.06, w]] as const) {
+    const sg = octx.createLinearGradient(x0, 0, x1, 0);
+    sg.addColorStop(0, 'rgba(0,0,0,0)');
+    sg.addColorStop(1, 'rgba(0,0,0,1)');
+    octx.fillStyle = sg;
+    octx.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), dh);
+  }
+  // Top corners soften so badges never sit on a hard photo edge.
+  const tg = octx.createLinearGradient(0, 0, 0, dh * 0.06);
+  tg.addColorStop(0, 'rgba(0,0,0,0.55)');
+  tg.addColorStop(1, 'rgba(0,0,0,0)');
+  octx.fillStyle = tg;
+  octx.fillRect(0, 0, w, dh * 0.06);
+
+  ctx.drawImage(off, 0, 0);
+}
+
+function drawPhotoNameplate(
+  ctx: CanvasRenderingContext2D,
+  fctx: CanvasRenderingContext2D,
+  w: number, h: number,
+  first: string, last: string, position: string,
+  teamLine: string, jersey: number,
+  accent: string, foilOnFrame: number,
+): void {
+  // Angled broadcast band.
+  const topL = h * 0.842, topR = h * 0.822, bot = h * 0.936;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, topL);
+  ctx.lineTo(w, topR);
+  ctx.lineTo(w, bot);
+  ctx.lineTo(0, bot);
+  ctx.closePath();
+  const bg = ctx.createLinearGradient(0, topR, 0, bot);
+  bg.addColorStop(0, 'rgba(9,10,16,0.96)');
+  bg.addColorStop(1, 'rgba(14,16,24,0.96)');
+  ctx.fillStyle = bg;
+  ctx.fill();
+  // Accent blade along the angled top edge.
+  ctx.beginPath();
+  ctx.moveTo(0, topL);
+  ctx.lineTo(w, topR);
+  ctx.lineWidth = Math.max(2, h * 0.005);
+  ctx.strokeStyle = accent;
+  ctx.stroke();
+
+  // Oversized jersey number, right side, ghosted metallic.
+  const numText = String(jersey);
+  ctx.font = `900 italic ${h * 0.078}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  // Metallic ramp biased bright — a dark accent must still read on the
+  // near-black band.
+  const numGrad = ctx.createLinearGradient(0, topR, 0, bot);
+  numGrad.addColorStop(0, mixHex(accent, '#ffffff', 0.75));
+  numGrad.addColorStop(0.55, mixHex(accent, '#ffffff', 0.4));
+  numGrad.addColorStop(1, mixHex(accent, '#ffffff', 0.12));
+  ctx.fillStyle = numGrad;
+  ctx.fillText(numText, w * 0.955, h * 0.884);
+  const numW = ctx.measureText(numText).width;
+
+  // Name block, left side. Last name is the hero; fit by shrinking.
+  const nameX = w * 0.05;
+  const avail = w * 0.9 - numW - nameX;
+  ctx.textAlign = 'left';
+  ctx.font = `700 ${h * 0.02}px Arial, sans-serif`;
+  ctx.fillStyle = withAlpha(mixHex(accent, '#ffffff', 0.4), 0.95);
+  ctx.fillText(first.toUpperCase(), nameX, h * 0.856, avail);
+  let lastPx = h * 0.042;
+  ctx.font = `900 ${lastPx}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  const lw = ctx.measureText(last.toUpperCase()).width;
+  if (lw > avail) {
+    lastPx = Math.max(12, lastPx * (avail / lw));
+    ctx.font = `900 ${lastPx}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  }
+  ctx.fillStyle = '#f6f4ee';
+  ctx.fillText(last.toUpperCase() || first.toUpperCase(), nameX, h * 0.888, avail);
+  ctx.font = `600 ${h * 0.017}px Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(244,242,236,0.66)';
+  ctx.fillText(`${position}  •  ${teamLine.toUpperCase()}`, nameX, h * 0.919, avail);
+  ctx.restore();
+
+  // Foil: the band's blade, the last name, and the number burn.
+  fctx.save();
+  fctx.beginPath();
+  fctx.moveTo(0, topL);
+  fctx.lineTo(w, topR);
+  fctx.lineWidth = Math.max(2, h * 0.006);
+  fctx.strokeStyle = `rgba(255,255,255,${0.85 * Math.max(0.4, foilOnFrame)})`;
+  fctx.stroke();
+  fctx.font = `900 ${lastPx}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  fctx.textAlign = 'left';
+  fctx.textBaseline = 'middle';
+  fctx.fillStyle = `rgba(255,255,255,${0.55 * Math.max(0.4, foilOnFrame)})`;
+  fctx.fillText(last.toUpperCase() || first.toUpperCase(), w * 0.05, h * 0.888);
+  fctx.font = `900 italic ${h * 0.078}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  fctx.textAlign = 'right';
+  fctx.fillStyle = 'rgba(255,255,255,0.6)';
+  fctx.fillText(String(jersey), w * 0.955, h * 0.884);
+  fctx.restore();
 }
 
 const insertRunOf = (name: string): number =>
@@ -576,6 +778,9 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
 
   const isDowntown = spec.insertName === 'Downtown';
   const isInsert = !!spec.insertName;
+  // REALISM CONCEPT: an imported photo switches the whole front to the
+  // photo-first template. Inserts keep their illustrated identity.
+  const photo = !isInsert ? heroPhoto(player.sport, `${player.first} ${player.last}`) : null;
   const poses = posesFor(player.sport);
   const pose = poses[Number(spec.artSeed % BigInt(poses.length))];
   const figX = isInsert ? w * 0.04 : w * 0.02;
@@ -598,13 +803,16 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   } else if (isInsert) {
     // Ignition (and future illustrated sets): a bespoke painted panel.
     drawIgnition(ctx, w, h, childSeedN(spec.artSeed, 5151), team.primary, team.secondary);
+  } else if (photo) {
+    drawPhotoStage(ctx, w, h, primary, accent, team.nickname, rng);
   } else {
     patternPainters[dna.pattern](ctx, w, h, primary, accent, dna, rng);
   }
 
   // Hero glow: a hot accent core behind the figure lifts the whole card and
   // separates the subject the way studio lighting does on real photography.
-  if (!isInsert) {
+  // (The photo stage carries its own lighting.)
+  if (!isInsert && !photo) {
   const glow = ctx.createRadialGradient(w / 2, h * 0.40, 0, w / 2, h * 0.40, w * 0.62);
   glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.45), 0.5));
   glow.addColorStop(0.55, withAlpha(accent, 0.16));
@@ -624,7 +832,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   if (isDowntown) {
     // Plinth sits exactly on the measured foot line so the figure stands.
     drawBase(ctx, w * 0.5, footY, w * 0.3, team.primary);
-  } else if (!isInsert && dna.layout === 'diagonalSplit') {
+  } else if (!isInsert && !photo && dna.layout === 'diagonalSplit') {
     ctx.beginPath();
     ctx.moveTo(0, h * 0.78);
     ctx.lineTo(w, h * 0.5);
@@ -633,7 +841,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     ctx.closePath();
     ctx.fillStyle = withAlpha(shade(primary, -0.16), 0.85);
     ctx.fill();
-  } else if (!isInsert && dna.layout === 'archWindow') {
+  } else if (!isInsert && !photo && dna.layout === 'archWindow') {
     // Arch glow behind figure
     ctx.beginPath();
     ctx.moveTo(w * 0.14, h * 0.86);
@@ -663,13 +871,12 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   }
 
 
-  // REALISM CONCEPT: a real photo (imported by the player at runtime)
-  // replaces the procedural figure on standard cards. Inserts keep their
-  // illustrated identity either way.
-  const photo = !isInsert ? heroPhoto(player.sport, `${player.first} ${player.last}`) : null;
-  if (photo) {
-    drawPhotoHero(ctx, photo, figX, figY, figW, figH, player.sport, team.primary, accent);
-  } else {
+  // Opaque photo panels sit UNDER the frame (a framed photo card); cutout
+  // busts draw after the frame below, breaking over it like a broadcast
+  // graphic. Procedural figures stay under the frame as always.
+  if (photo && !isCutout(photo)) {
+    drawPhotoSubject(ctx, photo, w, h, team.primary, accent);
+  } else if (!photo) {
     const style = athleteStyle(
       player.appearanceSeed, player.jersey, player.sport,
       team.primary, team.secondary, team.nickname,
@@ -711,6 +918,11 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     fctx.strokeStyle = `rgba(255,255,255,${0.75 * dna.foilOnFrame})`;
     fctx.stroke();
     fctx.restore();
+  }
+
+  // Cutout busts break over the frame — drawn after it on purpose.
+  if (photo && isCutout(photo)) {
+    drawPhotoSubject(ctx, photo, w, h, team.primary, accent);
   }
 
   // Font families, parsed once — the DNA stacks carry a leading weight token
@@ -793,7 +1005,15 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   const displayPx = Math.round(npH * 0.62);
   const labelPx = Math.round(npH * 0.3);
   const nameText = `${player.first.toUpperCase()} ${player.last.toUpperCase()}`;
-  if (!isInsert) {
+  if (photo) {
+    drawPhotoNameplate(
+      ctx, fctx as unknown as CanvasRenderingContext2D, w, h,
+      player.first, player.last, player.position,
+      `${team.city} ${team.nickname}`, player.jersey,
+      accent, dna.foilOnFrame,
+    );
+  }
+  if (!isInsert && !photo) {
   ctx.save();
   switch (dna.nameplate) {
     case 'bar': {
@@ -1020,7 +1240,14 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   ctx.restore();
 
   // --- Team badge: a real logo lockup, not a letter in a circle ---
-  if (!isInsert) {
+  // Photo cards wear it as a crest at the top-left (the lockup owns the
+  // bottom band); rookies keep the RC shield there instead.
+  if (!isInsert && photo && !spec.isRookie) {
+    drawTeamBadge(
+      ctx, w * 0.085, h * 0.078, w * 0.052,
+      team.primary, team.secondary, team.nickname[0], team.logoSeed,
+    );
+  } else if (!isInsert && !photo) {
     drawTeamBadge(
       ctx,
       dna.nameplate === 'chip' ? w * 0.115 : w * 0.9,
