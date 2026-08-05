@@ -219,7 +219,7 @@ const cashBefore = await page.evaluate(() => {
   const t = document.body.textContent ?? '';
   return t.match(/CASH\s*\$([\d.,KM]+)/)?.[1] ?? '';
 });
-await page.locator('button:has(img)').first().click();
+await page.locator('[data-testid="inventory-card"]').first().click();
 await page.waitForTimeout(700);
 check('price sheet shows comps', (await page.getByText('RECENT SALES').count()) === 1);
 await page.getByText('LIST AT AUCTION').click();
@@ -233,11 +233,17 @@ const results = await page.getByText('RESULTS').count();
 check('auction settles into the results feed', results > 0, `cash before: ${cashBefore}`);
 await page.screenshot({ path: 'shots/e2e-market.png' });
 
+const finds = await page.locator('[data-testid="market-find"]').count();
+check('other collectors surface cards onto the market', finds > 0, `${finds} listed`);
+
 // --- 8. The wire and Top 50 ----------------------------------------------
 await nav('WIRE').click();
 await page.waitForTimeout(1400);
 const neverFound = await page.getByText('NEVER FOUND').count();
+const surfacedRows = await page.getByText('surfaced').count();
 check('Top 50 tracks unfound grails', neverFound > 0, `${neverFound} still sealed`);
+check('and grails do start surfacing as the world rips',
+  surfacedRows > 0 || neverFound < 50, `${surfacedRows} surfaced`);
 await page.getByText('NEWS', { exact: true }).click();
 await page.waitForTimeout(600);
 const stories = await page.locator('article').count();

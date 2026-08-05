@@ -18,6 +18,7 @@ import { dealerOffer } from '../engine/economy/valuation';
 import {
   bigSaleStory, grailFoundStory, ambientStories, productDropStory, type NewsItem,
 } from '../engine/news/wire';
+import type { PulledCard as Pull } from '../engine/cards/series';
 
 export interface CardInstance extends PulledCard {
   /** Unique ownership id (monotonic per save). */
@@ -57,6 +58,13 @@ export interface SealedItem {
   pricePaid: number;
 }
 
+/** A card somebody else pulled and put up for sale. */
+export interface MarketFind {
+  pull: Pull;
+  ask: number;
+  listedDay: number;
+}
+
 export interface Submission {
   uids: number[];
   companyKey: string;
@@ -84,6 +92,7 @@ interface CollectionState {
   nextSealedId: number;
   /** productKey:seriesId:day -> units bought, for daily allocation limits. */
   bought: Record<string, number>;
+  marketFinds: MarketFind[];
   news: NewsItem[];
   /** Unread breaking story awaiting its takeover. */
   breaking: NewsItem | null;
@@ -102,6 +111,7 @@ interface CollectionState {
   clearBreaking(): void;
   setShopName(name: string): void;
   buyWax(seriesId: string, productKey: string, price: number): SealedItem | null;
+  buyFind(listedDay: number, uidKey: string): boolean;
   openSealed(id: number): void;
   setCash(amount: number): void;
   startCareer(): void;
@@ -140,6 +150,7 @@ function scheduleSave(state: CollectionState): void {
         saleFeed: state.saleFeed,
         dugLots: state.dugLots,
         sealed: state.sealed,
+        marketFinds: state.marketFinds,
         nextSealedId: state.nextSealedId,
         bought: state.bought,
         news: state.news.slice(0, 60),
@@ -167,6 +178,7 @@ export const useCollection = create<CollectionState>((set, get) => ({
   sealed: [],
   nextSealedId: 1,
   bought: {},
+  marketFinds: [],
   news: [],
   breaking: null,
   shopName: 'Corner Store Cards',
@@ -252,8 +264,33 @@ export const useCollection = create<CollectionState>((set, get) => ({
       }
     }
 
-    // The wire picks up notable results plus ambient hobby traffic.
+    // The rest of the hobby rips too. Grails surface elsewhere, which is how
+    // a 1-in-2000-case card becomes something you can realistically chase.
+    const surfaced = world.ripWorld(newDay);
+    const forSale: MarketFind[] = [];
     const stories: NewsItem[] = [];
+    for (const { pull } of surfaced) {
+      const run = world.printRunOf(pull);
+      const info = world.displayName(pull);
+      // Only crown jewels make the wire, capped so a busy day cannot flood it.
+      if (run <= 5 && stories.length < 2) {
+        stories.push(grailFoundStory(
+          newDay, info.player, info.tier, info.series, false, get().shopName,
+          childSeedN(hashString(world.identityKey(pull)), newDay),
+        ));
+      }
+      // A slice of what surfaces gets listed for sale by whoever found it.
+      const askRng = new Rng(childSeedN(hashString(world.identityKey(pull)), newDay + 7));
+      if (askRng.chance(run <= 25 ? 0.35 : 0.6)) {
+        const value = world.valuation(pull);
+        forSale.push({
+          pull,
+          // Sellers ask above comp; the rarer it is, the bolder the ask.
+          ask: Math.round(value * (1.05 + askRng.float() * (run <= 25 ? 0.9 : 0.35))),
+          listedDay: newDay,
+        });
+      }
+    }
     for (const sale of newSales) {
       if (sale.price >= 250) {
         stories.push(bigSaleStory(
@@ -281,6 +318,9 @@ export const useCollection = create<CollectionState>((set, get) => ({
       listings: openListings,
       cards: cards.filter(c => !soldUids.has(c.uid)),
       saleFeed: [...newSales, ...saleFeed].slice(0, 40),
+      // Finds age off the board after a week so the market stays fresh.
+      marketFinds: [...forSale, ...get().marketFinds.filter(f => f.listedDay > newDay - 7)]
+        .slice(0, 60),
       news: [...stories, ...get().news].slice(0, 60),
       returns: [...returns, ...arrived.flatMap(s => s.uids.map(uid => uid))],
     });
@@ -356,6 +396,23 @@ export const useCollection = create<CollectionState>((set, get) => ({
     scheduleSave(get());
     return item;
   },
+  buyFind(listedDay, uidKey) {
+    const { marketFinds, cash, cards, nextUid } = get();
+    const idx = marketFinds.findIndex(
+      f => f.listedDay === listedDay && world.identityKey(f.pull) === uidKey,
+    );
+    if (idx < 0) return false;
+    const find = marketFinds[idx];
+    if (find.ask > cash) return false;
+    set({
+      cash: cash - find.ask,
+      cards: [...cards, { ...find.pull, uid: nextUid, pulledSeq: nextUid }],
+      nextUid: nextUid + 1,
+      marketFinds: marketFinds.filter((_, i) => i !== idx),
+    });
+    scheduleSave(get());
+    return true;
+  },
   openSealed(id) {
     set({ sealed: get().sealed.filter(s => s.id !== id) });
     scheduleSave(get());
@@ -415,6 +472,7 @@ export async function hydrateCollection(): Promise<void> {
         saleFeed: save.saleFeed ?? [],
         dugLots: save.dugLots ?? [],
         sealed: save.sealed ?? [],
+        marketFinds: save.marketFinds ?? [],
         nextSealedId: save.nextSealedId ?? 1,
         bought: save.bought ?? {},
         news: save.news ?? [],

@@ -50,39 +50,66 @@ export interface PressProfile {
 /** Per-series press personality, derived from the series seed. */
 export function pressProfile(seriesSeed: bigint): PressProfile {
   const rng = Rng.from(seriesSeed, 'press');
+  // Ranges are wide on purpose: the gap between a clean press and a
+  // notorious one should be something players learn and trade on.
   return {
-    centeringSigma: 0.006 + rng.float() * 0.014,
-    edgeChip: 0.04 + rng.float() * 0.16,
-    cornerSoft: 0.04 + rng.float() * 0.12,
-    surfaceNoise: 0.05 + rng.float() * 0.2,
+    centeringSigma: 0.004 + rng.float() * 0.013,
+    edgeChip: 0.03 + rng.float() * 0.13,
+    cornerSoft: 0.03 + rng.float() * 0.1,
+    surfaceNoise: 0.04 + rng.float() * 0.16,
     errorRate: 0.0002 + rng.float() * 0.0008,
   };
 }
 
 const ERRORS: CardError[] = ['miscut', 'missingFoil', 'inkSmear', 'doubleStamp', 'wrongBack'];
 
+/**
+ * How carefully a copy was made and handled, from its print run.
+ *
+ * Short-printed cards are not just rarer, they are *better*: the press is
+ * watched, the sheet is cut with care, and every hand that touches one knows
+ * what it is. A 1/1 is pulled from a pack and sleeved in seconds. So scarcity
+ * tightens every tolerance, and at the very top it approaches zero — the
+ * generator must never hand you a Superfractor with a chewed corner.
+ */
+export function careFactor(printRun: number): number {
+  if (printRun <= 1) return 0.04;      // 1/1: effectively flawless
+  if (printRun <= 5) return 0.1;
+  if (printRun <= 25) return 0.22;
+  if (printRun <= 99) return 0.42;
+  if (printRun <= 299) return 0.62;
+  if (printRun <= 1500) return 0.82;
+  return 1;                             // base commons get no such care
+}
+
 /** Deterministic condition for one physical copy. */
 export function conditionFor(
   seriesSeed: bigint, cardIndex: number, parallelId: number, serial: number,
   profile: PressProfile,
+  /** Print run of this copy's tier — drives how carefully it was made. */
+  printRun = 20000,
 ): Condition {
   const seed = childSeed(
     seriesSeed,
     `cond:${cardIndex}:${parallelId}:${serial}`,
   ) ^ hashString('copy');
   const rng = new Rng(seed);
+  const care = careFactor(printRun);
 
   const wear = (tendency: number): number => {
-    const base = Math.abs(rng.gaussian(0, tendency));
-    // Occasional real ding regardless of press quality.
-    return Math.min(1, base + (rng.chance(0.03) ? rng.float() * 0.5 : 0));
+    const base = Math.abs(rng.gaussian(0, tendency * care));
+    // Occasional real ding — but the rarer the card, the less it happens.
+    const unlucky = rng.chance(0.03 * care) ? rng.float() * 0.5 * care : 0;
+    return Math.min(1, base + unlucky);
   };
 
-  const isError = rng.chance(profile.errorRate);
+  // Factory errors scale with care too: a 1/1 that escaped QC would be a
+  // story, not a routine occurrence.
+  const isError = rng.chance(profile.errorRate * care);
   const error = isError ? ERRORS[rng.int(ERRORS.length)] : null;
 
-  let offX = rng.gaussian(0, profile.centeringSigma);
-  let offY = rng.gaussian(0, profile.centeringSigma);
+  let offX = rng.gaussian(0, profile.centeringSigma * care);
+  let offY = rng.gaussian(0, profile.centeringSigma * care);
   if (error === 'miscut') {
     offX = (rng.chance(0.5) ? 1 : -1) * (0.03 + rng.float() * 0.02);
     offY = rng.gaussian(0, profile.centeringSigma * 2);
@@ -94,9 +121,9 @@ export function conditionFor(
     offX, offY,
     corners: [wear(profile.cornerSoft), wear(profile.cornerSoft), wear(profile.cornerSoft), wear(profile.cornerSoft)],
     edges: [wear(profile.edgeChip), wear(profile.edgeChip), wear(profile.edgeChip), wear(profile.edgeChip)],
-    scratches: rng.chance(profile.surfaceNoise) ? rng.range(1, 3) : 0,
-    printLines: rng.chance(profile.surfaceNoise * 0.5) ? rng.range(1, 2) : 0,
-    printDots: rng.chance(profile.surfaceNoise) ? rng.range(1, 4) : 0,
+    scratches: rng.chance(profile.surfaceNoise * care) ? rng.range(1, 3) : 0,
+    printLines: rng.chance(profile.surfaceNoise * 0.5 * care) ? rng.range(1, 2) : 0,
+    printDots: rng.chance(profile.surfaceNoise * care) ? rng.range(1, 4) : 0,
     error,
   };
 }

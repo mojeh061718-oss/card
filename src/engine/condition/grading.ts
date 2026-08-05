@@ -66,20 +66,56 @@ function clampGrade(g: number): number {
   return Math.max(1, Math.min(10, Math.round(g * 2) / 2));
 }
 
-/** Raw 1-10 quality per dimension from true condition (before strictness). */
+/**
+ * Raw 1-10 quality per dimension from true condition, before strictness.
+ *
+ * Each dimension has a **tolerance band** — real graders award a 10 for
+ * anything inside roughly 55/45 centering and don't penalize microscopic
+ * corner softness. Without those bands every card accumulates small
+ * deductions and nothing ever gems, which is not how the hobby works.
+ */
 export function rawSubs(c: Condition): { centering: number; corners: number; edges: number; surface: number } {
   const off = Math.max(Math.abs(c.offX), Math.abs(c.offY));
-  // 50/50 → 10; 60/40 (0.02) → ~8.6; miscut 0.04+ → ≤6.
-  const centering = 10 - off * 72 - Math.min(Math.abs(c.offX), Math.abs(c.offY)) * 30;
+  // Inside ~55/45 is a 10. 60/40 ≈ 8.9, 65/35 ≈ 7.9, a miscut is ≤ 6.
+  const centering = 10
+    - Math.max(0, off - 0.011) * 95
+    - Math.max(0, Math.min(Math.abs(c.offX), Math.abs(c.offY)) - 0.011) * 30;
   const worstCorner = Math.max(...c.corners);
   const cornerAvg = c.corners.reduce((a, b) => a + b, 0) / 4;
-  const corners = 10 - worstCorner * 6.5 - cornerAvg * 3;
+  const corners = 10 - Math.max(0, worstCorner - 0.06) * 8 - Math.max(0, cornerAvg - 0.04) * 3.5;
   const worstEdge = Math.max(...c.edges);
   const edgeAvg = c.edges.reduce((a, b) => a + b, 0) / 4;
-  const edges = 10 - worstEdge * 6 - edgeAvg * 3;
+  const edges = 10 - Math.max(0, worstEdge - 0.07) * 7.5 - Math.max(0, edgeAvg - 0.05) * 3.5;
   const surface = 10 - c.scratches * 1.1 - c.printLines * 1.4 - c.printDots * 0.4
     - (c.error === 'inkSmear' ? 2.5 : 0);
   return { centering, corners, edges, surface };
+}
+
+/**
+ * How much genuinely wrong with this card a grader could catch.
+ *
+ * 0 means pristine. This drives the mishap chance, so a surprise is always
+ * *earned* by something actually on the cardboard — never a free coin flip.
+ * Centering is weighted hardest because it is the flaw that most often
+ * costs a card its 10 in the real hobby.
+ */
+export function flawPressure(c: Condition): number {
+  const off = Math.max(Math.abs(c.offX), Math.abs(c.offY));
+  const centering = Math.min(1, off / 0.022);          // ~61/39 saturates
+  const corner = Math.min(1, Math.max(...c.corners) / 0.28);
+  const edge = Math.min(1, Math.max(...c.edges) / 0.3);
+  const surface = Math.min(1, (c.scratches * 0.4 + c.printLines * 0.55 + c.printDots * 0.16));
+  return Math.min(1,
+    centering * 0.45 + corner * 0.25 + edge * 0.16 + surface * 0.14
+    + (c.error ? 0.3 : 0));
+}
+
+/** Odds this submission comes back worse than the card deserves. */
+export function mishapChance(c: Condition, company: GradingCompany): number {
+  // A clean card is a near-lock; a flawed one is a coin toss the grader
+  // decides. Strict houses find more of what is there.
+  const base = 0.015 + flawPressure(c) * 0.42;
+  return Math.min(0.55, base * (0.7 + company.strictness * 0.45));
 }
 
 export function gradeCard(
@@ -90,14 +126,28 @@ export function gradeCard(
 ): GradeResult {
   const rng = new Rng(childSeed(submissionSeed, `grade:${company.key}`));
   const raw = rawSubs(condition);
+  // Graders are consistent. The spread between two submissions of the same
+  // card is small and deliberate — the drama comes from the mishap below,
+  // not from the dice rattling on every subgrade.
+  const jitter = company.variance * 0.35;
   const grade = (v: number): number =>
-    clampGrade(10 - (10 - v) * company.strictness + rng.gaussian(0, company.variance));
+    clampGrade(10 - (10 - v) * company.strictness + rng.gaussian(0, jitter));
   const subs = {
     centering: grade(raw.centering),
     corners: grade(raw.corners),
     edges: grade(raw.edges),
     surface: grade(raw.surface),
   };
+
+  // The mystery: occasionally a grader dings the weakest dimension harder
+  // than the card looks like it deserves. Probability is a function of the
+  // card's real flaws, so a pristine copy is safe and a 60/40 is a gamble.
+  if (rng.chance(mishapChance(condition, company))) {
+    const order: (keyof typeof subs)[] = ['centering', 'corners', 'edges', 'surface'];
+    const weakest = order.reduce((a, b) => (subs[a] <= subs[b] ? a : b));
+    const severity = rng.chance(0.72) ? 0.5 : rng.chance(0.6) ? 1 : 1.5;
+    subs[weakest] = clampGrade(subs[weakest] - severity);
+  }
   const vals = [subs.centering, subs.corners, subs.edges, subs.surface];
   const min = Math.min(...vals);
   const mean = vals.reduce((a, b) => a + b, 0) / 4;

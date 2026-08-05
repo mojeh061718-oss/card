@@ -16,8 +16,8 @@ import { sfx, unlockAudio } from './feel';
 
 export function MarketScreen() {
   const {
-    cards, cash, day, listings, saleFeed,
-    quickSell, listAtAuction, dismissSale, endDay,
+    cards, cash, day, listings, saleFeed, marketFinds,
+    quickSell, listAtAuction, dismissSale, endDay, buyFind,
   } = useCollection();
   const [selected, setSelected] = useState<CardInstance | null>(null);
 
@@ -82,11 +82,66 @@ export function MarketScreen() {
           </section>
         )}
 
+        {marketFinds.length > 0 && (
+          <section style={S.section}>
+            <div style={S.sectionTitle}>
+              ON THE MARKET — cards other collectors pulled and listed
+            </div>
+            {[...marketFinds]
+              .sort((a, b) => world.valuation(b.pull) - world.valuation(a.pull))
+              .slice(0, 12)
+              .map(find => {
+                const info = world.displayName(find.pull);
+                const run = world.printRunOf(find.pull);
+                const value = world.valuation(find.pull);
+                const overAsk = find.ask / value;
+                const affordable = cash >= find.ask;
+                return (
+                  <button
+                    key={`${find.listedDay}-${world.identityKey(find.pull)}`}
+                    data-testid="market-find"
+                    style={{ ...S.findRow, opacity: affordable ? 1 : 0.5 }}
+                    disabled={!affordable}
+                    onClick={() => {
+                      if (buyFind(find.listedDay, world.identityKey(find.pull))) sfx.cash();
+                    }}
+                  >
+                    <img
+                      src={snapshotCard(world.specFor(find.pull), 150)}
+                      alt=""
+                      style={{ width: 40, borderRadius: 4, display: 'block' }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                      <div style={{ fontSize: 12, fontWeight: 800 }}>{info.player}</div>
+                      <div style={{ fontSize: 10, color: '#e8c86a' }}>{info.tier}</div>
+                      <div style={{ fontSize: 9, opacity: 0.45 }}>
+                        {run <= 25 ? 'GRAIL · ' : ''}{run.toLocaleString()} printed
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: '#e8c86a' }}>
+                        {formatMoney(find.ask)}
+                      </div>
+                      <div style={{
+                        fontSize: 9,
+                        color: overAsk > 1.5 ? '#e08a6a' : overAsk < 1.15 ? '#8ee08e' : 'rgba(244,242,236,0.5)',
+                      }}>
+                        {overAsk > 1.5 ? 'well over comp'
+                          : overAsk < 1.15 ? 'near comp' : 'over comp'}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+          </section>
+        )}
+
         <section style={S.section}>
           <div style={S.sectionTitle}>YOUR INVENTORY — tap a card to price it</div>
           <div style={S.grid}>
             {sellable.map(({ card, value }) => (
-              <button key={card.uid} style={S.cell} onClick={() => setSelected(card)}>
+              <button key={card.uid} data-testid="inventory-card" style={S.cell}
+                onClick={() => setSelected(card)}>
                 <img src={snapshotCard(world.specFor(card), 180)} alt="" style={S.cellImg} />
                 <div style={S.cellValue}>{formatMoney(value)}</div>
               </button>
@@ -251,6 +306,11 @@ const styles: Record<string, React.CSSProperties> = {
   cellValue: { fontSize: 10, fontWeight: 800, color: '#8ee08e', marginTop: 3 },
   empty: { opacity: 0.5, fontSize: 12, gridColumn: '1 / -1', padding: 20, textAlign: 'center' },
   queueRow: { display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, marginBottom: 6 },
+  findRow: {
+    display: 'flex', gap: 10, alignItems: 'center', width: '100%', padding: '7px 10px',
+    marginBottom: 6, background: 'rgba(212,160,23,0.07)',
+    border: '1px solid rgba(212,160,23,0.25)', borderRadius: 9, color: '#f4f2ec',
+  },
   saleRow: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', marginBottom: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid', borderRadius: 8, color: '#f4f2ec' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,4,7,0.9)', zIndex: 50, display: 'flex', alignItems: 'flex-end' },
   sheet: { background: '#15151c', borderRadius: '18px 18px 0 0', padding: 18, width: '100%', maxHeight: '88%', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)' },

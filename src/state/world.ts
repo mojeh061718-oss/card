@@ -16,6 +16,7 @@ import {
 } from '../engine/cards/series';
 import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/economy/lots';
 import { buildTop50, type Top50Entry } from '../engine/news/top50';
+import { ripWorldDay } from '../engine/cards/worldRips';
 import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
 import type { Population } from '../engine/cards/population';
@@ -177,7 +178,10 @@ class World {
 
   conditionOf(pull: PulledCard): Condition {
     const rt = this.get(pull.seriesId);
-    return conditionFor(rt.def.seed, pull.cardIndex, pull.parallelId, pull.serial, rt.press);
+    return conditionFor(
+      rt.def.seed, pull.cardIndex, pull.parallelId, pull.serial, rt.press,
+      this.printRunOf(pull),
+    );
   }
 
   specFor(pull: PulledCard): CardRenderSpec {
@@ -286,6 +290,47 @@ class World {
       tier: `${card.isAuto ? 'AUTO · ' : ''}${tier}`,
       series: rt.def.name,
     };
+  }
+
+  /**
+   * Advance the world by a day: everyone else opens wax too.
+   *
+   * Returns only the notable surfacings — scarce parallels, autos and
+   * illustrated inserts — so the caller can put them on the wire and on the
+   * market. Commons are consumed silently.
+   */
+  ripWorld(day: number): { pull: PulledCard; seriesId: string }[] {
+    const surfaced: { pull: PulledCard; seriesId: string }[] = [];
+    for (const [seriesId, rt] of this.series) {
+      const P = rt.def.ladder.length;
+      const ageDays = Math.max(0, day - this.releaseDay(seriesId));
+      if (ageDays < 0) continue;
+      const { notable } = ripWorldDay(
+        rt.pop, this.packRng, rt.pop.totalPrinted, ageDays,
+        (slotId) => {
+          const card = rt.def.checklist[Math.floor(slotId / P)];
+          const par = rt.def.ladder[slotId % P];
+          return !!card.insertName || card.isAuto || par.printRun <= 299;
+        },
+      );
+      for (const n of notable) {
+        const { cardIndex, parallelId } = decodeSlot(rt.def, n.slotId);
+        surfaced.push({
+          seriesId,
+          pull: {
+            seriesId, cardIndex, parallelId,
+            serial: n.serial,
+            numberedTo: rt.def.ladder[parallelId].numberedTo,
+          },
+        });
+      }
+    }
+    return surfaced;
+  }
+
+  /** In-game day a product hit shelves. Staggered so releases feel like a calendar. */
+  releaseDay(seriesId: string): number {
+    return this.seriesIds.indexOf(seriesId) * 45 + 1;
   }
 
   /**

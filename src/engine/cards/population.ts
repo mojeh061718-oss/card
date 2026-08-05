@@ -115,6 +115,35 @@ export class Population {
   }
 
   /**
+   * Draw without issuing a serial number.
+   *
+   * Serial assignment runs a Feistel permutation over BigInt, which is
+   * ~100x the cost of the draw itself. The world opens tens of thousands of
+   * cards a day and only cares about the handful worth reporting, so this
+   * decrements the population and hands back the copy index — call
+   * `serialFor` later for just the copies that matter.
+   */
+  drawIndex(rng: Rng): { slotId: number; copyIndex: number } {
+    if (this.total <= 0) throw new RangeError('Population exhausted');
+    const slotId = this.findKth(rng.int(this.total));
+    const copyIndex = this.drawn[slotId];
+    this.drawn[slotId]++;
+    this.update(slotId, -1);
+    this.total--;
+    return { slotId, copyIndex };
+  }
+
+  /** Serial for a given copy index of a slot, computed on demand. */
+  serialFor(slotId: number, copyIndex: number): number {
+    let perm = this.serialPerms[slotId];
+    if (perm === null) {
+      perm = new FeistelPermutation(this.printed[slotId], childSeedN(this.seed, slotId));
+      this.serialPerms[slotId] = perm;
+    }
+    return perm.serialFor(copyIndex);
+  }
+
+  /**
    * Draw one uniform random remaining copy from a subset of slots (e.g. "the
    * insert slots of this product's hobby-box hit table"). O(m + log n) for m
    * subset slots.
