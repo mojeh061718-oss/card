@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { useCollection } from '../state/collection';
 import { sfx, unlockAudio } from './feel';
-import { runRealismImport, realismCached } from './realism';
+import { runRealismImport, realismCached, type RealismEvent } from './realism';
 
 const BANKROLL_TIERS = [
   { amount: 500, label: 'SHOEBOX', blurb: 'Dollar boxes and prayer. Every purchase matters.' },
@@ -35,23 +35,35 @@ export function CareerSetup({ onDone }: { onDone: () => void }) {
   // Once it finishes, the whole game runs offline.
   const [realismBusy, setRealismBusy] = useState(false);
   const [realismMsg, setRealismMsg] = useState<string | null>(null);
+  const [stage, setStage] = useState<RealismEvent | null>(null);
+  const [ticker, setTicker] = useState<{ label: string; hot: boolean }[]>([]);
   const cached = realismCached();
   const realismDone = tcgEnabled && cached.scans > 0;
   const realismTap = async () => {
     if (realismBusy) return;
     setRealismBusy(true);
+    setTicker([]);
+    setRealismMsg(null);
     try {
-      const r = await runRealismImport(setRealismMsg);
+      const r = await runRealismImport(() => {}, e => {
+        setStage(e);
+        if (e.highlight) {
+          if (e.highlight.hot) sfx.tap();
+          setTicker(t => [e.highlight!, ...t].slice(0, 4));
+        }
+      });
+      setStage(null);
       setRealismMsg(
-        `Done — real names applied, ${r.photos.done} player photos and ` +
-        `${r.scans.done} card scans cached for offline play. ` +
-        `The vintage TCG sets are now on the WAX shelf.` +
+        `THE VAULT IS STOCKED — ${r.photos.done} player photos · ` +
+        `${r.scans.done} official scans (${r.hires} hi-res) · 3 sets on the shelf. ` +
+        `Everything now runs offline.` +
         (r.photos.failed + r.scans.failed > 0
-          ? ` (${r.photos.failed + r.scans.failed} assets couldn't be fetched — tap again to retry.)`
+          ? ` (${r.photos.failed + r.scans.failed} strays missed — tap again to sweep them up.)`
           : ''),
       );
     } catch {
-      setRealismMsg('Network error — whatever finished is kept. Tap again to resume.');
+      setStage(null);
+      setRealismMsg('Network error — everything secured so far is kept. Tap again to resume.');
     } finally {
       setRealismBusy(false);
     }
@@ -92,10 +104,31 @@ export function CareerSetup({ onDone }: { onDone: () => void }) {
             disabled={realismBusy}
             onClick={realismTap}
           >
-            {realismBusy ? 'DOWNLOADING…'
+            {realismBusy ? 'ACQUIRING…'
               : realismDone ? 'RE-CHECK ASSETS'
                 : 'DOWNLOAD ALL REAL ASSETS — ONE TAP'}
           </button>
+          {stage && (
+            <div style={S.stageBox}>
+              <div style={S.stageRow}>
+                <span style={S.stageName}>STAGE {stage.stage}/4 — {stage.stageName.toUpperCase()}</span>
+                <span style={S.stageCount}>{stage.done}/{stage.total}</span>
+              </div>
+              <div style={S.barTrack}>
+                <div style={{ ...S.barFill, width: `${Math.round((stage.done / Math.max(1, stage.total)) * 100)}%` }} />
+              </div>
+              {ticker.map((t, i) => (
+                <div key={`${t.label}-${i}`} style={{
+                  ...S.tickerLine,
+                  color: t.hot ? '#ffd75e' : 'rgba(142,224,142,0.8)',
+                  opacity: 1 - i * 0.22,
+                  fontWeight: t.hot ? 800 : 600,
+                }}>
+                  {t.hot ? '🔥 ' : '✓ '}{t.label}
+                </div>
+              ))}
+            </div>
+          )}
           {realismMsg && <div style={S.realismMsg}>{realismMsg}</div>}
         </div>
 
@@ -185,4 +218,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10, color: '#8ee08e', marginTop: 8, lineHeight: 1.5,
     whiteSpace: 'pre-wrap',
   },
+  stageBox: { marginTop: 10 },
+  stageRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' },
+  stageName: { fontSize: 10, letterSpacing: 1.5, fontWeight: 900, color: '#8ee08e' },
+  stageCount: { fontSize: 10, color: 'rgba(142,224,142,0.7)', fontVariantNumeric: 'tabular-nums' },
+  barTrack: {
+    height: 6, borderRadius: 3, marginTop: 6,
+    background: 'rgba(142,224,142,0.15)', overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%', borderRadius: 3,
+    background: 'linear-gradient(90deg, #8ee08e, #ffd75e)',
+    transition: 'width 200ms ease-out',
+  },
+  tickerLine: { fontSize: 10, marginTop: 5, lineHeight: 1.4 },
 };

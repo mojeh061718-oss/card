@@ -50,7 +50,7 @@ export async function cachedArtCount(setKey: string, nums: number[]): Promise<nu
  */
 export async function importSetArt(
   setKey: string, urlPattern: string, nums: number[],
-  onProgress: (done: number, failed: number) => void,
+  onProgress: (done: number, failed: number, lastNum?: number) => void,
   hiresNums?: Set<number>,
 ): Promise<{ done: number; failed: number }> {
   const db = await pokeDb();
@@ -71,10 +71,11 @@ export async function importSetArt(
           await db.put('img', await res.blob(), key);
         }
         done++;
+        onProgress(done, failed, num);
       } catch {
         failed++;
+        onProgress(done, failed);
       }
-      onProgress(done, failed);
     }
   }));
   return { done, failed };
@@ -210,7 +211,7 @@ export interface PhotoRoster { sport: 'football' | 'baseball'; names: string[] }
  */
 export async function importRealPhotos(
   rosters: PhotoRoster[],
-  onProgress: (done: number, failed: number, total: number) => void,
+  onProgress: (done: number, failed: number, total: number, lastName?: string) => void,
 ): Promise<{ done: number; failed: number }> {
   const db = await photoDb();
   // Stale-generation cache (older, lower-res URLs): wipe and refetch sharp.
@@ -239,10 +240,11 @@ export async function importRealPhotos(
         }
         if (!photoMap.has(key)) await decodeInto(key, blob);
         done++;
+        onProgress(done, failed, jobs.length, name);
       } catch {
         failed++;
+        onProgress(done, failed, jobs.length);
       }
-      onProgress(done, failed, jobs.length);
     }
   }));
   return { done, failed };

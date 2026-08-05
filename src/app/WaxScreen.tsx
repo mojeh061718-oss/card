@@ -291,10 +291,14 @@ function RipSession({ session, onClose }: {
   const packs = session.packs;
   const rt = useMemo(() => world.get(session.seriesId), [session]);
   const product = world.product(session.productKey);
-  const wrapperUrl = useMemo(() => renderPackWrapper(rt.def, 640, 900).toDataURL(), [rt]);
   const backUrl = useMemo(() => renderCardBack(rt.def, 500).toDataURL(), [rt]);
 
   const [packIdx, setPackIdx] = useState(0);
+  // TCG wraps rotate their featured art per pack in a box.
+  const wrapperUrl = useMemo(
+    () => renderPackWrapper(rt.def, 640, 900, packIdx).toDataURL(),
+    [rt, packIdx],
+  );
   const [phase, setPhase] = useState<Phase>('sealed');
   const [tear, setTear] = useState(0);
   const [idx, setIdx] = useState(0);
@@ -648,7 +652,7 @@ const styles: Record<string, React.CSSProperties> = {
   packWrap: { position: 'relative', width: 250, height: 352, touchAction: 'none' },
   packBody: { position: 'absolute', inset: 0, backgroundSize: 'cover', borderRadius: 8, transition: 'clip-path 80ms linear', boxShadow: '0 24px 60px rgba(0,0,0,0.65)' },
   tearStrip: { position: 'absolute', left: 0, right: 0, top: 0, height: '13%', backgroundSize: 'cover', borderRadius: '8px 8px 0 0', transition: 'transform 120ms linear, opacity 200ms', zIndex: 2 },
-  tearHint: { position: 'absolute', top: '15%', width: '100%', textAlign: 'center', fontSize: 12, letterSpacing: 1, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px #000' },
+  tearHint: { position: 'absolute', top: '4.5%', width: '100%', textAlign: 'center', fontSize: 12, letterSpacing: 1, color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px #000' },
   caption: { fontSize: 13, opacity: 0.6, letterSpacing: 1 },
   counter: { fontSize: 12, letterSpacing: 3, opacity: 0.7 },
   skip: { background: 'rgba(255,255,255,0.08)', color: 'rgba(244,242,236,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '7px 14px', fontSize: 10, letterSpacing: 1, fontWeight: 700 },

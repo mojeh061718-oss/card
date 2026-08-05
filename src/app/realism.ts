@@ -2,10 +2,15 @@
  * The REALISM CONCEPT pipeline — one tap, everything, offline after.
  *
  * Runs the full import in order: real-league names/colors, real player
- * photos resolved by name from public APIs, official card scans for both
- * TCG sets, and the TCG unlock itself. Every asset lands in this device's
- * IndexedDB, so once the run completes the game renders the real cards
- * with no network at all. Private use only; nothing ships in the app.
+ * photos resolved by name from public APIs, official card scans for the
+ * TCG sets (holos, chases AND rares at the CDN's high-resolution
+ * variant), and the TCG unlock itself. Every asset lands in this
+ * device's IndexedDB, so once the run completes the game renders the
+ * real cards with no network at all. Private use only.
+ *
+ * Progress is emitted as structured events so the UI can stage it like
+ * an acquisition ceremony — marquee names and chase-card scans get
+ * `highlight` events the moment they're secured.
  */
 
 import { sanitizeOverrides } from '../state/overrides';
@@ -16,56 +21,106 @@ import {
   photoCount, scanCount,
 } from './artcache';
 
+export interface RealismEvent {
+  /** 1-based stage index and its display name. */
+  stage: number;
+  stageName: string;
+  done: number;
+  total: number;
+  /** A marquee acquisition worth flashing in the ticker. */
+  highlight?: { label: string; hot: boolean };
+}
+
 export interface RealismSummary {
   photos: { done: number; failed: number };
   scans: { done: number; failed: number };
+  hires: number;
 }
 
-/** How much of the realism bundle is already on this device. */
 export function realismCached(): { photos: number; scans: number } {
   return { photos: photoCount(), scans: scanCount() };
 }
 
+const STAGES = ['League offices', 'Player photos', 'Vintage vault', 'Unlocking'];
+
 export async function runRealismImport(
   onProgress: (message: string) => void,
+  onEvent?: (e: RealismEvent) => void,
 ): Promise<RealismSummary> {
-  // 1. Names + colors for every team and the top 75 players per sport.
-  onProgress('1/4 — applying real-league names…');
+  const emit = (e: RealismEvent) => onEvent?.(e);
+
+  // 1. Names + colors for every team and 150 players per sport.
+  onProgress('1/4 — signing the leagues…');
+  emit({ stage: 1, stageName: STAGES[0], done: 0, total: 1 });
   const raw = await fetch('presets/real-world.json').then(r => r.json());
   const clean = sanitizeOverrides(raw).set;
   useCollection.getState().setOverrides(clean);
+  emit({
+    stage: 1, stageName: STAGES[0], done: 1, total: 1,
+    highlight: { label: '62 teams · 300 players signed', hot: false },
+  });
 
-  // 2. Player photos, resolved by name via the public search APIs.
+  // 2. Player photos, resolved by name via the public search APIs. The
+  // top of each ranked roster is marquee — those get ticker moments.
+  const fbNames = (raw.rosterByRank?.football ?? []) as string[];
+  const bbNames = (raw.rosterByRank?.baseball ?? []) as string[];
+  const marquee = new Set([...fbNames.slice(0, 10), ...bbNames.slice(0, 10)]);
   const rosters = [
-    { sport: 'football' as const, names: (raw.rosterByRank?.football ?? []) as string[] },
-    { sport: 'baseball' as const, names: (raw.rosterByRank?.baseball ?? []) as string[] },
+    { sport: 'football' as const, names: fbNames },
+    { sport: 'baseball' as const, names: bbNames },
   ];
-  const photos = await importRealPhotos(rosters, (done, failed, total) =>
-    onProgress(`2/4 — player photos… ${done + failed}/${total}`));
+  const photos = await importRealPhotos(rosters, (done, failed, total, lastName) => {
+    onProgress(`2/4 — player photos… ${done + failed}/${total}`);
+    emit({
+      stage: 2, stageName: STAGES[1], done: done + failed, total,
+      highlight: lastName && marquee.has(lastName)
+        ? { label: `${lastName} — photo secured`, hot: true } : undefined,
+    });
+  });
 
-  // 3. Official card scans for both TCG sets, cached for offline play.
-  // Holos and the chase come down at high resolution — the hits must be
-  // crisp at full-screen reveal size.
+  // 3. Official card scans. Holos, chases and rares come down at high
+  // resolution — the cards you actually chase must be crisp full-screen.
   const poke = await fetch('presets/pokemon-concept.json').then(r => r.json());
-  let scansDone = 0, scansFailed = 0;
-  for (const s of poke.sets ?? []) {
-    const cards = s.cards as { num: number; rarity: string }[];
-    const nums = cards.map(c => c.num);
-    const hires = new Set(
-      cards.filter(c => c.rarity === 'holo' || c.rarity === 'chase').map(c => c.num));
-    const r = await importSetArt(s.key, s.officialArt, nums, (done, failed) =>
-      onProgress(`3/4 — ${s.name} scans… ${done + failed}/${nums.length}`), hires);
+  let scansDone = 0, scansFailed = 0, hires = 0;
+  const sets = (poke.sets ?? []) as {
+    key: string; name: string; officialArt: string;
+    cards: { num: number; name: string; rarity: string }[];
+  }[];
+  const grandTotal = sets.reduce((a, s) => a + s.cards.length, 0);
+  for (const s of sets) {
+    const nums = s.cards.map(c => c.num);
+    const nameOf = new Map(s.cards.map(c => [c.num, c.name]));
+    const hiresNums = new Set(
+      s.cards.filter(c => ['holo', 'chase', 'rare'].includes(c.rarity)).map(c => c.num));
+    const hot = new Set(
+      s.cards.filter(c => ['holo', 'chase'].includes(c.rarity)).map(c => c.num));
+    const before = scansDone + scansFailed;
+    const r = await importSetArt(s.key, s.officialArt, nums, (done, failed, lastNum) => {
+      onProgress(`3/4 — ${s.name} scans… ${done + failed}/${nums.length}`);
+      emit({
+        stage: 3, stageName: STAGES[2], done: before + done + failed, total: grandTotal,
+        highlight: lastNum !== undefined && hot.has(lastNum)
+          ? { label: `${nameOf.get(lastNum)} — scan vaulted (hi-res)`, hot: true }
+          : undefined,
+      });
+    }, hiresNums);
     scansDone += r.done;
     scansFailed += r.failed;
+    hires += hiresNums.size;
   }
 
   // 4. Unlock the TCG sets and decode everything into the card press.
-  onProgress('4/4 — unlocking sets…');
+  onProgress('4/4 — unlocking the vault…');
+  emit({ stage: 4, stageName: STAGES[3], done: 0, total: 1 });
   useCollection.getState().enableTcg();
   await loadCachedScans();
   await loadCachedPhotos();
   // Bump the revision so every cached card re-renders with the real art.
   world.applyOverrides(world.currentOverrides);
+  emit({
+    stage: 4, stageName: STAGES[3], done: 1, total: 1,
+    highlight: { label: 'Base Set · 151 · Currency — unlocked', hot: true },
+  });
 
-  return { photos, scans: { done: scansDone, failed: scansFailed } };
+  return { photos, scans: { done: scansDone, failed: scansFailed }, hires };
 }

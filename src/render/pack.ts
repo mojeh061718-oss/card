@@ -7,8 +7,145 @@
 import { Rng } from '../engine/rng';
 import type { SeriesDef } from '../engine/cards/series';
 import { shade, withAlpha, mixHex } from './color';
+import { tcgScan } from './photodb';
 
-export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number): HTMLCanvasElement {
+/**
+ * TCG booster wrap composed from the CACHED OFFICIAL SCANS: the featured
+ * art is cropped straight out of the real card's art window, so a Base
+ * Set booster shows the actual Charizard/Blastoise/Venusaur wrap arts.
+ * `variant` rotates the featured card (each pack in a box differs).
+ * Falls back to the generic wrapper when no scan is cached yet.
+ */
+const WRAP_ART: Record<string, { setKey: string; nums: number[]; deep: string; accent: string; title: string }> = {
+  'tcg-base': { setKey: 'base', nums: [4, 2, 15], deep: '#0b2d5c', accent: '#ffd75e', title: 'BASE SET' },
+  'tcg-151': { setKey: '151', nums: [199, 151, 150], deep: '#5c0b14', accent: '#ffd75e', title: 'POKEMON 151' },
+};
+
+function renderTcgWrapper(
+  def: SeriesDef, wPx: number, hPx: number, variant: number,
+  art: HTMLImageElement, conf: (typeof WRAP_ART)[string],
+): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = wPx; c.height = hPx;
+  const ctx = c.getContext('2d')!;
+  const rng = Rng.from(def.seed, `wrap:${variant}`);
+
+  // Mylar base in the set's deep color, with crinkle sheen.
+  const g = ctx.createLinearGradient(0, 0, wPx, 0);
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24;
+    const l = 0.5 + Math.sin(i * 2.7 + rng.float() * 6) * 0.22;
+    g.addColorStop(t, mixHex(shade(conf.deep, l * 0.3 - 0.15), '#ffffff', Math.max(0, l - 0.62)));
+  }
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, wPx, hPx);
+
+  // Specular sweep.
+  const sweep = ctx.createLinearGradient(0, 0, wPx, hPx * 0.6);
+  sweep.addColorStop(0.42, 'rgba(255,255,255,0)');
+  sweep.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+  sweep.addColorStop(0.58, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sweep;
+  ctx.fillRect(0, 0, wPx, hPx);
+
+  // Featured art: the real card's art window, cover-cropped into a big
+  // center panel. Standard frame art window ≈ x 11–89%, y 10.5–46%.
+  const ax = art.naturalWidth * 0.115, ay = art.naturalHeight * 0.105;
+  const aw = art.naturalWidth * 0.77, ah = art.naturalHeight * 0.355;
+  const px = wPx * 0.07, py = hPx * 0.30, pw = wPx * 0.86, ph = hPx * 0.42;
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, wPx * 0.03);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = wPx * 0.05;
+  ctx.fillStyle = '#000';
+  ctx.fill();
+  ctx.restore();
+  ctx.clip();
+  const cover = Math.max(pw / aw, ph / ah);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    art, ax, ay, aw, ah,
+    px + (pw - aw * cover) / 2, py + (ph - ah * cover) / 2, aw * cover, ah * cover,
+  );
+  ctx.restore();
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, wPx * 0.03);
+  ctx.strokeStyle = conf.accent;
+  ctx.lineWidth = Math.max(2, wPx * 0.012);
+  ctx.stroke();
+
+  // Brand block above the art.
+  ctx.textAlign = 'center';
+  ctx.font = `900 italic ${wPx * 0.15}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  const metal = ctx.createLinearGradient(0, hPx * 0.12, 0, hPx * 0.2);
+  metal.addColorStop(0, mixHex(conf.accent, '#ffffff', 0.65));
+  metal.addColorStop(0.5, conf.accent);
+  metal.addColorStop(1, shade(conf.accent, -0.25));
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = wPx * 0.02;
+  ctx.fillStyle = metal;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = wPx * 0.012;
+  ctx.strokeText(conf.title, wPx / 2, hPx * 0.17);
+  ctx.fillText(conf.title, wPx / 2, hPx * 0.17);
+  ctx.restore();
+  ctx.font = `700 ${wPx * 0.045}px Arial, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('TRADING CARD GAME', wPx / 2, hPx * 0.225);
+
+  // 1st Edition stamp for the vintage wrap.
+  if (def.id === 'tcg-base') {
+    ctx.save();
+    ctx.translate(wPx * 0.14, hPx * 0.78);
+    ctx.rotate(-0.12);
+    ctx.beginPath();
+    ctx.arc(0, 0, wPx * 0.085, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.strokeStyle = conf.accent;
+    ctx.lineWidth = wPx * 0.01;
+    ctx.stroke();
+    ctx.fillStyle = conf.accent;
+    ctx.font = `900 ${wPx * 0.055}px Georgia, serif`;
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', 0, -wPx * 0.005);
+    ctx.font = `700 ${wPx * 0.022}px Arial, sans-serif`;
+    ctx.fillText('EDITION', 0, wPx * 0.045);
+    ctx.restore();
+  }
+
+  // Crimped seams.
+  ctx.fillStyle = withAlpha('#000000', 0.25);
+  for (const y of [0, hPx - hPx * 0.055]) {
+    ctx.fillRect(0, y, wPx, hPx * 0.055);
+    ctx.strokeStyle = withAlpha('#ffffff', 0.25);
+    ctx.lineWidth = 1.5;
+    for (let x = 0; x < wPx; x += 7) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 3.5, y + hPx * 0.055);
+      ctx.stroke();
+    }
+  }
+
+  ctx.font = `600 ${wPx * 0.04}px Arial, sans-serif`;
+  ctx.fillStyle = withAlpha('#ffffff', 0.9);
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('11 ADDITIONAL TRADING CARDS', wPx / 2, hPx * 0.9);
+  return c;
+}
+
+export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number, variant = 0): HTMLCanvasElement {
+  // TCG wraps prefer the real scan art when the cache has it.
+  const conf = WRAP_ART[def.id];
+  if (conf) {
+    const num = conf.nums[Math.abs(variant) % conf.nums.length];
+    const art = tcgScan(conf.setKey, num) ?? conf.nums.map(n => tcgScan(conf.setKey, n)).find(Boolean);
+    if (art) return renderTcgWrapper(def, wPx, hPx, variant, art, conf);
+  }
   const c = document.createElement('canvas');
   c.width = wPx; c.height = hPx;
   const ctx = c.getContext('2d')!;
