@@ -10,71 +10,9 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { openDB, type IDBPDatabase } from 'idb';
 import { renderPokeCard, POKE_ASPECT, type PokeCardSpec } from '../render/pokecard';
 import { createCardGL, type CardGL } from '../render/glcard';
-
-/**
- * One-tap official art import: every card image for a set is fetched at
- * runtime from the public CDN and cached as blobs in a local IndexedDB
- * store, so after one tap the real scans work offline on this device.
- * Nothing ships in the repo or the deployed bundle — the cache lives only
- * in the player's own browser storage.
- */
-let artDbPromise: Promise<IDBPDatabase> | null = null;
-function artDb(): Promise<IDBPDatabase> {
-  if (!artDbPromise) {
-    artDbPromise = openDB('poke-art-cache', 1, {
-      upgrade(d) { d.createObjectStore('img'); },
-    });
-  }
-  return artDbPromise;
-}
-
-async function cachedArtCount(setKey: string, nums: number[]): Promise<number> {
-  const db = await artDb();
-  let n = 0;
-  for (const num of nums) {
-    if (await db.get('img', `${setKey}:${num}`) !== undefined) n++;
-  }
-  return n;
-}
-
-async function importSetArt(
-  setKey: string, urlPattern: string, nums: number[],
-  onProgress: (done: number, failed: number) => void,
-): Promise<{ done: number; failed: number }> {
-  const db = await artDb();
-  let done = 0, failed = 0;
-  const WORKERS = 6;
-  await Promise.all(Array.from({ length: WORKERS }, async (_, w) => {
-    for (let i = w; i < nums.length; i += WORKERS) {
-      const key = `${setKey}:${nums[i]}`;
-      try {
-        if (await db.get('img', key) === undefined) {
-          const res = await fetch(urlPattern.replace('{num}', String(nums[i])));
-          if (!res.ok) throw new Error(String(res.status));
-          await db.put('img', await res.blob(), key);
-        }
-        done++;
-      } catch {
-        failed++;
-      }
-      onProgress(done, failed);
-    }
-  }));
-  return { done, failed };
-}
-
-async function loadArtUrls(setKey: string, nums: number[]): Promise<Record<number, string>> {
-  const db = await artDb();
-  const out: Record<number, string> = {};
-  for (const num of nums) {
-    const blob = await db.get('img', `${setKey}:${num}`);
-    if (blob) out[num] = URL.createObjectURL(blob as Blob);
-  }
-  return out;
-}
+import { cachedArtCount, importSetArt, loadArtUrls } from './artcache';
 
 interface ConceptCard {
   num: number; name: string; type: string;

@@ -2,9 +2,17 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { hydrateCollection, useCollection } from './state/collection';
 import { world } from './state/world';
+import { loadCachedPhotos } from './app/artcache';
 
 async function boot() {
   await hydrateCollection();
+
+  // REALISM CONCEPT: photos imported in an earlier session live in local
+  // IndexedDB — decode them before first render so cards come up real, and
+  // refresh any art rendered before they finished decoding.
+  void loadCachedPhotos().then(n => {
+    if (n > 0) world.applyOverrides(world.currentOverrides);
+  });
 
   // Ask the browser to keep the save: installed web apps get far better
   // storage durability, and this game's entire state is that one record.

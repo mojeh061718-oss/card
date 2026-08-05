@@ -10,6 +10,7 @@
 import { useMemo, useState } from 'react';
 import { world } from '../state/world';
 import { useCollection, exportSaveJson, importSaveJson } from '../state/collection';
+import { importRealPhotos, importSetArt, photoCount } from './artcache';
 import type { Sport } from '../engine/world/teams';
 import { sanitizeOverrides, teamKey, playerKey, emptyOverrides } from '../state/overrides';
 import { sfx } from './feel';
@@ -82,6 +83,54 @@ export function EditorScreen() {
       );
     } catch {
       setNotice("That file isn't valid JSON — nothing was changed.");
+    }
+  };
+
+  // THE REALISM CONCEPT — one tap, everything: real-league names, real
+  // player photos resolved by name from public APIs, and both creature
+  // sets' card scans. All of it fetched at the user's own request into
+  // this device's local cache; nothing ships in the app.
+  const [realismBusy, setRealismBusy] = useState(false);
+  const realismOneTap = async () => {
+    if (realismBusy) return;
+    setRealismBusy(true);
+    try {
+      // 1. Names + colors for every team and the top 75 players per sport.
+      setNotice('1/3 — applying real-league names…');
+      const raw = await fetch('presets/real-world.json').then(r => r.json());
+      const clean = sanitizeOverrides(raw).set;
+      setOverrides(clean);
+
+      // 2. Player photos, resolved by name via the public search APIs.
+      const rosters = [
+        { sport: 'football' as const, names: (raw.rosterByRank?.football ?? []) as string[] },
+        { sport: 'baseball' as const, names: (raw.rosterByRank?.baseball ?? []) as string[] },
+      ];
+      const photos = await importRealPhotos(rosters, (done, failed, total) =>
+        setNotice(`2/3 — importing player photos… ${done + failed}/${total}`));
+
+      // 3. Creature card scans for both concept sets.
+      const poke = await fetch('presets/pokemon-concept.json').then(r => r.json());
+      let scans = 0;
+      for (const s of poke.sets ?? []) {
+        const nums = (s.cards as { num: number }[]).map(c => c.num);
+        const r = await importSetArt(s.key, s.officialArt, nums, (done, failed) =>
+          setNotice(`3/3 — importing ${s.name} scans… ${done + failed}/${nums.length}`));
+        scans += r.done;
+      }
+
+      // Re-apply to bump namesRevision: every cached card re-renders, now
+      // with photos where they exist.
+      setOverrides(clean);
+      setNotice(
+        `Realism concept loaded: names + colors applied, ${photos.done} player photos` +
+        (photos.failed ? ` (${photos.failed} not found)` : '') +
+        `, ${scans} card scans cached. Cards with a photo now render it; visit ?pokelab for the sets.`,
+      );
+    } catch {
+      setNotice('Realism import hit a network error — whatever finished is kept; tap again to resume.');
+    } finally {
+      setRealismBusy(false);
     }
   };
 
@@ -239,6 +288,26 @@ export function EditorScreen() {
             <button
               style={{
                 ...S.action,
+                background: 'rgba(142,224,142,0.14)',
+                borderColor: 'rgba(142,224,142,0.55)',
+                color: '#8ee08e',
+                fontWeight: 900,
+              }}
+              disabled={realismBusy}
+              onClick={realismOneTap}
+            >
+              {realismBusy ? 'IMPORTING REALISM CONCEPT…'
+                : `🌎 REALISM CONCEPT — ONE TAP${photoCount() > 0 ? ` (${photoCount()} photos cached)` : ''}`}
+            </button>
+            <p style={S.note}>
+              One tap loads everything: real-league names and colors, real
+              player photos onto the cards (resolved by name from public
+              APIs), and both creature-set card scans — all cached on this
+              device only, for private use.
+            </p>
+            <button
+              style={{
+                ...S.action,
                 background: 'rgba(212,160,23,0.16)',
                 borderColor: 'rgba(212,160,23,0.55)',
                 color: '#e8c86a',
@@ -246,7 +315,7 @@ export function EditorScreen() {
               }}
               onClick={importBundled}
             >
-              ⚡ LOAD REAL-LEAGUE NAMES — ONE TAP
+              ⚡ LOAD REAL-LEAGUE NAMES ONLY
             </button>
             <button style={S.action} onClick={exportFile}>EXPORT NAMES JSON</button>
             <label style={{ ...S.action, textAlign: 'center', cursor: 'pointer' }}>

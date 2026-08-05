@@ -20,6 +20,86 @@ import { buildSignature, drawSignature, type InkKind } from './signature';
 import type { Condition } from '../engine/condition/condition';
 import { drawSkyline, drawBase } from './skyline';
 import { INSERT_SETS } from '../engine/cards/series';
+import { heroPhoto } from './photodb';
+
+/**
+ * REALISM CONCEPT hero: a real player photo takes the figure's place.
+ * Football headshots (transparent PNGs) float over a team-color glow with
+ * a ground shadow; baseball headshots (JPEG crops) cover a beveled window
+ * with a team-color duotone so mixed sources still read as one set.
+ */
+function drawPhotoHero(
+  ctx: CanvasRenderingContext2D,
+  photo: HTMLImageElement,
+  x: number, y: number, w: number, h: number,
+  sport: string, primary: string, accent: string,
+): void {
+  if (sport === 'football') {
+    // Glow pedestal behind the cutout.
+    const glow = ctx.createRadialGradient(x + w / 2, y + h * 0.5, 0, x + w / 2, y + h * 0.5, w * 0.55);
+    glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.5), 0.55));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x, y, w, h);
+
+    const scale = Math.min((w * 0.92) / photo.naturalWidth, (h * 0.8) / photo.naturalHeight);
+    const dw = photo.naturalWidth * scale, dh = photo.naturalHeight * scale;
+    const dx = x + (w - dw) / 2, dy = y + h * 0.72 - dh;
+    // Ground shadow under the cutout.
+    ctx.save();
+    const gy = y + h * 0.74;
+    ctx.translate(x + w / 2, gy);
+    ctx.scale(1, 0.14);
+    const ground = ctx.createRadialGradient(0, 0, 0, 0, 0, dw * 0.4);
+    ground.addColorStop(0, 'rgba(4,4,12,0.45)');
+    ground.addColorStop(1, 'rgba(4,4,12,0)');
+    ctx.fillStyle = ground;
+    ctx.beginPath();
+    ctx.arc(0, 0, dw * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = w * 0.03;
+    ctx.shadowOffsetY = h * 0.012;
+    ctx.drawImage(photo, dx, dy, dw, dh);
+    ctx.restore();
+  } else {
+    // Beveled photo window, cover-cropped, team duotone.
+    const px = x + w * 0.04, py = y + h * 0.02;
+    const pw = w * 0.92, ph = h * 0.72;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(px, py, pw, ph, w * 0.03);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = w * 0.04;
+    ctx.fillStyle = shade(primary, -0.2);
+    ctx.fill();
+    ctx.restore();
+    ctx.clip();
+    const cover = Math.max(pw / photo.naturalWidth, ph / photo.naturalHeight);
+    const dw = photo.naturalWidth * cover, dh = photo.naturalHeight * cover;
+    ctx.drawImage(photo, px + (pw - dw) / 2, py + (ph - dh) * 0.25, dw, dh);
+    // Duotone wash + bottom fade toward the nameplate.
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = withAlpha(mixHex(primary, '#ffffff', 0.25), 0.28);
+    ctx.fillRect(px, py, pw, ph);
+    ctx.globalCompositeOperation = 'source-over';
+    const fade = ctx.createLinearGradient(0, py + ph * 0.6, 0, py + ph);
+    fade.addColorStop(0, 'rgba(0,0,0,0)');
+    fade.addColorStop(1, withAlpha(shade(primary, -0.25), 0.85));
+    ctx.fillStyle = fade;
+    ctx.fillRect(px, py, pw, ph);
+    ctx.restore();
+    // Keyline.
+    ctx.beginPath();
+    ctx.roundRect(px, py, pw, ph, w * 0.03);
+    ctx.strokeStyle = withAlpha('#f7f5ef', 0.85);
+    ctx.lineWidth = Math.max(1.5, w * 0.004);
+    ctx.stroke();
+  }
+}
 
 const insertRunOf = (name: string): number =>
   INSERT_SETS.find(s => s.name === name)?.printRun ?? 199;
@@ -531,11 +611,19 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   }
 
 
-  const style = athleteStyle(
-    player.appearanceSeed, player.jersey, player.sport,
-    team.primary, team.secondary, team.nickname,
-  );
-  renderAthleteLayer(ctx, pose, style, figX, figY, figW, figH, player.appearanceSeed, accent);
+  // REALISM CONCEPT: a real photo (imported by the player at runtime)
+  // replaces the procedural figure on standard cards. Inserts keep their
+  // illustrated identity either way.
+  const photo = !isInsert ? heroPhoto(player.sport, `${player.first} ${player.last}`) : null;
+  if (photo) {
+    drawPhotoHero(ctx, photo, figX, figY, figW, figH, player.sport, team.primary, accent);
+  } else {
+    const style = athleteStyle(
+      player.appearanceSeed, player.jersey, player.sport,
+      team.primary, team.secondary, team.nickname,
+    );
+    renderAthleteLayer(ctx, pose, style, figX, figY, figW, figH, player.appearanceSeed, accent);
+  }
 
   // Figure cools the foil under it (ink blocks foil board).
   if (parallel.finish !== 'none' && parallel.finish !== 'superfractor') {
