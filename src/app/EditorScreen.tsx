@@ -24,12 +24,23 @@ export function EditorScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const league = world.leagues[sport];
+  // League-wide talent rank — this is exactly the ordering an imported
+  // `rosterByRank` list is applied in, so showing it makes the file legible:
+  // rank 1 is who your #1 chase card is built around.
+  const rankOf = useMemo(() => {
+    const m = new Map<number, number>();
+    [...league.players]
+      .sort((a, b) => b.talent - a.talent)
+      .forEach((p, i) => m.set(p.id, i + 1));
+    return m;
+  }, [league]);
   const roster = useMemo(
     () => league.players
       .filter(p => p.teamId === teamFilter)
       .sort((a, b) => b.talent - a.talent),
     [league, teamFilter],
   );
+  const rankedCount = overrides.rosterByRank[sport]?.length ?? 0;
 
   const patchTeam = (id: number, field: string, value: string) => {
     const key = teamKey(sport, id);
@@ -77,7 +88,8 @@ export function EditorScreen() {
   const S = styles;
   const editCount = Object.keys(overrides.teams).length
     + Object.keys(overrides.players).length
-    + Object.keys(overrides.series).length;
+    + Object.keys(overrides.series).length
+    + Object.values(overrides.rosterByRank).reduce((a, l) => a + (l?.length ?? 0), 0);
 
   return (
     <div style={S.root}>
@@ -139,18 +151,33 @@ export function EditorScreen() {
                 <option key={t.id} value={t.id}>{t.city} {t.nickname}</option>
               ))}
             </select>
-            {roster.map(p => (
-              <div key={p.id} style={S.row}>
-                <div style={S.jersey}>{p.jersey}</div>
-                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <input style={S.input} defaultValue={p.first} placeholder="First"
-                    onBlur={e => patchPlayer(p.id, 'first', e.target.value)} />
-                  <input style={S.input} defaultValue={p.last} placeholder="Last"
-                    onBlur={e => patchPlayer(p.id, 'last', e.target.value)} />
+            {rankedCount > 0 && (
+              <p style={{ ...S.note, marginBottom: 10 }}>
+                A ranked roster of {rankedCount} names is loaded. It fills league
+                talent ranks 1–{rankedCount}; typing over a name here pins that
+                one player and always wins.
+              </p>
+            )}
+            {roster.map(p => {
+              const rank = rankOf.get(p.id) ?? 0;
+              return (
+                <div key={p.id} style={S.row}>
+                  <div style={S.jersey}>{p.jersey}</div>
+                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <input key={`f${p.first}`} style={S.input} defaultValue={p.first}
+                      placeholder="First"
+                      onBlur={e => patchPlayer(p.id, 'first', e.target.value)} />
+                    <input key={`l${p.last}`} style={S.input} defaultValue={p.last}
+                      placeholder="Last"
+                      onBlur={e => patchPlayer(p.id, 'last', e.target.value)} />
+                  </div>
+                  <div style={S.meta}>
+                    {p.position}<br />{p.talent} OVR<br />
+                    <span style={rank <= rankedCount ? S.rankOn : undefined}>#{rank}</span>
+                  </div>
                 </div>
-                <div style={S.meta}>{p.position}<br />{p.talent} OVR</div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -181,6 +208,13 @@ export function EditorScreen() {
             <p style={S.note}>
               Export your edits to a JSON file you can hand-edit and re-import.
               Unrecognized entries are skipped rather than wiping the rest.
+            </p>
+            <p style={S.note}>
+              The <code>rosterByRank</code> field is the one worth editing by
+              hand: an ordered list of names per sport, applied to the league's
+              best players by talent. Rank 1 anchors the checklist, so put the
+              biggest market name first. Ready-made lists live in{' '}
+              <code>presets/</code>.
             </p>
             <button style={S.action} onClick={exportFile}>EXPORT NAMES JSON</button>
             <label style={{ ...S.action, textAlign: 'center', cursor: 'pointer' }}>
@@ -231,6 +265,7 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.5, flexShrink: 0,
   },
   meta: { fontSize: 9, opacity: 0.4, textAlign: 'right', lineHeight: 1.4, flexShrink: 0 },
+  rankOn: { color: '#e8c86a', fontWeight: 800 },
   input: {
     background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: 6, padding: '7px 8px', fontSize: 12, color: '#f4f2ec',

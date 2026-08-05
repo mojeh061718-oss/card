@@ -66,5 +66,33 @@ const cards = await page.evaluate(() => {
 });
 console.log('collection intact after rename:', cards, 'cards');
 await page.screenshot({ path: 'shots/editor-4-binder.png' });
+
+// Import a real-world preset through the same file picker a player would use,
+// then confirm the ranked roster actually reached the cards and the board.
+await nav('EDIT').click();
+await page.waitForTimeout(500);
+await page.getByText('FILE', { exact: true }).click();
+await page.waitForTimeout(400);
+await page.locator('input[type=file]').setInputFiles(
+  new URL('../presets/real-world.json', import.meta.url).pathname,
+);
+await page.waitForTimeout(900);
+await page.screenshot({ path: 'shots/editor-5-preset-loaded.png' });
+
+await page.getByText('PLAYERS', { exact: true }).click();
+await page.waitForTimeout(600);
+await page.screenshot({ path: 'shots/editor-6-preset-roster.png' });
+
+await nav('WIRE').click();
+await page.waitForTimeout(900);
+const board = await page.evaluate(() => document.body.innerText.slice(0, 1200));
+console.log('--- wire/board after preset ---');
+console.log(board);
+await page.screenshot({ path: 'shots/editor-7-preset-board.png' });
+
+await nav('BOOK').click();
+await page.waitForTimeout(1800);
+await page.screenshot({ path: 'shots/editor-8-preset-binder.png' });
+
 await browser.close();
 server.close();

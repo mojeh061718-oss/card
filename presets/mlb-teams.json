@@ -213,5 +213,6 @@
     }
   },
   "players": {},
-  "series": {}
+  "series": {},
+  "rosterByRank": {}
 }

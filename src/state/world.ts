@@ -18,7 +18,7 @@ import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/eco
 import { buildTop50, type Top50Entry } from '../engine/news/top50';
 import { ripWorldDay } from '../engine/cards/worldRips';
 import {
-  emptyOverrides, teamKey, playerKey, type OverrideSet,
+  emptyOverrides, teamKey, playerKey, splitName, type OverrideSet,
 } from './overrides';
 import { deriveDna, type DesignDna } from '../render/dna';
 import { artSeedFor, type CardRenderSpec } from '../render/layers';
@@ -47,6 +47,13 @@ class World {
   readonly series: Map<string, SeriesRuntime> = new Map();
   private packRng: Rng;
   private overrides: OverrideSet = emptyOverrides();
+  /**
+   * Bumped every time names change. Card art bakes in names, team colors and
+   * badges, so any cached bitmap keyed only by card identity goes stale on a
+   * rename — callers key their caches on this, or clear on the callback.
+   */
+  namesRevision = 0;
+  private nameListeners: (() => void)[] = [];
 
   constructor() {
     this.baseLeagues = {
@@ -85,14 +92,29 @@ class World {
     this.overrides = set;
     for (const sport of ['football', 'baseball'] as Sport[]) {
       const base = this.baseLeagues[sport];
+
+      // Ranked rosters resolve to concrete ids here rather than in the file,
+      // so a name list keeps working if the world seed ever changes.
+      const byRank = new Map<number, { first: string; last: string }>();
+      const names = set.rosterByRank[sport];
+      if (names && names.length > 0) {
+        const ordered = [...base.players].sort((a, b) => b.talent - a.talent);
+        names.slice(0, ordered.length).forEach((name, i) => {
+          byRank.set(ordered[i].id, splitName(name));
+        });
+      }
+
       this.leagues[sport] = {
         teams: base.teams.map(t => {
           const o = set.teams[teamKey(sport, t.id)];
           return o ? { ...t, ...o } : t;
         }),
         players: base.players.map(p => {
+          // An explicit per-id override always wins over the ranked list.
+          const ranked = byRank.get(p.id);
           const o = set.players[playerKey(sport, p.id)];
-          return o ? { ...p, ...o } : p;
+          if (!ranked && !o) return p;
+          return { ...p, ...(ranked ?? {}), ...(o ?? {}) };
         }),
       };
     }
@@ -102,6 +124,17 @@ class World {
       rt.players = lg.players;
       rt.teams = lg.teams;
     }
+    this.namesRevision++;
+    for (const fn of this.nameListeners) fn();
+  }
+
+  /** Drop cached artwork when names change. Returns an unsubscribe. */
+  onNamesChanged(fn: () => void): () => void {
+    this.nameListeners.push(fn);
+    return () => {
+      const i = this.nameListeners.indexOf(fn);
+      if (i >= 0) this.nameListeners.splice(i, 1);
+    };
   }
 
   get currentOverrides(): OverrideSet {

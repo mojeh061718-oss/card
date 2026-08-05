@@ -250,6 +250,39 @@ const stories = await page.locator('article').count();
 check('wire carries stories from real events', stories > 3, `${stories} stories`);
 await page.screenshot({ path: 'shots/e2e-wire.png' });
 
+// --- 8b. Importing a real-world name preset -------------------------------
+// Card art bakes in names, team colors and badges, so a preset has to reach
+// the pixels — not just the labels. Thumbnails are cached by card identity,
+// which stays the same across a rename, so this is a live regression guard.
+const firstThumb = () => page.evaluate(() =>
+  document.querySelector('img[src^="data:"]')?.src ?? '');
+await nav('BOOK').click();
+await page.waitForTimeout(1600);
+const artBefore = await firstThumb();
+
+await nav('EDIT').click();
+await page.waitForTimeout(600);
+await page.getByText('FILE', { exact: true }).click();
+await page.waitForTimeout(300);
+await page.locator('input[type=file]').setInputFiles(
+  new URL('../presets/real-world.json', import.meta.url).pathname,
+);
+await page.waitForTimeout(900);
+
+await nav('WIRE').click();
+await page.waitForTimeout(900);
+const boardText = await page.evaluate(() => document.body.innerText);
+check('name preset reaches the Top 50 board',
+  /Shohei Ohtani|Patrick Mahomes/.test(boardText));
+
+await nav('BOOK').click();
+await page.waitForTimeout(1800);
+const artAfter = await firstThumb();
+check('renaming invalidates cached card art',
+  artBefore.length > 1000 && artAfter.length > 1000 && artBefore !== artAfter,
+  artBefore === artAfter ? 'thumbnail unchanged — stale cache' : 'redrawn');
+await page.screenshot({ path: 'shots/e2e-preset.png' });
+
 // --- 9. Persistence across reload -----------------------------------------
 await page.reload();
 await page.waitForTimeout(1600);

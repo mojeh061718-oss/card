@@ -165,9 +165,46 @@ product lines freely without touching a seed, a print run, or a card you
 already own. Talent, jersey numbers and team assignment are deliberately not
 editable, because those feed valuation and art.
 
-`presets/` holds importable name files mapped onto team ids (32 football,
-30 baseball). They are reference data you can load from the EDIT tab for
-private use — the generator itself stays fictional. Rebuild them with
+### Name presets
+
+`presets/` holds importable name files. They are reference data you load from
+the EDIT tab for private use — nothing in `presets/` is bundled into the game,
+and the generator itself stays fictional.
+
+| File | Contents |
+|---|---|
+| `nfl-teams.json` / `mlb-teams.json` | 32 / 30 clubs — city, name, abbreviation, published colors |
+| `real-teams.json` | both leagues' clubs in one import |
+| `nfl-players.json` / `mlb-players.json` | 75 player names per sport — 25 current, 50 legacy |
+| `real-players.json` | both leagues' player names |
+| `real-world.json` | everything: 62 clubs + 150 player names |
+
+Teams map onto team ids alphabetically. Players use a different, sturdier
+mechanism — **`rosterByRank`**, a plain ordered list of names applied to the
+league's best players by talent:
+
+```json
+{ "version": 1, "rosterByRank": { "football": ["Patrick Mahomes", "Josh Allen"] } }
+```
+
+Rank 1 lands on the highest-talent generated player, rank 2 on the next, and
+so on. That means **position in the list decides who anchors the checklist**
+and whose 1/1 sits at the top of the board — so the shipped lists are ordered
+by *card-market* pull, not by on-field grade, which is why a top-five lineman
+sits below a quarterback. It also survives a world-seed change, where
+hard-coded player ids would silently land on the wrong people.
+
+Two things worth knowing:
+
+- The lists cover 75 of each league's ~900 generated players, so ranks 76 and
+  down keep their generated names and you get a mix. Add more names to the
+  arrays in `tools/make-presets.mjs` to push real names deeper.
+- Team assignment is the generator's, not the real league's — Mahomes lands
+  on whichever club the world seed put its top-talent quarterback on. Team
+  assignment feeds art and valuation, so it stays off the editable list.
+
+Typing a name directly into the EDIT tab's players list pins that one player
+and always beats the ranked list. Rebuild the files with
 `node tools/make-presets.mjs`.
 
 ## Verification

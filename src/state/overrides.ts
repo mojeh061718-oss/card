@@ -33,10 +33,25 @@ export interface OverrideSet {
   players: Record<string, PlayerOverride>;
   /** Keyed by series id — rename a product line. */
   series: Record<string, { brand?: string; line?: string }>;
+  /**
+   * Names applied in order to the league's best players by talent.
+   *
+   * This is the format worth hand-editing: a plain ordered list, resolved
+   * to concrete player ids at load time. It survives a world-seed change,
+   * where hard-coded ids would silently land on the wrong people.
+   */
+  rosterByRank: Partial<Record<'football' | 'baseball', string[]>>;
 }
 
 export function emptyOverrides(): OverrideSet {
-  return { version: 1, teams: {}, players: {}, series: {} };
+  return { version: 1, teams: {}, players: {}, series: {}, rosterByRank: {} };
+}
+
+/** Split a display name into first/last, keeping suffixes on the surname. */
+export function splitName(full: string): { first: string; last: string } {
+  const parts = full.trim().split(/\s+/);
+  if (parts.length === 1) return { first: parts[0], last: '' };
+  return { first: parts[0], last: parts.slice(1).join(' ') };
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -117,6 +132,21 @@ export function sanitizeOverrides(raw: unknown): { set: OverrideSet; dropped: st
       if (brand) entry.brand = brand;
       if (line) entry.line = line;
       if (Object.keys(entry).length > 0) out.series[key] = entry;
+    }
+  }
+
+  const ranked = obj.rosterByRank;
+  if (typeof ranked === 'object' && ranked !== null) {
+    for (const [sport, list] of Object.entries(ranked as Record<string, unknown>)) {
+      if (sport !== 'football' && sport !== 'baseball') {
+        dropped.push(`rosterByRank sport "${sport}"`);
+        continue;
+      }
+      if (!Array.isArray(list)) { dropped.push(`rosterByRank.${sport}`); continue; }
+      const names = list
+        .map(n => cleanName(n, 32))
+        .filter((n): n is string => !!n);
+      if (names.length > 0) out.rosterByRank[sport] = names;
     }
   }
 

@@ -37,6 +37,13 @@ function thumbFor(card: CardInstance): string {
 const slabCache = new Map<number, string>();
 const slabPending = new Set<number>();
 
+// Names, team colors and badges are baked into the bitmap, so a rename makes
+// every cached thumbnail and slab wrong. Drop them and let them re-render.
+world.onNamesChanged(() => {
+  thumbCache.clear();
+  slabCache.clear();
+});
+
 /** Kick off slab rasterization; resolves to a data URL via `onReady`. */
 function ensureSlab(card: CardInstance, onReady: () => void): string | null {
   const cached = slabCache.get(card.uid);
