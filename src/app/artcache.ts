@@ -42,19 +42,31 @@ export async function cachedArtCount(setKey: string, nums: number[]): Promise<nu
   return n;
 }
 
+/**
+ * Fetch a set's scans into the cache. `hiresNums` are fetched at the CDN's
+ * high-resolution variant (the chase-card crispness is the whole point);
+ * an already-cached low-res copy of a hires target is UPGRADED in place,
+ * so re-tapping the importer sharpens old caches instead of skipping them.
+ */
 export async function importSetArt(
   setKey: string, urlPattern: string, nums: number[],
   onProgress: (done: number, failed: number) => void,
+  hiresNums?: Set<number>,
 ): Promise<{ done: number; failed: number }> {
   const db = await pokeDb();
   let done = 0, failed = 0;
   const WORKERS = 6;
   await Promise.all(Array.from({ length: WORKERS }, async (_, w) => {
     for (let i = w; i < nums.length; i += WORKERS) {
-      const key = `${setKey}:${nums[i]}`;
+      const num = nums[i];
+      const key = `${setKey}:${num}`;
+      const wantHires = hiresNums?.has(num) ?? false;
       try {
-        if (await db.get('img', key) === undefined) {
-          const res = await fetch(urlPattern.replace('{num}', String(nums[i])));
+        const cached = await db.get('img', key) as Blob | undefined;
+        const needsUpgrade = wantHires && cached !== undefined && cached.size < 300_000;
+        if (cached === undefined || needsUpgrade) {
+          const slug = wantHires ? `${num}_hires` : String(num);
+          const res = await fetch(urlPattern.replace('{num}', slug));
           if (!res.ok) throw new Error(String(res.status));
           await db.put('img', await res.blob(), key);
         }

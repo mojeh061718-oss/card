@@ -142,6 +142,71 @@ describe('tcg packs', () => {
   });
 });
 
+describe('tcg holos actually show up', () => {
+  it('a Base Set booster BOX always delivers holos (1:3 packs)', () => {
+    // 30 boxes: per-box holo counts must hover around 12/36 and NEVER
+    // come up empty — this is the guarantee the whole vintage fantasy
+    // rides on.
+    const counts: number[] = [];
+    for (let b = 0; b < 30; b++) {
+      const pop = tcgPopulation(base, SEED);
+      const classes = tcgClasses(base);
+      const rng = new Rng(seedFromText(`base-box-${b}`));
+      const packs = openTcgBox(base, pop, classes, rng);
+      counts.push(packs.filter(p =>
+        p.some(c => tcgCardOf(base, c.cardIndex).rarity === 'holo')).length);
+    }
+    const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(4);
+    expect(avg).toBeGreaterThan(9);
+    expect(avg).toBeLessThan(15);
+  });
+
+  it('a 151 booster BOX always delivers holos too', () => {
+    const counts: number[] = [];
+    for (let b = 0; b < 30; b++) {
+      const pop = tcgPopulation(modern, SEED);
+      const classes = tcgClasses(modern);
+      const rng = new Rng(seedFromText(`modern-box-${b}`));
+      const packs = openTcgBox(modern, pop, classes, rng);
+      counts.push(packs.filter(p =>
+        p.some(c => tcgCardOf(modern, c.cardIndex).rarity === 'holo')).length);
+    }
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(4);
+    const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
+    expect(avg).toBeGreaterThan(9);
+    expect(avg).toBeLessThan(15);
+  });
+
+  it('the 151 chase surfaces at box scale (1:150 packs ≈ 1 in 4.2 boxes)', () => {
+    let chases = 0;
+    for (let b = 0; b < 40; b++) {
+      const pop = tcgPopulation(modern, SEED);
+      const classes = tcgClasses(modern);
+      const rng = new Rng(seedFromText(`chase-box-${b}`));
+      const packs = openTcgBox(modern, pop, classes, rng);
+      chases += packs.flat().filter(c =>
+        tcgCardOf(modern, c.cardIndex).rarity === 'chase').length;
+    }
+    // 40 boxes × 36 packs = 1440 packs at 1:150 → expect ~10.
+    expect(chases).toBeGreaterThan(2);
+    expect(chases).toBeLessThan(25);
+  });
+
+  it('holos carry real premiums over the commons around them', () => {
+    for (const set of TCG_SETS) {
+      const holoAvg = avgValue(set, 'holo');
+      const commonAvg = avgValue(set, 'common');
+      expect(holoAvg).toBeGreaterThan(commonAvg * 5);
+    }
+  });
+});
+
+function avgValue(set: (typeof TCG_SETS)[number], rarity: string): number {
+  const cards = set.cards.filter(c => c.rarity === rarity);
+  return cards.reduce((a, c) => a + c.value, 0) / cards.length;
+}
+
 describe('tcg grading curve', () => {
   it('rewards gems and punishes damage', () => {
     expect(tcgGradeMultiplier(10, 1)).toBe(8.5);

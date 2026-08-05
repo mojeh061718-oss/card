@@ -44,12 +44,17 @@ export async function runRealismImport(
     onProgress(`2/4 — player photos… ${done + failed}/${total}`));
 
   // 3. Official card scans for both TCG sets, cached for offline play.
+  // Holos and the chase come down at high resolution — the hits must be
+  // crisp at full-screen reveal size.
   const poke = await fetch('presets/pokemon-concept.json').then(r => r.json());
   let scansDone = 0, scansFailed = 0;
   for (const s of poke.sets ?? []) {
-    const nums = (s.cards as { num: number }[]).map(c => c.num);
+    const cards = s.cards as { num: number; rarity: string }[];
+    const nums = cards.map(c => c.num);
+    const hires = new Set(
+      cards.filter(c => c.rarity === 'holo' || c.rarity === 'chase').map(c => c.num));
     const r = await importSetArt(s.key, s.officialArt, nums, (done, failed) =>
-      onProgress(`3/4 — ${s.name} scans… ${done + failed}/${nums.length}`));
+      onProgress(`3/4 — ${s.name} scans… ${done + failed}/${nums.length}`), hires);
     scansDone += r.done;
     scansFailed += r.failed;
   }

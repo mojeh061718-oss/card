@@ -733,6 +733,8 @@ function renderScanCard(
   fctx.fillStyle = '#000';
   fctx.fillRect(0, 0, w, h);
   ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.beginPath();
   ctx.roundRect(0, 0, w, h, w * 0.045);
   ctx.clip();
@@ -741,15 +743,26 @@ function renderScanCard(
   ctx.drawImage(scan, (w - dw) / 2, (h - dh) / 2, dw, dh);
   ctx.restore();
   if (holo) {
+    const fc = fctx as unknown as CanvasRenderingContext2D;
     fctx.save();
     fctx.beginPath();
-    (fctx as unknown as CanvasRenderingContext2D).roundRect(0, 0, w, h, w * 0.045);
+    fc.roundRect(0, 0, w, h, w * 0.045);
     fctx.clip();
-    // Gentle full-card shimmer, hotter over the art window band.
-    fctx.fillStyle = 'rgb(70,70,70)';
+    // A holo has to LOOK like a holo: hot shimmer over the whole card,
+    // hotter still across the art window, with diagonal burst streaks the
+    // foil shader turns into moving light.
+    fctx.fillStyle = 'rgb(95,95,95)';
     fctx.fillRect(0, 0, w, h);
-    fctx.fillStyle = 'rgb(150,150,150)';
+    fctx.fillStyle = 'rgb(215,215,215)';
     fctx.fillRect(w * 0.08, h * 0.1, w * 0.84, h * 0.42);
+    fctx.save();
+    fc.translate(w / 2, h * 0.3);
+    fc.rotate(-0.5);
+    fctx.fillStyle = 'rgb(255,255,255)';
+    for (let i = -6; i <= 6; i++) {
+      fctx.fillRect(i * w * 0.11 - w * 0.012, -h, w * 0.024, h * 2);
+    }
+    fctx.restore();
     fctx.restore();
   }
   return { print, foilMask, widthPx: w, heightPx: h };

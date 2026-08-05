@@ -276,6 +276,14 @@ export function WaxScreen() {
 
 type Phase = 'sealed' | 'stack' | 'takeover' | 'done';
 
+// The reveal stage card: as big as the viewport allows, and its still is
+// rendered at device pixels so it's crisp on a 3x display (the shared
+// scratch GL is 1536px wide — headroom without ever resizing a canvas).
+const REVEAL_W = Math.min(342, (typeof window !== 'undefined' ? window.innerWidth : 402) - 56);
+const REVEAL_STILL_PX = Math.min(1152, Math.round(
+  REVEAL_W * (typeof window !== 'undefined' ? Math.min(3, window.devicePixelRatio || 2) : 2),
+));
+
 /** Rip one product: tear each pack, flip each card, then the tally. */
 function RipSession({ session, onClose }: {
   session: RipSessionState; onClose: () => void;
@@ -325,37 +333,41 @@ function RipSession({ session, onClose }: {
   };
 
   // One gesture per card: tap OR swipe advances, and the next card flips
-  // itself. The old flow (tap to flip, tap again for next, 11 times twice
-  // over) read as "painfully slow" — this one is swipe-swipe-swipe with the
-  // reveal doing its own work.
+  // itself. The card FOLLOWS the finger during the drag (direct DOM
+  // transform, no per-move React render — ProMotion needs the full 120Hz),
+  // then flicks away with momentum or springs back.
+  // Two-stage reveal: flip INSTANTLY on a fast still, then swap in the
+  // device-pixel render once the card has been on screen long enough to be
+  // looked at. Rapid swiping never pays the hi-res cost (motion hides the
+  // softness); pausing on a card gets it crisp.
+  const revealSeq = useRef(0);
   const revealAt = (i: number) => {
     const c = cards[i];
     if (!c) return;
     const t = heatTier(world.heat(c));
     if (t > 0) sfx.riser(t as 1 | 2 | 3);
-    // 520px covers the 260pt flip stage at 2x; the tap→flip latency is the
-    // most-felt frame in the game, so resolution buys nothing here.
     setStillUrl(snapshotCard(world.specFor(c), 520));
     setFlipped(true);
     setTimeout(() => (t > 0 ? sfx.hit(t as 1 | 2 | 3) : sfx.flip()), t > 0 ? 180 : 0);
+    const seq = ++revealSeq.current;
+    setTimeout(() => {
+      if (revealSeq.current !== seq) return; // already moved on
+      const url = snapshotCard(world.specFor(c), REVEAL_STILL_PX);
+      if (url && revealSeq.current === seq) setStillUrl(url);
+    }, 950);
   };
 
   const reveal = () => { if (current && !flipped) revealAt(idx); };
 
-  const nextCard = () => {
-    if (!flipped) return;
-    if (isOne) { setPhase('takeover'); return; }
-    advance();
-  };
-
   const advance = () => {
+    revealSeq.current++; // cancel any pending hi-res upgrade
     sfx.cardSlide();
     setFlipped(false);
     setStillUrl(null);
     if (idx + 1 < cards.length) {
       setIdx(idx + 1);
       // Auto-reveal the incoming card after the slide beat.
-      setTimeout(() => revealAt(idx + 1), 170);
+      setTimeout(() => revealAt(idx + 1), 150);
       return;
     }
     // Pack finished — next pack, or the box tally.
@@ -369,26 +381,81 @@ function RipSession({ session, onClose }: {
     }
   };
 
-  // Swipe = same action as tap, so riffling through a pack feels like
-  // thumbing a stack of cards. Small movements still count as taps.
-  const swipe = useRef<{ x: number; y: number } | null>(null);
-  const swipeConsumed = useRef(false);
-  const onStagePointerDown = (e: React.PointerEvent) => {
-    swipe.current = { x: e.clientX, y: e.clientY };
+  const dragEl = useRef<HTMLDivElement>(null);
+  const drag = useRef({ x0: 0, t0: 0, dx: 0, active: false });
+  const animating = useRef(false);
+
+  /** Fly the card off screen with momentum, then bring in the next one. */
+  const flyOut = (dir: number) => {
+    const el = dragEl.current;
+    animating.current = true;
+    if (el) {
+      el.style.transition = 'transform 220ms cubic-bezier(0.3, 0.6, 0.4, 1), opacity 220ms linear';
+      el.style.transform = `translateX(${dir * (window.innerWidth + 220)}px) rotate(${dir * 24}deg)`;
+      el.style.opacity = '0';
+    }
+    setTimeout(() => {
+      advance();
+      if (el) {
+        el.style.transition = 'none';
+        el.style.transform = '';
+        el.style.opacity = '1';
+      }
+      animating.current = false;
+    }, 200);
   };
-  const onStagePointerUp = (e: React.PointerEvent) => {
-    if (!swipe.current) return;
-    const dx = e.clientX - swipe.current.x;
-    const dy = e.clientY - swipe.current.y;
-    swipe.current = null;
-    if (Math.abs(dx) >= 36 || Math.abs(dy) >= 36) {
-      swipeConsumed.current = true; // the trailing click must not double-fire
-      (flipped ? nextCard : reveal)();
+
+  const gestureAdvance = (dir: number) => {
+    if (!flipped) {
+      reveal();
+      return;
+    }
+    if (isOne) { setPhase('takeover'); return; }
+    flyOut(dir);
+  };
+
+  const onStagePointerDown = (e: React.PointerEvent) => {
+    if (animating.current) return;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    drag.current = { x0: e.clientX, t0: performance.now(), dx: 0, active: true };
+    if (dragEl.current) dragEl.current.style.transition = 'none';
+  };
+  const onStagePointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d.active || animating.current) return;
+    d.dx = e.clientX - d.x0;
+    // Only a flipped card rides the finger — the face-down card flips in place.
+    if (flipped && dragEl.current) {
+      dragEl.current.style.transform =
+        `translateX(${d.dx}px) rotate(${d.dx * 0.05}deg)`;
     }
   };
-  const onStageClick = () => {
-    if (swipeConsumed.current) { swipeConsumed.current = false; return; }
-    (flipped ? nextCard : reveal)();
+  const onStagePointerUp = () => {
+    const d = drag.current;
+    if (!d.active) return;
+    d.active = false;
+    const el = dragEl.current;
+    const dt = Math.max(1, performance.now() - d.t0);
+    const flick = Math.abs(d.dx) / dt > 0.45;
+    if (Math.abs(d.dx) < 8) {
+      // Tap.
+      if (el) el.style.transform = '';
+      gestureAdvance(-1);
+    } else if (Math.abs(d.dx) > 64 || flick) {
+      if (!flipped) {
+        if (el) el.style.transform = '';
+        reveal();
+      } else if (isOne) {
+        if (el) { el.style.transition = 'transform 260ms cubic-bezier(0.34,1.56,0.64,1)'; el.style.transform = ''; }
+        setPhase('takeover');
+      } else {
+        flyOut(d.dx >= 0 ? 1 : -1);
+      }
+    } else if (el) {
+      // Spring back.
+      el.style.transition = 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+      el.style.transform = '';
+    }
   };
 
   /** Skip the ceremony: jump straight to the tally. */
@@ -448,14 +515,16 @@ function RipSession({ session, onClose }: {
       {phase === 'stack' && current && (
         <div
           style={{ ...S.center, touchAction: 'none' }}
-          onClick={onStageClick}
           onPointerDown={onStagePointerDown}
+          onPointerMove={onStagePointerMove}
           onPointerUp={onStagePointerUp}
+          onPointerCancel={onStagePointerUp}
         >
           <div style={S.counter}>
             {packs.length > 1 && `PACK ${packIdx + 1}/${packs.length} · `}
             {idx + 1} / {cards.length}
           </div>
+          <div ref={dragEl} style={{ willChange: 'transform' }}>
           <div style={{ ...S.flipScene, filter: glow && !flipped ? `drop-shadow(0 0 26px ${glow})` : undefined }}>
             <div style={{ ...S.flipInner, transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
               <img src={backUrl} alt="card back" style={{ ...S.face, backfaceVisibility: 'hidden' }} />
@@ -466,6 +535,7 @@ function RipSession({ session, onClose }: {
                 }} />
               )}
             </div>
+          </div>
           </div>
           {flipped ? (
             // The number is the payoff — say it the moment the card lands.
@@ -490,7 +560,7 @@ function RipSession({ session, onClose }: {
       {phase === 'takeover' && current && (
         <div style={S.takeover} onClick={() => { setPhase('stack'); advance(); }}>
           <div style={S.oneBanner}>ONE OF ONE</div>
-          <LiveCard spec={world.specFor(current)} width={300} />
+          <LiveCard spec={world.specFor(current)} width={Math.min(330, REVEAL_W)} />
           <div style={S.oneSub}>{rt.def.name} · Superfractor · #{current.serial}/1</div>
           <div style={{ ...S.caption, color: '#ffd75e' }}>tap to continue</div>
         </div>
@@ -582,7 +652,7 @@ const styles: Record<string, React.CSSProperties> = {
   caption: { fontSize: 13, opacity: 0.6, letterSpacing: 1 },
   counter: { fontSize: 12, letterSpacing: 3, opacity: 0.7 },
   skip: { background: 'rgba(255,255,255,0.08)', color: 'rgba(244,242,236,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '7px 14px', fontSize: 10, letterSpacing: 1, fontWeight: 700 },
-  flipScene: { perspective: '1200px', width: 260, transition: 'filter 300ms' },
+  flipScene: { perspective: '1200px', width: REVEAL_W, transition: 'filter 300ms' },
   flipInner: { position: 'relative', width: '100%', transformStyle: 'preserve-3d', transition: 'transform 360ms cubic-bezier(0.2, 0.8, 0.25, 1)' },
   face: { width: '100%', borderRadius: 12, display: 'block', boxShadow: '0 18px 50px rgba(0,0,0,0.6)' },
   takeover: { position: 'fixed', inset: 0, background: '#050507', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 60, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(52px + env(safe-area-inset-bottom))' },
