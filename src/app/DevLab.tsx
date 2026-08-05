@@ -65,15 +65,18 @@ function buildSpecs(): GallerySpec[] {
     });
   };
 
-  mk('Base', 'football', 0, dnaA, P(0), null, false, null, 0);
-  mk('Base RC', 'football', 1, dnaA, P(0), null, true, null, 1);
-  mk('Refractor', 'baseball', 0, dnaA, P(1), null, false, null, 2);
-  mk('/199', 'football', 2, dnaA, P(3), 47, false, null, 3);
-  mk('/99', 'baseball', 1, dnaA, P(5), 12, true, null, 4);
-  mk('/25 Auto', 'football', 3, dnaA, P(8), 9, true, { ink: inks[0], sticker: false }, 5);
-  mk('/10', 'baseball', 2, dnaB, P(9), 3, false, null, 6);
-  mk('/5 Auto', 'football', 4, dnaB, P(10), 2, true, { ink: inks[3], sticker: true }, 7);
-  mk('SUPERFRACTOR 1/1', 'baseball', 0, dnaA, one, 1, true, { ink: inks[1], sticker: false }, 8);
+  // Showcase every pattern engine across the spread — variety is the point.
+  const withPattern = (dna: typeof dnaA, pattern: typeof dnaA.pattern, layout?: typeof dnaA.layout) =>
+    ({ ...dna, pattern, ...(layout ? { layout } : {}) });
+  mk('Base', 'football', 0, withPattern(dnaA, 'wave'), P(0), null, false, null, 0);
+  mk('Base RC', 'football', 1, withPattern(dnaA, 'halftone'), P(0), null, true, null, 1);
+  mk('Refractor', 'baseball', 0, withPattern(dnaA, 'pinstripe'), P(1), null, false, null, 2);
+  mk('/199', 'football', 2, withPattern(dnaA, 'tessellation'), P(3), 47, false, null, 3);
+  mk('/99', 'baseball', 1, withPattern(dnaA, 'circuit'), P(5), 12, true, null, 4);
+  mk('/25 Auto', 'football', 3, withPattern(dnaA, 'marble'), P(8), 9, true, { ink: inks[0], sticker: false }, 5);
+  mk('/10', 'baseball', 2, withPattern(dnaB, 'rays'), P(9), 3, false, null, 6);
+  mk('/5 Auto', 'football', 4, withPattern(dnaB, 'starburst', 'framed'), P(10), 2, true, { ink: inks[3], sticker: true }, 7);
+  mk('SUPERFRACTOR 1/1', 'baseball', 0, withPattern(dnaA, 'starburst'), one, 1, true, { ink: inks[1], sticker: false }, 8);
   return specs;
 }
 

@@ -37,7 +37,7 @@ export function buildSignature(
   signatureSeed: bigint, first: string, last: string, jersey: number,
 ): SignatureStyle {
   const rng = new Rng(signatureSeed);
-  const quality = 0.35 + rng.float() * 0.65;
+  const quality = 0.5 + rng.float() * 0.5;
   const strokes: Stroke[] = [];
   const slant = (rng.float() - 0.3) * 0.35; // rightward lean bias
   let cursor = 0.04;
@@ -138,34 +138,46 @@ export function drawSignature(
     ctx.restore();
   }
   ctx.save();
-  ctx.strokeStyle = INK_COLORS[ink];
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  if (ink === 'silverPaint' || ink === 'goldPaint') {
-    ctx.shadowColor = 'rgba(255,255,255,0.5)';
-    ctx.shadowBlur = 1.5;
-  } else if (!onSticker) {
-    // On-card ink sits under gloss: slightly soft, slightly absorbed.
-    ctx.globalAlpha = 0.92;
-  }
   const sx = (nx: number) => x + nx * w;
   const sy = (ny: number) => y + (ny / 0.4) * h;
-  for (const stroke of sig.strokes) {
-    const pts = stroke.pts;
-    if (pts.length < 2) continue;
-    // Variable width: taper in and out by splitting into segments.
-    for (let i = 0; i < pts.length - 1; i++) {
-      const t = i / (pts.length - 1);
-      const taper = 0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15));
-      ctx.lineWidth = Math.max(0.8, stroke.width * w * taper);
-      ctx.beginPath();
-      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1];
-      const m1x = (p0.x + p1.x) / 2, m1y = (p0.y + p1.y) / 2;
-      const m2x = (p1.x + p2.x) / 2, m2y = (p1.y + p2.y) / 2;
-      ctx.moveTo(sx(m1x), sy(m1y));
-      ctx.quadraticCurveTo(sx(p1.x), sy(p1.y), sx(m2x), sy(m2y));
-      ctx.stroke();
+
+  const trace = (widthScale: number) => {
+    for (const stroke of sig.strokes) {
+      const pts = stroke.pts;
+      if (pts.length < 2) continue;
+      // Variable width: taper in and out by splitting into segments.
+      for (let i = 0; i < pts.length - 1; i++) {
+        const t = i / (pts.length - 1);
+        const taper = 0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15));
+        ctx.lineWidth = Math.max(1.1, stroke.width * w * taper * widthScale);
+        ctx.beginPath();
+        const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1];
+        const m1x = (p0.x + p1.x) / 2, m1y = (p0.y + p1.y) / 2;
+        const m2x = (p1.x + p2.x) / 2, m2y = (p1.y + p2.y) / 2;
+        ctx.moveTo(sx(m1x), sy(m1y));
+        ctx.quadraticCurveTo(sx(p1.x), sy(p1.y), sx(m2x), sy(m2y));
+        ctx.stroke();
+      }
     }
+  };
+
+  // Contrast halo: a soft light pass under the ink so the signature reads
+  // boldly against any background art.
+  if (!onSticker) {
+    ctx.strokeStyle = 'rgba(250, 250, 244, 0.55)';
+    ctx.shadowColor = 'rgba(250, 250, 244, 0.9)';
+    ctx.shadowBlur = Math.max(2, w * 0.012);
+    trace(2.1);
+    ctx.shadowBlur = 0;
   }
+  // Ink pass — full opacity, metallic paints get their sheen.
+  ctx.strokeStyle = INK_COLORS[ink];
+  if (ink === 'silverPaint' || ink === 'goldPaint') {
+    ctx.shadowColor = 'rgba(255,255,255,0.6)';
+    ctx.shadowBlur = 2;
+  }
+  trace(1.25);
   ctx.restore();
 }

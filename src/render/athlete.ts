@@ -117,11 +117,14 @@ export interface AthleteStyle {
   skin: string;
   jerseyNumber: number;
   sport: Sport;
+  /** Nickname wordmark across the chest. */
+  wordmark: string;
+  pinstripes: boolean; // baseball whites
 }
 
 export function athleteStyle(
   appearanceSeed: bigint, jerseyNumber: number, sport: Sport,
-  primary: string, secondary: string,
+  primary: string, secondary: string, wordmark = '',
 ): AthleteStyle {
   const rng = new Rng(appearanceSeed);
   const pantsWhite = rng.chance(0.5);
@@ -132,6 +135,8 @@ export function athleteStyle(
     skin: rng.pick(SKIN_TONES),
     jerseyNumber,
     sport,
+    wordmark,
+    pinstripes: sport === 'baseball' && pantsWhite && rng.chance(0.5),
   };
 }
 
@@ -190,6 +195,11 @@ export function drawAthlete(
   // --- FAR limbs (painter's order) ---
   limb(ctx, [P.sF, P.eF], armW * 1.05, armW * 0.85, far(jerseyDark));
   limb(ctx, [P.eF, P.wF], foreW, foreW * 0.8, far(skinDark));
+  // Far hand (gloved in trim for football, skin for baseball).
+  ctx.beginPath();
+  ctx.arc(P.wF.x, P.wF.y, foreW * 0.48, 0, Math.PI * 2);
+  ctx.fillStyle = style.sport === 'football' ? far(shade(style.trim, -0.28)) : far(skinDark);
+  ctx.fill();
   limb(ctx, [P.hF, P.kF], legW, legW * 0.85, far(pantsDark));
   limb(
     ctx, [P.kF, P.aF], calfW, calfW * 0.75,
@@ -222,7 +232,8 @@ export function drawAthlete(
   ctx.fillStyle = style.jersey;
   ctx.fill();
 
-  // Torso shading + yoke trim inside the silhouette.
+  // Torso detail inside the silhouette: fabric shading, pinstripes or side
+  // panels, collar, yoke, wordmark, number, belt.
   ctx.save();
   ctx.clip();
   const grad = ctx.createLinearGradient(P.sF.x - 0.1 * u, P.sF.y, P.sN.x + 0.12 * u, P.hN.y);
@@ -231,26 +242,88 @@ export function drawAthlete(
   grad.addColorStop(1, withAlpha('#ffffff', 0.08));
   ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = style.trim;
-  ctx.lineWidth = 0.014 * u;
-  ctx.beginPath();
-  ctx.moveTo(P.sF.x, P.sF.y + 0.035 * u);
-  ctx.quadraticCurveTo(P.neck.x, P.neck.y + 0.06 * u, P.sN.x, P.sN.y + 0.035 * u);
-  ctx.stroke();
-  // Jersey number on chest.
-  const numSize = 0.088 * u;
-  const chest = { x: (P.neck.x + P.pelvis.x) / 2, y: P.neck.y + (P.pelvis.y - P.neck.y) * 0.36 };
+
   const lean = Math.atan2(P.pelvis.x - P.neck.x, P.pelvis.y - P.neck.y);
+  if (style.pinstripes) {
+    ctx.strokeStyle = withAlpha(shade(style.jersey, -0.22), 0.55);
+    ctx.lineWidth = 0.005 * u;
+    for (let sx = -6; sx <= 6; sx++) {
+      const px = P.neck.x + sx * 0.022 * u;
+      ctx.beginPath();
+      ctx.moveTo(px + Math.tan(lean) * -0.1 * u, P.neck.y - 0.05 * u);
+      ctx.lineTo(px + Math.tan(lean) * 0.28 * u, P.pelvis.y + 0.06 * u);
+      ctx.stroke();
+    }
+  } else {
+    // Side panel stripes down both flanks in trim color.
+    ctx.strokeStyle = withAlpha(style.trim, 0.85);
+    ctx.lineWidth = 0.02 * u;
+    ctx.beginPath();
+    ctx.moveTo(P.sN.x + 0.012 * u, P.sN.y + 0.03 * u);
+    ctx.quadraticCurveTo(
+      (P.sN.x + P.hN.x) / 2 + shoulderW * 0.14, (P.sN.y + P.hN.y) / 2,
+      P.hN.x + 0.01 * u, P.hN.y,
+    );
+    ctx.moveTo(P.sF.x - 0.012 * u, P.sF.y + 0.03 * u);
+    ctx.quadraticCurveTo(
+      (P.sF.x + P.hF.x) / 2 - shoulderW * 0.14, (P.sF.y + P.hF.y) / 2,
+      P.hF.x - 0.01 * u, P.hF.y,
+    );
+    ctx.stroke();
+  }
+
+  // Collar V at the neck.
+  ctx.strokeStyle = style.trim;
+  ctx.lineWidth = 0.016 * u;
+  ctx.beginPath();
+  ctx.moveTo(P.neck.x - 0.045 * u, P.neck.y + 0.008 * u);
+  ctx.lineTo(P.neck.x, P.neck.y + 0.05 * u);
+  ctx.lineTo(P.neck.x + 0.045 * u, P.neck.y + 0.008 * u);
+  ctx.stroke();
+  // Yoke seam.
+  ctx.lineWidth = 0.008 * u;
+  ctx.strokeStyle = withAlpha(shade(style.jersey, -0.2), 0.7);
+  ctx.beginPath();
+  ctx.moveTo(P.sF.x, P.sF.y + 0.045 * u);
+  ctx.quadraticCurveTo(P.neck.x, P.neck.y + 0.085 * u, P.sN.x, P.sN.y + 0.045 * u);
+  ctx.stroke();
+
+  // Wordmark arc + number, rotated with the torso lean.
+  const chest = { x: (P.neck.x + P.pelvis.x) / 2, y: P.neck.y + (P.pelvis.y - P.neck.y) * 0.40 };
   ctx.translate(chest.x, chest.y);
   ctx.rotate(-lean * 0.6);
-  ctx.font = `bold ${numSize}px "Arial Narrow", Arial, sans-serif`;
+  if (style.wordmark) {
+    ctx.font = `700 ${0.033 * u}px "Arial Narrow", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 0.008 * u;
+    ctx.strokeStyle = shade(style.trim, -0.25);
+    const word = style.wordmark.toUpperCase().slice(0, 10);
+    ctx.strokeText(word, 0, -0.075 * u);
+    ctx.fillStyle = style.trim;
+    ctx.fillText(word, 0, -0.075 * u);
+  }
+  const numSize = 0.098 * u;
+  ctx.font = `900 ${numSize}px "Arial Narrow", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.lineWidth = numSize * 0.16;
-  ctx.strokeStyle = shade(style.trim, -0.2);
-  ctx.strokeText(String(style.jerseyNumber), 0, 0);
+  ctx.lineWidth = numSize * 0.18;
+  ctx.strokeStyle = shade(style.trim, -0.24);
+  ctx.strokeText(String(style.jerseyNumber), 0, 0.02 * u);
   ctx.fillStyle = style.trim;
-  ctx.fillText(String(style.jerseyNumber), 0, 0);
+  ctx.fillText(String(style.jerseyNumber), 0, 0.02 * u);
+  ctx.rotate(lean * 0.6);
+  ctx.translate(-chest.x, -chest.y);
+
+  // Belt line for baseball.
+  if (style.sport === 'baseball') {
+    ctx.strokeStyle = shade(style.trim, -0.15);
+    ctx.lineWidth = 0.018 * u;
+    ctx.beginPath();
+    ctx.moveTo(P.hF.x - 0.02 * u, P.hF.y - 0.005 * u);
+    ctx.lineTo(P.hN.x + 0.02 * u, P.hN.y - 0.005 * u);
+    ctx.stroke();
+  }
   ctx.restore();
 
   // Neck.
@@ -330,6 +403,11 @@ export function drawAthlete(
     armW * 0.95, armW * 0.95, style.trim,
   );
   limb(ctx, [P.eN, P.wN], foreW * 1.05, foreW * 0.85, style.skin);
+  // Near hand.
+  ctx.beginPath();
+  ctx.arc(P.wN.x, P.wN.y, foreW * 0.52, 0, Math.PI * 2);
+  ctx.fillStyle = style.sport === 'football' ? shade(style.trim, -0.26) : style.skin;
+  ctx.fill();
 
   // --- Prop ---
   if (pose.prop) {
@@ -468,14 +546,30 @@ export function renderAthleteLayer(
   rctx.globalCompositeOperation = 'destination-out';
   rctx.drawImage(off, lx * w * 0.014, ly * h * 0.014);
 
-  // Blit: shadow → figure → rim.
+  // Contour: a dark keyline around the whole silhouette — this is what makes
+  // the cutout read crisp and "printed" instead of floating soft.
+  const contour = document.createElement('canvas');
+  contour.width = off.width;
+  contour.height = off.height;
+  const cctx = contour.getContext('2d')!;
+  const cr = Math.max(1.5, w * 0.006);
+  for (let a = 0; a < 8; a++) {
+    const ang = (a / 8) * Math.PI * 2;
+    cctx.drawImage(off, Math.cos(ang) * cr, Math.sin(ang) * cr);
+  }
+  cctx.globalCompositeOperation = 'source-in';
+  cctx.fillStyle = '#101018';
+  cctx.fillRect(0, 0, contour.width, contour.height);
+
+  // Blit: shadow → contour → figure → rim.
   target.save();
   target.shadowColor = 'rgba(0,0,0,0.5)';
   target.shadowBlur = Math.max(6, w * 0.035);
   target.shadowOffsetX = w * 0.014 * (mx >= 0 ? -1 : 1);
   target.shadowOffsetY = h * 0.018;
-  target.drawImage(off, x, y);
+  target.drawImage(contour, x, y);
   target.restore();
+  target.drawImage(off, x, y);
   target.save();
   target.globalAlpha = 0.65;
   target.globalCompositeOperation = 'lighter';

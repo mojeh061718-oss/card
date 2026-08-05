@@ -89,9 +89,9 @@ const patternPainters: Record<DesignDna['pattern'], Painter> = {
     ctx.translate(w / 2, h / 2);
     ctx.rotate(dna.patternAngle * 0.35);
     ctx.translate(-w / 2, -h / 2);
-    ctx.fillStyle = withAlpha(mixHex(a, b, 0.5), 0.4);
+    ctx.fillStyle = withAlpha(mixHex(a, b, 0.6), 0.6);
     for (let x = -w; x < w * 2; x += step) {
-      ctx.fillRect(x, -h, step * 0.18, h * 3);
+      ctx.fillRect(x, -h, step * 0.24, h * 3);
     }
     ctx.restore();
   },
@@ -234,6 +234,15 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   // --- Background art ---
   patternPainters[dna.pattern](ctx, w, h, primary, accent, dna, rng);
 
+  // Hero glow: a hot accent core behind the figure lifts the whole card and
+  // separates the subject the way studio lighting does on real photography.
+  const glow = ctx.createRadialGradient(w / 2, h * 0.40, 0, w / 2, h * 0.40, w * 0.62);
+  glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.45), 0.5));
+  glow.addColorStop(0.55, withAlpha(accent, 0.16));
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
   // Depth vignette so the figure pops.
   const vg = ctx.createRadialGradient(w / 2, h * 0.42, w * 0.2, w / 2, h * 0.42, w * 0.95);
   vg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -283,7 +292,10 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   // --- Athlete ---
   const poses = posesFor(player.sport);
   const pose = poses[Number(spec.artSeed % BigInt(poses.length))];
-  const style = athleteStyle(player.appearanceSeed, player.jersey, player.sport, team.primary, team.secondary);
+  const style = athleteStyle(
+    player.appearanceSeed, player.jersey, player.sport,
+    team.primary, team.secondary, team.nickname,
+  );
   const figX = w * 0.02, figY = h * 0.06, figW = w * 0.96, figH = h * 0.78;
   renderAthleteLayer(ctx, pose, style, figX, figY, figW, figH, player.appearanceSeed, accent);
 
@@ -439,53 +451,85 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     fctx.restore();
   }
 
-  // --- Serial stamp ---
-  if (spec.serial !== null && parallel.numberedTo !== null) {
+  // --- Parallel badge: bold, instantly readable tier marker (top-right) ---
+  if (parallel.numberedTo !== null && spec.serial !== null) {
+    const isOne = parallel.numberedTo === 1;
     const st = `${spec.serial}/${parallel.numberedTo}`;
-    const sPx = Math.round(w * 0.036);
-    const sx = w * 0.92, sy = h * 0.075;
+    const bw2 = w * (isOne ? 0.30 : 0.24);
+    const bh2 = h * (isOne ? 0.085 : 0.062);
+    const bx = w * 0.94 - bw2, by = h * 0.045;
+    const gold = isOne ? '#ffd75e' : '#e8c86a';
     ctx.save();
-    ctx.translate(sx, sy);
-    ctx.rotate(-0.03 + rng.float() * 0.06); // stamp misalignment — hand-applied
-    ctx.font = `700 ${sPx}px "Courier New", monospace`;
+    ctx.translate(bx + bw2 / 2, by + bh2 / 2);
+    ctx.rotate(-0.015 + rng.float() * 0.03); // hand-stamped tilt
+    // Plate: near-black with gold keyline; unmistakable at binder size.
+    ctx.fillStyle = 'rgba(8, 8, 12, 0.88)';
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = Math.max(1.5, w * 0.004);
+    ctx.beginPath();
+    ctx.roundRect(-bw2 / 2, -bh2 / 2, bw2, bh2, bh2 * 0.2);
+    ctx.fill();
+    ctx.stroke();
+    // Serial — the hero of the plate.
+    const serPx = bh2 * (isOne ? 0.52 : 0.56);
+    ctx.font = `900 ${serPx}px "Arial Narrow", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = gold;
+    ctx.fillText(isOne ? '1/1' : st, 0, isOne ? -bh2 * 0.16 : bh2 * (parallel.name ? 0.16 : 0));
+    // Tier name in small caps above/below.
+    ctx.font = `700 ${bh2 * 0.24}px Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(244, 242, 236, 0.85)';
+    const label = isOne ? 'ONE OF ONE' : parallel.name.toUpperCase();
+    ctx.fillText(label, 0, isOne ? bh2 * 0.28 : -bh2 * 0.26, bw2 * 0.9);
+    ctx.restore();
+    // Badge burns on the foil layer.
+    fctx.save();
+    fctx.translate(bx + bw2 / 2, by + bh2 / 2);
+    fctx.fillStyle = 'rgba(255,255,255,0.95)';
+    fctx.beginPath();
+    fctx.roundRect(-bw2 / 2, -bh2 / 2, bw2, bh2, bh2 * 0.2);
+    fctx.fill();
+    fctx.restore();
+  } else if (parallel.finish !== 'none') {
+    // Unnumbered foil tier still announces itself.
+    const bh2 = h * 0.042;
+    ctx.save();
+    ctx.font = `800 ${bh2 * 0.62}px Arial, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    // Emboss: dark offset under gold face
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillText(st, 1.5, 1.5);
-    ctx.fillStyle = parallel.numberedTo === 1 ? '#ffd75e' : '#e8c86a';
-    ctx.fillText(st, 0, 0);
+    ctx.fillStyle = 'rgba(244, 242, 236, 0.9)';
+    ctx.strokeStyle = 'rgba(8, 8, 12, 0.6)';
+    ctx.lineWidth = bh2 * 0.14;
+    const label = parallel.name.toUpperCase();
+    ctx.strokeText(label, w * 0.94, h * 0.062);
+    ctx.fillText(label, w * 0.94, h * 0.062);
     ctx.restore();
-    fctx.save();
-    fctx.translate(sx, sy);
-    fctx.font = `700 ${sPx}px "Courier New", monospace`;
-    fctx.textAlign = 'right';
-    fctx.textBaseline = 'middle';
-    fctx.fillStyle = 'rgba(255,255,255,0.9)';
-    fctx.fillText(st, 0, 0);
-    fctx.restore();
   }
 
-  // --- 1/1 crown treatment ---
+  // --- 1/1 crown frame ---
   if (parallel.numberedTo === 1) {
     ctx.save();
-    ctx.strokeStyle = withAlpha('#ffd75e', 0.9);
-    ctx.lineWidth = w * 0.006;
+    ctx.strokeStyle = withAlpha('#ffd75e', 0.95);
+    ctx.lineWidth = w * 0.008;
     ctx.beginPath();
-    ctx.roundRect(w * 0.015, w * 0.015, w - w * 0.03, h - w * 0.03, cornerR * 0.8);
+    ctx.roundRect(w * 0.018, w * 0.018, w - w * 0.036, h - w * 0.036, cornerR * 0.8);
     ctx.stroke();
-    ctx.font = `700 ${w * 0.026}px "Courier New", monospace`;
-    ctx.fillStyle = withAlpha('#ffd75e', 0.95);
-    ctx.textAlign = 'center';
-    ctx.fillText('O N E   O F   O N E', w / 2, h * 0.035);
     ctx.restore();
+    fctx.save();
+    fctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    fctx.lineWidth = w * 0.008;
+    fctx.beginPath();
+    fctx.roundRect(w * 0.018, w * 0.018, w - w * 0.036, h - w * 0.036, cornerR * 0.8);
+    fctx.stroke();
+    fctx.restore();
   }
 
   // --- Autograph ---
   if (spec.auto) {
     const sig = buildSignature(player.signatureSeed, player.first, player.last, player.jersey);
-    const sw = w * 0.52, sh = sw * 0.4 * 0.55;
-    const sx0 = w * 0.24, sy0 = h * 0.66;
+    const sw = w * 0.62, sh = sw * 0.4 * 0.55;
+    const sx0 = w * 0.19, sy0 = h * 0.615;
     drawSignature(ctx, sig, spec.auto.ink, sx0, sy0, sw, sh, spec.auto.sticker);
   }
 
