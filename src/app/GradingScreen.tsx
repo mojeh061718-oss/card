@@ -111,7 +111,10 @@ export function GradingScreen() {
         )}
 
         <section style={S.section}>
-          <div style={S.sectionTitle}>SELECT CARDS — long-press to inspect with the loupe</div>
+          <div style={S.sectionTitle}>
+            SELECT CARDS — long-press to inspect with the loupe. An off-center
+            card really is more likely to disappoint: look before you pay.
+          </div>
           <div style={S.grid}>
             {candidates.map(card => (
               <PickCell key={card.uid} card={card} picked={picked.has(card.uid)}
