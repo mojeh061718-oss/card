@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DevLab } from './DevLab';
+import { PokeLab } from './PokeLab';
 import { WaxScreen } from './WaxScreen';
 import { BinderScreen } from './BinderScreen';
 import { GradingScreen } from './GradingScreen';
@@ -16,8 +17,13 @@ export function App() {
   const careerStarted = useCollection(s => s.careerStarted);
   // The render lab is a dev tool — it skips career setup entirely.
   const labMode = new URLSearchParams(location.search).has('lab');
+  // Hidden concept lab — reachable only by URL, never from the nav.
+  const pokeMode = new URLSearchParams(location.search).has('pokelab');
   const [setupDone, setSetupDone] = useState(false);
   const [route, setRoute] = useState<Route>(labMode ? 'devlab' : 'wax');
+  if (pokeMode) {
+    return <div style={{ height: '100dvh' }}><PokeLab /></div>;
+  }
   if (!careerStarted && !setupDone && !labMode) {
     return <CareerSetup onDone={() => setSetupDone(true)} />;
   }

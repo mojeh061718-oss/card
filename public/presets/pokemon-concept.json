@@ -1,0 +1,2199 @@
+{
+ "version": 1,
+ "note": "Creature TCG concept checklist for private experimentation. Names are factual checklist data; no artwork is included. HP values are approximate. officialArt URL patterns fetch at runtime from the public pokemontcg.io image CDN and nothing is bundled or redistributed.",
+ "sets": [
+  {
+   "key": "base",
+   "name": "Base Set",
+   "year": 1999,
+   "size": 102,
+   "officialArt": "https://images.pokemontcg.io/base1/{num}.png",
+   "cards": [
+    {
+     "num": 1,
+     "name": "Alakazam",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 2,
+     "name": "Blastoise",
+     "type": "water",
+     "rarity": "holo",
+     "hp": 100,
+     "kind": "creature"
+    },
+    {
+     "num": 3,
+     "name": "Chansey",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": 120,
+     "kind": "creature"
+    },
+    {
+     "num": 4,
+     "name": "Charizard",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": 120,
+     "kind": "creature"
+    },
+    {
+     "num": 5,
+     "name": "Clefairy",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 6,
+     "name": "Gyarados",
+     "type": "water",
+     "rarity": "holo",
+     "hp": 100,
+     "kind": "creature"
+    },
+    {
+     "num": 7,
+     "name": "Hitmonchan",
+     "type": "fighting",
+     "rarity": "holo",
+     "hp": 70,
+     "kind": "creature"
+    },
+    {
+     "num": 8,
+     "name": "Machamp",
+     "type": "fighting",
+     "rarity": "holo",
+     "hp": 100,
+     "kind": "creature"
+    },
+    {
+     "num": 9,
+     "name": "Magneton",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 10,
+     "name": "Mewtwo",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 11,
+     "name": "Nidoking",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": 90,
+     "kind": "creature"
+    },
+    {
+     "num": 12,
+     "name": "Ninetales",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 13,
+     "name": "Poliwrath",
+     "type": "water",
+     "rarity": "holo",
+     "hp": 90,
+     "kind": "creature"
+    },
+    {
+     "num": 14,
+     "name": "Raichu",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 15,
+     "name": "Venusaur",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": 100,
+     "kind": "creature"
+    },
+    {
+     "num": 16,
+     "name": "Zapdos",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": 90,
+     "kind": "creature"
+    },
+    {
+     "num": 17,
+     "name": "Beedrill",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 18,
+     "name": "Dragonair",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 19,
+     "name": "Dugtrio",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": 70,
+     "kind": "creature"
+    },
+    {
+     "num": 20,
+     "name": "Electabuzz",
+     "type": "lightning",
+     "rarity": "rare",
+     "hp": 70,
+     "kind": "creature"
+    },
+    {
+     "num": 21,
+     "name": "Electrode",
+     "type": "lightning",
+     "rarity": "rare",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 22,
+     "name": "Pidgeotto",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 23,
+     "name": "Arcanine",
+     "type": "fire",
+     "rarity": "uncommon",
+     "hp": 100,
+     "kind": "creature"
+    },
+    {
+     "num": 24,
+     "name": "Charmeleon",
+     "type": "fire",
+     "rarity": "uncommon",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 25,
+     "name": "Dewgong",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 26,
+     "name": "Dratini",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 27,
+     "name": "Farfetch'd",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 28,
+     "name": "Growlithe",
+     "type": "fire",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 29,
+     "name": "Haunter",
+     "type": "psychic",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 30,
+     "name": "Ivysaur",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 31,
+     "name": "Jynx",
+     "type": "psychic",
+     "rarity": "uncommon",
+     "hp": 70,
+     "kind": "creature"
+    },
+    {
+     "num": 32,
+     "name": "Kadabra",
+     "type": "psychic",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 33,
+     "name": "Kakuna",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 34,
+     "name": "Machoke",
+     "type": "fighting",
+     "rarity": "uncommon",
+     "hp": 80,
+     "kind": "creature"
+    },
+    {
+     "num": 35,
+     "name": "Magikarp",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": 30,
+     "kind": "creature"
+    },
+    {
+     "num": 36,
+     "name": "Magmar",
+     "type": "fire",
+     "rarity": "uncommon",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 37,
+     "name": "Nidorino",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 38,
+     "name": "Poliwhirl",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 39,
+     "name": "Porygon",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": 30,
+     "kind": "creature"
+    },
+    {
+     "num": 40,
+     "name": "Raticate",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 41,
+     "name": "Seel",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 42,
+     "name": "Wartortle",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": 70,
+     "kind": "creature"
+    },
+    {
+     "num": 43,
+     "name": "Abra",
+     "type": "psychic",
+     "rarity": "common",
+     "hp": 30,
+     "kind": "creature"
+    },
+    {
+     "num": 44,
+     "name": "Bulbasaur",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 45,
+     "name": "Caterpie",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 46,
+     "name": "Charmander",
+     "type": "fire",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 47,
+     "name": "Diglett",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": 30,
+     "kind": "creature"
+    },
+    {
+     "num": 48,
+     "name": "Doduo",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 49,
+     "name": "Drowzee",
+     "type": "psychic",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 50,
+     "name": "Gastly",
+     "type": "psychic",
+     "rarity": "common",
+     "hp": 30,
+     "kind": "creature"
+    },
+    {
+     "num": 51,
+     "name": "Koffing",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 52,
+     "name": "Machop",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 53,
+     "name": "Magnemite",
+     "type": "lightning",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 54,
+     "name": "Metapod",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 70,
+     "kind": "creature"
+    },
+    {
+     "num": 55,
+     "name": "Nidoran M",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 56,
+     "name": "Onix",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": 90,
+     "kind": "creature"
+    },
+    {
+     "num": 57,
+     "name": "Pidgey",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 58,
+     "name": "Pikachu",
+     "type": "lightning",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 59,
+     "name": "Poliwag",
+     "type": "water",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 60,
+     "name": "Ponyta",
+     "type": "fire",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 61,
+     "name": "Rattata",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": 30,
+     "kind": "creature"
+    },
+    {
+     "num": 62,
+     "name": "Sandshrew",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 63,
+     "name": "Squirtle",
+     "type": "water",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 64,
+     "name": "Starmie",
+     "type": "water",
+     "rarity": "common",
+     "hp": 60,
+     "kind": "creature"
+    },
+    {
+     "num": 65,
+     "name": "Staryu",
+     "type": "water",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 66,
+     "name": "Tangela",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 67,
+     "name": "Voltorb",
+     "type": "lightning",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 68,
+     "name": "Vulpix",
+     "type": "fire",
+     "rarity": "common",
+     "hp": 50,
+     "kind": "creature"
+    },
+    {
+     "num": 69,
+     "name": "Weedle",
+     "type": "grass",
+     "rarity": "common",
+     "hp": 40,
+     "kind": "creature"
+    },
+    {
+     "num": 70,
+     "name": "Clefairy Doll",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 71,
+     "name": "Computer Search",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 72,
+     "name": "Devolution Spray",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 73,
+     "name": "Impostor Professor Oak",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 74,
+     "name": "Item Finder",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 75,
+     "name": "Lass",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 76,
+     "name": "Pokemon Breeder",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 77,
+     "name": "Pokemon Trader",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 78,
+     "name": "Scoop Up",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 79,
+     "name": "Super Energy Removal",
+     "type": "trainer",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 80,
+     "name": "Defender",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 81,
+     "name": "Energy Retrieval",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 82,
+     "name": "Full Heal",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 83,
+     "name": "Maintenance",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 84,
+     "name": "PlusPower",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 85,
+     "name": "Pokemon Center",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 86,
+     "name": "Pokemon Flute",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 87,
+     "name": "Pokedex",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 88,
+     "name": "Professor Oak",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 89,
+     "name": "Revive",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 90,
+     "name": "Super Potion",
+     "type": "trainer",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 91,
+     "name": "Bill",
+     "type": "trainer",
+     "rarity": "common",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 92,
+     "name": "Energy Removal",
+     "type": "trainer",
+     "rarity": "common",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 93,
+     "name": "Gust of Wind",
+     "type": "trainer",
+     "rarity": "common",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 94,
+     "name": "Potion",
+     "type": "trainer",
+     "rarity": "common",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 95,
+     "name": "Switch",
+     "type": "trainer",
+     "rarity": "common",
+     "hp": null,
+     "kind": "trainer"
+    },
+    {
+     "num": 96,
+     "name": "Double Colorless Energy",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "energy"
+    },
+    {
+     "num": 97,
+     "name": "Fighting Energy",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "energy"
+    },
+    {
+     "num": 98,
+     "name": "Fire Energy",
+     "type": "fire",
+     "rarity": "common",
+     "hp": null,
+     "kind": "energy"
+    },
+    {
+     "num": 99,
+     "name": "Grass Energy",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "energy"
+    },
+    {
+     "num": 100,
+     "name": "Lightning Energy",
+     "type": "lightning",
+     "rarity": "common",
+     "hp": null,
+     "kind": "energy"
+    },
+    {
+     "num": 101,
+     "name": "Psychic Energy",
+     "type": "psychic",
+     "rarity": "common",
+     "hp": null,
+     "kind": "energy"
+    },
+    {
+     "num": 102,
+     "name": "Water Energy",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "energy"
+    }
+   ]
+  },
+  {
+   "key": "151",
+   "name": "Pokemon 151",
+   "year": 2023,
+   "size": 151,
+   "officialArt": "https://images.pokemontcg.io/sv3pt5/{num}.png",
+   "cards": [
+    {
+     "num": 1,
+     "name": "Bulbasaur",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 1
+    },
+    {
+     "num": 2,
+     "name": "Ivysaur",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 2
+    },
+    {
+     "num": 3,
+     "name": "Venusaur",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 3
+    },
+    {
+     "num": 4,
+     "name": "Charmander",
+     "type": "fire",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 4
+    },
+    {
+     "num": 5,
+     "name": "Charmeleon",
+     "type": "fire",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 5
+    },
+    {
+     "num": 6,
+     "name": "Charizard",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 6
+    },
+    {
+     "num": 7,
+     "name": "Squirtle",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 7
+    },
+    {
+     "num": 8,
+     "name": "Wartortle",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 8
+    },
+    {
+     "num": 9,
+     "name": "Blastoise",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 9
+    },
+    {
+     "num": 10,
+     "name": "Caterpie",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 10
+    },
+    {
+     "num": 11,
+     "name": "Metapod",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 11
+    },
+    {
+     "num": 12,
+     "name": "Butterfree",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 12
+    },
+    {
+     "num": 13,
+     "name": "Weedle",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 13
+    },
+    {
+     "num": 14,
+     "name": "Kakuna",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 14
+    },
+    {
+     "num": 15,
+     "name": "Beedrill",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 15
+    },
+    {
+     "num": 16,
+     "name": "Pidgey",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 16
+    },
+    {
+     "num": 17,
+     "name": "Pidgeotto",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 17
+    },
+    {
+     "num": 18,
+     "name": "Pidgeot",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 18
+    },
+    {
+     "num": 19,
+     "name": "Rattata",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 19
+    },
+    {
+     "num": 20,
+     "name": "Raticate",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 20
+    },
+    {
+     "num": 21,
+     "name": "Spearow",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 21
+    },
+    {
+     "num": 22,
+     "name": "Fearow",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 22
+    },
+    {
+     "num": 23,
+     "name": "Ekans",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 23
+    },
+    {
+     "num": 24,
+     "name": "Arbok",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 24
+    },
+    {
+     "num": 25,
+     "name": "Pikachu",
+     "type": "lightning",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 25
+    },
+    {
+     "num": 26,
+     "name": "Raichu",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 26
+    },
+    {
+     "num": 27,
+     "name": "Sandshrew",
+     "type": "fighting",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 27
+    },
+    {
+     "num": 28,
+     "name": "Sandslash",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 28
+    },
+    {
+     "num": 29,
+     "name": "Nidoran F",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 29
+    },
+    {
+     "num": 30,
+     "name": "Nidorina",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 30
+    },
+    {
+     "num": 31,
+     "name": "Nidoqueen",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 31
+    },
+    {
+     "num": 32,
+     "name": "Nidoran M",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 32
+    },
+    {
+     "num": 33,
+     "name": "Nidorino",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 33
+    },
+    {
+     "num": 34,
+     "name": "Nidoking",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 34
+    },
+    {
+     "num": 35,
+     "name": "Clefairy",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 35
+    },
+    {
+     "num": 36,
+     "name": "Clefable",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 36
+    },
+    {
+     "num": 37,
+     "name": "Vulpix",
+     "type": "fire",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 37
+    },
+    {
+     "num": 38,
+     "name": "Ninetales",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 38
+    },
+    {
+     "num": 39,
+     "name": "Jigglypuff",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 39
+    },
+    {
+     "num": 40,
+     "name": "Wigglytuff",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 40
+    },
+    {
+     "num": 41,
+     "name": "Zubat",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 41
+    },
+    {
+     "num": 42,
+     "name": "Golbat",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 42
+    },
+    {
+     "num": 43,
+     "name": "Oddish",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 43
+    },
+    {
+     "num": 44,
+     "name": "Gloom",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 44
+    },
+    {
+     "num": 45,
+     "name": "Vileplume",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 45
+    },
+    {
+     "num": 46,
+     "name": "Paras",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 46
+    },
+    {
+     "num": 47,
+     "name": "Parasect",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 47
+    },
+    {
+     "num": 48,
+     "name": "Venonat",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 48
+    },
+    {
+     "num": 49,
+     "name": "Venomoth",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 49
+    },
+    {
+     "num": 50,
+     "name": "Diglett",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 50
+    },
+    {
+     "num": 51,
+     "name": "Dugtrio",
+     "type": "fighting",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 51
+    },
+    {
+     "num": 52,
+     "name": "Meowth",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 52
+    },
+    {
+     "num": 53,
+     "name": "Persian",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 53
+    },
+    {
+     "num": 54,
+     "name": "Psyduck",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 54
+    },
+    {
+     "num": 55,
+     "name": "Golduck",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 55
+    },
+    {
+     "num": 56,
+     "name": "Mankey",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 56
+    },
+    {
+     "num": 57,
+     "name": "Primeape",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 57
+    },
+    {
+     "num": 58,
+     "name": "Growlithe",
+     "type": "fire",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 58
+    },
+    {
+     "num": 59,
+     "name": "Arcanine",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 59
+    },
+    {
+     "num": 60,
+     "name": "Poliwag",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 60
+    },
+    {
+     "num": 61,
+     "name": "Poliwhirl",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 61
+    },
+    {
+     "num": 62,
+     "name": "Poliwrath",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 62
+    },
+    {
+     "num": 63,
+     "name": "Abra",
+     "type": "psychic",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 63
+    },
+    {
+     "num": 64,
+     "name": "Kadabra",
+     "type": "psychic",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 64
+    },
+    {
+     "num": 65,
+     "name": "Alakazam",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 65
+    },
+    {
+     "num": 66,
+     "name": "Machop",
+     "type": "fighting",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 66
+    },
+    {
+     "num": 67,
+     "name": "Machoke",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 67
+    },
+    {
+     "num": 68,
+     "name": "Machamp",
+     "type": "fighting",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 68
+    },
+    {
+     "num": 69,
+     "name": "Bellsprout",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 69
+    },
+    {
+     "num": 70,
+     "name": "Weepinbell",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 70
+    },
+    {
+     "num": 71,
+     "name": "Victreebel",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 71
+    },
+    {
+     "num": 72,
+     "name": "Tentacool",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 72
+    },
+    {
+     "num": 73,
+     "name": "Tentacruel",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 73
+    },
+    {
+     "num": 74,
+     "name": "Geodude",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 74
+    },
+    {
+     "num": 75,
+     "name": "Graveler",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 75
+    },
+    {
+     "num": 76,
+     "name": "Golem",
+     "type": "fighting",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 76
+    },
+    {
+     "num": 77,
+     "name": "Ponyta",
+     "type": "fire",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 77
+    },
+    {
+     "num": 78,
+     "name": "Rapidash",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 78
+    },
+    {
+     "num": 79,
+     "name": "Slowpoke",
+     "type": "psychic",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 79
+    },
+    {
+     "num": 80,
+     "name": "Slowbro",
+     "type": "psychic",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 80
+    },
+    {
+     "num": 81,
+     "name": "Magnemite",
+     "type": "lightning",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 81
+    },
+    {
+     "num": 82,
+     "name": "Magneton",
+     "type": "lightning",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 82
+    },
+    {
+     "num": 83,
+     "name": "Farfetch'd",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 83
+    },
+    {
+     "num": 84,
+     "name": "Doduo",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 84
+    },
+    {
+     "num": 85,
+     "name": "Dodrio",
+     "type": "colorless",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 85
+    },
+    {
+     "num": 86,
+     "name": "Seel",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 86
+    },
+    {
+     "num": 87,
+     "name": "Dewgong",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 87
+    },
+    {
+     "num": 88,
+     "name": "Grimer",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 88
+    },
+    {
+     "num": 89,
+     "name": "Muk",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 89
+    },
+    {
+     "num": 90,
+     "name": "Shellder",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 90
+    },
+    {
+     "num": 91,
+     "name": "Cloyster",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 91
+    },
+    {
+     "num": 92,
+     "name": "Gastly",
+     "type": "psychic",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 92
+    },
+    {
+     "num": 93,
+     "name": "Haunter",
+     "type": "psychic",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 93
+    },
+    {
+     "num": 94,
+     "name": "Gengar",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 94
+    },
+    {
+     "num": 95,
+     "name": "Onix",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 95
+    },
+    {
+     "num": 96,
+     "name": "Drowzee",
+     "type": "psychic",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 96
+    },
+    {
+     "num": 97,
+     "name": "Hypno",
+     "type": "psychic",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 97
+    },
+    {
+     "num": 98,
+     "name": "Krabby",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 98
+    },
+    {
+     "num": 99,
+     "name": "Kingler",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 99
+    },
+    {
+     "num": 100,
+     "name": "Voltorb",
+     "type": "lightning",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 100
+    },
+    {
+     "num": 101,
+     "name": "Electrode",
+     "type": "lightning",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 101
+    },
+    {
+     "num": 102,
+     "name": "Exeggcute",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 102
+    },
+    {
+     "num": 103,
+     "name": "Exeggutor",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 103
+    },
+    {
+     "num": 104,
+     "name": "Cubone",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 104
+    },
+    {
+     "num": 105,
+     "name": "Marowak",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 105
+    },
+    {
+     "num": 106,
+     "name": "Hitmonlee",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 106
+    },
+    {
+     "num": 107,
+     "name": "Hitmonchan",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 107
+    },
+    {
+     "num": 108,
+     "name": "Lickitung",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 108
+    },
+    {
+     "num": 109,
+     "name": "Koffing",
+     "type": "grass",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 109
+    },
+    {
+     "num": 110,
+     "name": "Weezing",
+     "type": "grass",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 110
+    },
+    {
+     "num": 111,
+     "name": "Rhyhorn",
+     "type": "fighting",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 111
+    },
+    {
+     "num": 112,
+     "name": "Rhydon",
+     "type": "fighting",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 112
+    },
+    {
+     "num": 113,
+     "name": "Chansey",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 113
+    },
+    {
+     "num": 114,
+     "name": "Tangela",
+     "type": "grass",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 114
+    },
+    {
+     "num": 115,
+     "name": "Kangaskhan",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 115
+    },
+    {
+     "num": 116,
+     "name": "Horsea",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 116
+    },
+    {
+     "num": 117,
+     "name": "Seadra",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 117
+    },
+    {
+     "num": 118,
+     "name": "Goldeen",
+     "type": "water",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 118
+    },
+    {
+     "num": 119,
+     "name": "Seaking",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 119
+    },
+    {
+     "num": 120,
+     "name": "Staryu",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 120
+    },
+    {
+     "num": 121,
+     "name": "Starmie",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 121
+    },
+    {
+     "num": 122,
+     "name": "Mr. Mime",
+     "type": "psychic",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 122
+    },
+    {
+     "num": 123,
+     "name": "Scyther",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 123
+    },
+    {
+     "num": 124,
+     "name": "Jynx",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 124
+    },
+    {
+     "num": 125,
+     "name": "Electabuzz",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 125
+    },
+    {
+     "num": 126,
+     "name": "Magmar",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 126
+    },
+    {
+     "num": 127,
+     "name": "Pinsir",
+     "type": "grass",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 127
+    },
+    {
+     "num": 128,
+     "name": "Tauros",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 128
+    },
+    {
+     "num": 129,
+     "name": "Magikarp",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 129
+    },
+    {
+     "num": 130,
+     "name": "Gyarados",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 130
+    },
+    {
+     "num": 131,
+     "name": "Lapras",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 131
+    },
+    {
+     "num": 132,
+     "name": "Ditto",
+     "type": "colorless",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 132
+    },
+    {
+     "num": 133,
+     "name": "Eevee",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 133
+    },
+    {
+     "num": 134,
+     "name": "Vaporeon",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 134
+    },
+    {
+     "num": 135,
+     "name": "Jolteon",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 135
+    },
+    {
+     "num": 136,
+     "name": "Flareon",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 136
+    },
+    {
+     "num": 137,
+     "name": "Porygon",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 137
+    },
+    {
+     "num": 138,
+     "name": "Omanyte",
+     "type": "water",
+     "rarity": "uncommon",
+     "hp": null,
+     "kind": "creature",
+     "dex": 138
+    },
+    {
+     "num": 139,
+     "name": "Omastar",
+     "type": "water",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 139
+    },
+    {
+     "num": 140,
+     "name": "Kabuto",
+     "type": "fighting",
+     "rarity": "common",
+     "hp": null,
+     "kind": "creature",
+     "dex": 140
+    },
+    {
+     "num": 141,
+     "name": "Kabutops",
+     "type": "fighting",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 141
+    },
+    {
+     "num": 142,
+     "name": "Aerodactyl",
+     "type": "fighting",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 142
+    },
+    {
+     "num": 143,
+     "name": "Snorlax",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 143
+    },
+    {
+     "num": 144,
+     "name": "Articuno",
+     "type": "water",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 144
+    },
+    {
+     "num": 145,
+     "name": "Zapdos",
+     "type": "lightning",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 145
+    },
+    {
+     "num": 146,
+     "name": "Moltres",
+     "type": "fire",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 146
+    },
+    {
+     "num": 147,
+     "name": "Dratini",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 147
+    },
+    {
+     "num": 148,
+     "name": "Dragonair",
+     "type": "colorless",
+     "rarity": "rare",
+     "hp": null,
+     "kind": "creature",
+     "dex": 148
+    },
+    {
+     "num": 149,
+     "name": "Dragonite",
+     "type": "colorless",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 149
+    },
+    {
+     "num": 150,
+     "name": "Mewtwo",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 150
+    },
+    {
+     "num": 151,
+     "name": "Mew",
+     "type": "psychic",
+     "rarity": "holo",
+     "hp": null,
+     "kind": "creature",
+     "dex": 151
+    }
+   ]
+  }
+ ]
+}
