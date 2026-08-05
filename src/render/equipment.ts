@@ -93,12 +93,39 @@ export function drawFootballHelmet(
   const dark = shade(shell, -0.16);
   const light = shade(shell, 0.12);
 
-  // --- Shell: crown + jaw flare in one silhouette ---
+  // --- Shell: ONE closed silhouette a football fan would recognize —
+  // rounded crown, brow ledge over the face opening, jaw guard sweeping to
+  // the chin, back edge cut in toward the neck. Not stacked ellipses.
+  const D = dir;
   const shellPath = () => {
     ctx.beginPath();
-    ctx.ellipse(cx - dir * r * 0.06, cy - r * 0.1, r * 1.18, r * 1.12, dir * 0.08, 0, Math.PI * 2);
-    // Jaw guard sweeping down toward the chin on the facing side.
-    ctx.ellipse(cx - dir * r * 0.12, cy + r * 0.52, r * 0.72, r * 0.62, dir * 0.2, 0, Math.PI * 2);
+    // Back-bottom, behind the ear — kept high so the shell doesn't grow a
+    // pointed tail off the back of the neck.
+    ctx.moveTo(cx - D * r * 0.92, cy + r * 0.38);
+    // Up the back of the shell and over the crown.
+    ctx.bezierCurveTo(
+      cx - D * r * 1.28, cy - r * 0.28,
+      cx - D * r * 0.85, cy - r * 1.25,
+      cx + D * r * 0.1, cy - r * 1.18,
+    );
+    // Down the forehead to the brow ledge.
+    ctx.bezierCurveTo(
+      cx + D * r * 0.75, cy - r * 1.1,
+      cx + D * r * 1.12, cy - r * 0.6,
+      cx + D * r * 1.1, cy - r * 0.18,
+    );
+    // Face opening: the front edge steps IN — this notch is what makes it
+    // read as a helmet instead of a ball.
+    ctx.quadraticCurveTo(cx + D * r * 0.98, cy - r * 0.02, cx + D * r * 0.92, cy + r * 0.24);
+    // Jaw guard out and down to the chin.
+    ctx.bezierCurveTo(
+      cx + D * r * 0.88, cy + r * 0.66,
+      cx + D * r * 0.52, cy + r * 0.94,
+      cx + D * r * 0.05, cy + r * 0.96,
+    );
+    // Bottom edge back toward the neck.
+    ctx.quadraticCurveTo(cx - D * r * 0.62, cy + r * 0.88, cx - D * r * 0.92, cy + r * 0.38);
+    ctx.closePath();
   };
   shellPath();
   ctx.fillStyle = shell;
@@ -146,9 +173,9 @@ export function drawFootballHelmet(
   ctx.restore();
 
   // --- Face (or visor) in the opening ---
-  const faceCx = cx + dir * r * 0.52, faceCy = cy + r * 0.22;
+  const faceCx = cx + dir * r * 0.56, faceCy = cy + r * 0.2;
   ctx.beginPath();
-  ctx.ellipse(faceCx, faceCy, r * 0.62, r * 0.68, dir * 0.12, 0, Math.PI * 2);
+  ctx.ellipse(faceCx, faceCy, r * 0.55, r * 0.6, dir * 0.12, 0, Math.PI * 2);
   ctx.fillStyle = shade(skin, 0.04);
   ctx.fill();
   if (visor) {
@@ -199,58 +226,66 @@ export function drawFootballHelmet(
     ctx.ellipse(cx + dir * r * 0.5, cy - r * 0.22, r * 0.58, r * 0.2, dir * 0.12, 0, Math.PI * 2);
     ctx.fillStyle = withAlpha('#2a1a10', 0.22);
     ctx.fill();
-    drawFace(ctx, faceCx, faceCy - r * 0.08, r * 0.62, dir, skin, { eyeBlack: true });
+    drawFace(ctx, faceCx, faceCy - r * 0.06, r * 0.55, dir, skin, { eyeBlack: true });
   }
 
-  // --- Chinstrap: cups the jaw, anchors at the earhole ---
-  ctx.strokeStyle = '#e6e3da';
-  ctx.lineWidth = r * 0.1;
+  // Jaw-guard seam: a shadow line where the chin bar meets the shell (the
+  // white strap is gone — the integrated jaw guard covers the chin now).
+  ctx.strokeStyle = withAlpha('#000010', 0.3);
+  ctx.lineWidth = r * 0.05;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(cx - dir * r * 0.4, cy + r * 0.38);
+  ctx.moveTo(cx - dir * r * 0.35, cy + r * 0.62);
   ctx.quadraticCurveTo(
-    cx + dir * r * 0.42, cy + r * 1.1,
-    cx + dir * r * 0.94, cy + r * 0.6,
+    cx + dir * r * 0.3, cy + r * 0.82,
+    cx + dir * r * 0.8, cy + r * 0.55,
   );
   ctx.stroke();
 
-  // --- Facemask: metallic cage in front of everything ---
-  const maskFront = cx + dir * r * 1.14;
-  const maskBack = cx + dir * r * 0.04;
+  // --- Facemask: metallic cage that visibly JUTS FORWARD of the brow, the
+  // single most recognizable trait of the silhouette.
+  const maskFront = cx + dir * r * 1.34;
+  const maskBack = cx + dir * r * 0.3;
   const barGrad = ctx.createLinearGradient(cx, cy, cx, cy + r);
   barGrad.addColorStop(0, '#e8ecf2');
   barGrad.addColorStop(0.5, '#aeb6c2');
   barGrad.addColorStop(1, '#7e8694');
   ctx.strokeStyle = barGrad;
-  ctx.lineWidth = r * 0.08;
+  ctx.lineWidth = r * 0.085;
   ctx.lineJoin = 'round';
-  for (const [yOff, bow] of [[0.22, 0.05], [0.52, 0.07], [0.82, 0.08]] as const) {
+  ctx.lineCap = 'round';
+  // Top bar anchors at the brow ledge and runs out past the face.
+  ctx.beginPath();
+  ctx.moveTo(cx + dir * r * 0.95, cy - r * 0.12);
+  ctx.lineTo(maskFront, cy - r * 0.06);
+  ctx.stroke();
+  for (const [yOff, bow] of [[0.24, 0.05], [0.52, 0.07], [0.8, 0.08]] as const) {
     ctx.beginPath();
-    ctx.moveTo(maskFront, cy + r * (yOff - 0.08));
+    ctx.moveTo(maskFront - dir * r * 0.02, cy + r * (yOff - 0.1));
     ctx.quadraticCurveTo(
       (maskFront + maskBack) / 2, cy + r * (yOff + bow),
-      maskBack, cy + r * (yOff + 0.06),
+      maskBack, cy + r * (yOff + 0.04),
     );
     ctx.stroke();
   }
-  // Verticals: nose bridge + cheek bar.
-  for (const fx of [1.1, 0.62] as const) {
+  // Verticals: front cage bar + cheek bar tying into the jaw guard.
+  for (const [x0, x1] of [[1.32, 1.22], [0.86, 0.78]] as const) {
     ctx.beginPath();
-    ctx.moveTo(cx + dir * r * fx, cy + r * 0.1);
-    ctx.lineTo(cx + dir * r * (fx - 0.08), cy + r * 0.88);
+    ctx.moveTo(cx + dir * r * x0, cy - r * 0.08);
+    ctx.lineTo(cx + dir * r * x1, cy + r * 0.84);
     ctx.stroke();
   }
   // Mask highlight so the cage reads metallic.
   ctx.strokeStyle = withAlpha('#ffffff', 0.6);
-  ctx.lineWidth = r * 0.028;
+  ctx.lineWidth = r * 0.03;
   ctx.beginPath();
-  ctx.moveTo(maskFront, cy + r * 0.18);
-  ctx.quadraticCurveTo((maskFront + maskBack) / 2, cy + r * 0.26, maskBack, cy + r * 0.24);
+  ctx.moveTo(maskFront, cy + r * 0.16);
+  ctx.quadraticCurveTo((maskFront + maskBack) / 2, cy + r * 0.24, maskBack, cy + r * 0.22);
   ctx.stroke();
 
   // --- Earhole with a rim ---
   ctx.beginPath();
-  ctx.arc(cx - dir * r * 0.44, cy + r * 0.14, r * 0.15, 0, Math.PI * 2);
+  ctx.arc(cx - dir * r * 0.32, cy + r * 0.24, r * 0.14, 0, Math.PI * 2);
   ctx.fillStyle = dark;
   ctx.fill();
   ctx.strokeStyle = withAlpha('#000010', 0.45);
@@ -260,7 +295,7 @@ export function drawFootballHelmet(
   // Shell specular pop.
   ctx.beginPath();
   ctx.ellipse(
-    cx + dir * r * 0.2, cy - r * 0.72, r * 0.4, r * 0.14, dir * 0.5, 0, Math.PI * 2,
+    cx + dir * r * 0.16, cy - r * 0.78, r * 0.42, r * 0.15, dir * 0.42, 0, Math.PI * 2,
   );
   ctx.fillStyle = withAlpha('#ffffff', 0.35);
   ctx.fill();

@@ -619,15 +619,22 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
       ctx.fillText(serialText, rightEdge, barY + barH * 0.52);
       textLimit = rightEdge - ctx.measureText(serialText).width - w * 0.025;
     }
-    // Player + team fill whatever space the serial left behind.
+    // Player + team fill whatever space the serial left behind. The name
+    // shrinks to fit — it must never squish or run under the serial.
     ctx.textAlign = 'left';
     const nameX = pillX + pillW + w * 0.03;
     const avail = Math.max(w * 0.1, textLimit - nameX);
-    ctx.font = `900 ${barH * 0.44}px "Arial Narrow", Arial, sans-serif`;
-    ctx.fillStyle = '#f6f4ee';
     const dtName = `${player.first.toUpperCase()} ${player.last.toUpperCase()}`;
-    const nameW = Math.min(ctx.measureText(dtName).width, avail * 0.72);
-    ctx.fillText(dtName, nameX, barY + barH * 0.52, avail * 0.72);
+    let dtPx = barH * 0.44;
+    ctx.font = `900 ${dtPx}px "Arial Narrow", Arial, sans-serif`;
+    const dtMeasured = ctx.measureText(dtName).width;
+    if (dtMeasured > avail * 0.72) {
+      dtPx = Math.max(9, dtPx * ((avail * 0.72) / dtMeasured));
+      ctx.font = `900 ${dtPx}px "Arial Narrow", Arial, sans-serif`;
+    }
+    ctx.fillStyle = '#f6f4ee';
+    const nameW = ctx.measureText(dtName).width;
+    ctx.fillText(dtName, nameX, barY + barH * 0.52);
     ctx.font = `700 ${barH * 0.28}px Arial, sans-serif`;
     ctx.fillStyle = withAlpha('#f6f4ee', 0.8);
     ctx.fillText(
@@ -682,39 +689,50 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     case 'outline':
       break; // text-only treatments
   }
-  // Name text
-  ctx.font = `${dna.displayFont.includes('italic') ? 'italic ' : ''}900 ${displayPx}px ${famMatch[0]}`;
+  // Name text. The badge occupies the right edge on left-aligned plates, so
+  // the name must never reach it — fit by SHRINKING the font, not by letting
+  // canvas maxWidth squish the glyphs sideways.
   ctx.textBaseline = 'middle';
   const centered = dna.nameplate === 'chip' || dna.nameplate === 'stacked';
   ctx.textAlign = centered ? 'center' : 'left';
   const nameX = centered ? w / 2 : w * 0.05;
+  const nameAvail = centered ? w * 0.62 : w * 0.76;
+  const italic = dna.displayFont.includes('italic') ? 'italic ' : '';
+  let fitPx = displayPx;
+  ctx.font = `${italic}900 ${fitPx}px ${famMatch[0]}`;
+  const measured = ctx.measureText(nameText).width;
+  if (measured > nameAvail) {
+    fitPx = Math.max(11, Math.floor(displayPx * (nameAvail / measured)));
+    ctx.font = `${italic}900 ${fitPx}px ${famMatch[0]}`;
+  }
   if (dna.nameplate === 'outline') {
-    ctx.lineWidth = Math.max(1.5, displayPx * 0.06);
+    ctx.lineWidth = Math.max(1.5, fitPx * 0.06);
     ctx.strokeStyle = ink;
-    ctx.strokeText(nameText, nameX, npY + npH * 0.42, w * 0.9);
+    ctx.strokeText(nameText, nameX, npY + npH * 0.42);
     ctx.fillStyle = withAlpha(ink, 0.15);
-    ctx.fillText(nameText, nameX, npY + npH * 0.42, w * 0.9);
+    ctx.fillText(nameText, nameX, npY + npH * 0.42);
   } else {
     ctx.fillStyle = '#f4f2ec';
-    ctx.fillText(nameText, nameX, npY + npH * 0.42, w * 0.9);
+    ctx.fillText(nameText, nameX, npY + npH * 0.42);
   }
   // Position • Team line
   ctx.font = `600 ${labelPx}px ${famLabel[0]}`;
   ctx.fillStyle = withAlpha('#f4f2ec', 0.75);
   ctx.fillText(
     `${player.position}  •  ${team.city.toUpperCase()} ${team.nickname.toUpperCase()}`,
-    nameX, npY + npH * 0.82, w * 0.9,
+    nameX, npY + npH * 0.82, nameAvail,
   );
   ctx.restore();
 
-  // Nameplate foil text accent
+  // Nameplate foil text accent — same fitted size as the ink pass, or the
+  // foil ghost misaligns with the printed name.
   fctx.save();
   const famF = famMatch[0];
-  fctx.font = `${dna.displayFont.includes('italic') ? 'italic ' : ''}900 ${displayPx}px ${famF}`;
+  fctx.font = `${italic}900 ${fitPx}px ${famF}`;
   fctx.textBaseline = 'middle';
   fctx.textAlign = centered ? 'center' : 'left';
   fctx.fillStyle = `rgba(255,255,255,${0.5 * dna.foilOnFrame})`;
-  fctx.fillText(nameText, nameX, npY + npH * 0.42, w * 0.9);
+  fctx.fillText(nameText, nameX, npY + npH * 0.42);
   fctx.restore();
   }
 

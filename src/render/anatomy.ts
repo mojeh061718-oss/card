@@ -214,9 +214,10 @@ export function torsoPath(
   const openness = Math.min(1, spread / (unit * 0.13));
   const breadth = 0.8 + 0.2 * openness;
 
-  const shoulderHalf = unit * 0.118 * breadth;
-  const waistHalf = unit * 0.086 * breadth;
-  const hipHalf = unit * 0.098 * breadth;
+  // Football-built, not track-built: broad through the shoulders and hips.
+  const shoulderHalf = unit * 0.136 * breadth;
+  const waistHalf = unit * 0.1 * breadth;
+  const hipHalf = unit * 0.114 * breadth;
 
   const at = (along: number, side: number, half: number): Pt => ({
     x: shoulderMid.x + sx * along + px * side * half,
@@ -274,6 +275,40 @@ export function torsoPath(
   ctx.closePath();
 }
 
+/**
+ * Deltoid cap — a rounded muscle mass drawn over the arm-torso seam AFTER
+ * the upper arm, so the arm reads as growing out of the shoulder instead of
+ * pinned onto it. Lit with the same cylinder gradient as the limbs.
+ */
+export function deltoidCap(
+  ctx: CanvasRenderingContext2D,
+  shoulder: Pt, elbow: Pt, unit: number, color: string, light: Light,
+): void {
+  const dx = elbow.x - shoulder.x, dy = elbow.y - shoulder.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  // Sits slightly up-arm from the joint, elongated along the arm.
+  const cxp = shoulder.x + ux * unit * 0.02;
+  const cyp = shoulder.y + uy * unit * 0.02;
+  const rx = unit * 0.052, ry = unit * 0.042;
+  let nx = -uy, ny = ux;
+  if (nx * light.x + ny * light.y < 0) { nx = -nx; ny = -ny; }
+  const g = ctx.createLinearGradient(
+    cxp + nx * ry, cyp + ny * ry, cxp - nx * ry, cyp - ny * ry,
+  );
+  g.addColorStop(0, shade(color, 0.12));
+  g.addColorStop(0.5, color);
+  g.addColorStop(1, shade(color, -0.16));
+  ctx.save();
+  ctx.translate(cxp, cyp);
+  ctx.rotate(Math.atan2(uy, ux));
+  ctx.beginPath();
+  ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+}
+
 /** Shoulder pad cap — the shelf that gives football figures their silhouette. */
 export function shoulderPad(
   ctx: CanvasRenderingContext2D,
@@ -285,7 +320,7 @@ export function shoulderPad(
   ctx.save();
   ctx.translate(shoulder.x + ux * unit * 0.012, shoulder.y + uy * unit * 0.012);
   ctx.rotate(Math.atan2(uy, ux));
-  const rx = unit * 0.042 * outward, ry = unit * 0.032;
+  const rx = unit * 0.052 * outward, ry = unit * 0.04;
   const g = ctx.createLinearGradient(0, -ry, 0, ry);
   g.addColorStop(0, shade(color, 0.12));
   g.addColorStop(0.55, color);

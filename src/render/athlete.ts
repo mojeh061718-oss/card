@@ -24,7 +24,7 @@ import {
   drawCleat, drawKneePad, drawBand, drawFace,
 } from './equipment';
 import {
-  volume, torsoPath, shoulderPad, neckColumn, jointShadow,
+  volume, torsoPath, shoulderPad, neckColumn, jointShadow, deltoidCap,
   SPINDLE, TAPER_IN, BELLY, FLAT as FLATW, type Light,
 } from './anatomy';
 
@@ -75,8 +75,8 @@ export const POSES: PoseSpec[] = [
     // ribs, free arm flung out horizontally for balance.
     id: 'rb-cut', sport: 'football', motion: { x: -0.95, y: -0.05 },
     head: { x: 0.395, y: 0.195 }, neck: { x: 0.435, y: 0.275 }, pelvis: { x: 0.525, y: 0.545 },
-    shoulderNear: { x: 0.525, y: 0.315 }, elbowNear: { x: 0.495, y: 0.44 }, wristNear: { x: 0.395, y: 0.415 },
-    shoulderFar: { x: 0.405, y: 0.32 }, elbowFar: { x: 0.545, y: 0.35 }, wristFar: { x: 0.685, y: 0.315 },
+    shoulderNear: { x: 0.525, y: 0.315 }, elbowNear: { x: 0.495, y: 0.44 }, wristNear: { x: 0.40, y: 0.418 },
+    shoulderFar: { x: 0.405, y: 0.32 }, elbowFar: { x: 0.555, y: 0.37 }, wristFar: { x: 0.675, y: 0.44 },
     hipNear: { x: 0.552, y: 0.545 }, kneeNear: { x: 0.665, y: 0.675 }, ankleNear: { x: 0.735, y: 0.835 }, toeNear: { x: 0.795, y: 0.86 },
     hipFar: { x: 0.495, y: 0.55 }, kneeFar: { x: 0.355, y: 0.585 }, ankleFar: { x: 0.30, y: 0.705 }, toeFar: { x: 0.235, y: 0.735 },
     prop: { kind: 'football', at: { x: 0.405, y: 0.40 }, angle: 1.15 },
@@ -110,7 +110,7 @@ export const POSES: PoseSpec[] = [
     id: 'stiff-arm', sport: 'football', motion: { x: -0.9, y: 0 },
     head: { x: 0.465, y: 0.17 }, neck: { x: 0.485, y: 0.25 }, pelvis: { x: 0.52, y: 0.52 },
     shoulderNear: { x: 0.575, y: 0.30 }, elbowNear: { x: 0.625, y: 0.405 }, wristNear: { x: 0.525, y: 0.44 },
-    shoulderFar: { x: 0.42, y: 0.30 }, elbowFar: { x: 0.30, y: 0.335 }, wristFar: { x: 0.19, y: 0.375 },
+    shoulderFar: { x: 0.42, y: 0.30 }, elbowFar: { x: 0.315, y: 0.375 }, wristFar: { x: 0.215, y: 0.45 },
     hipNear: { x: 0.552, y: 0.52 }, kneeNear: { x: 0.445, y: 0.635 }, ankleNear: { x: 0.40, y: 0.795 }, toeNear: { x: 0.33, y: 0.835 },
     hipFar: { x: 0.488, y: 0.52 }, kneeFar: { x: 0.60, y: 0.645 }, ankleFar: { x: 0.70, y: 0.765 }, toeFar: { x: 0.775, y: 0.815 },
     prop: { kind: 'football', at: { x: 0.505, y: 0.43 }, angle: 1.0 },
@@ -232,20 +232,29 @@ export function drawAthlete(
   const jx = (rng.float() - 0.5) * 0.01, jy = (rng.float() - 0.5) * 0.01;
   const S = (p: Pt): Pt => ({ x: x + (p.x + jx) * w, y: y + (p.y + jy) * h });
   const P = {
-    head: S(pose.head), neck: S(pose.neck), pelvis: S(pose.pelvis),
+    // Head pulled 20% toward the neck: athletes in pads have almost no
+    // visible neck — the helmet sits ON the collar.
+    head: S({
+      x: pose.head.x + (pose.neck.x - pose.head.x) * 0.2,
+      y: pose.head.y + (pose.neck.y - pose.head.y) * 0.2,
+    }),
+    neck: S(pose.neck), pelvis: S(pose.pelvis),
     sN: S(pose.shoulderNear), eN: S(pose.elbowNear), wN: S(pose.wristNear),
     sF: S(pose.shoulderFar), eF: S(pose.elbowFar), wF: S(pose.wristFar),
     hN: S(pose.hipNear), kN: S(pose.kneeNear), aN: S(pose.ankleNear), tN: S(pose.toeNear),
     hF: S(pose.hipFar), kF: S(pose.kneeFar), aF: S(pose.ankleFar), tF: S(pose.toeFar),
   };
   const u = Math.min(w, h);
-  const armW = 0.058 * u, foreW = 0.044 * u, legW = 0.085 * u, calfW = 0.06 * u;
+  // Football-player mass, not track-runner mass.
+  const bulk = style.sport === 'football' ? 1.0 : 0.88;
+  const armW = 0.075 * u * bulk, foreW = 0.058 * u * bulk;
+  const legW = 0.105 * u * bulk, calfW = 0.075 * u * bulk;
   const skinDark = shade(style.skin, -0.08);
   const jerseyDark = shade(style.jersey, -0.12);
   const pantsDark = shade(style.pants, -0.1);
-  // Far limbs recede with ATMOSPHERE (cooler, softer), not blackness — a
-  // pure darken turns dark jerseys into detached black shapes.
-  const far = (c: string) => mixHex(shade(c, -0.05), '#5a6a80', 0.22);
+  // Far limbs recede with a soft darken — strong tints read as a different
+  // material and make the limb look pasted on.
+  const far = (c: string) => mixHex(shade(c, -0.07), '#3c4452', 0.1);
 
   // One key light for the whole figure, opposite the motion vector.
   const mlen = Math.hypot(pose.motion.x, pose.motion.y) || 1;
@@ -280,15 +289,15 @@ export function drawAthlete(
   }
 
   // --- Neck, then torso silhouette ---
-  neckColumn(ctx, P.neck, { x: P.head.x, y: P.head.y + 0.035 * u }, u, skinDark, light);
+  neckColumn(ctx, P.neck, { x: P.head.x, y: P.head.y + 0.03 * u }, u, skinDark, light);
   if (style.sport === 'football') {
     // Padded collar riding up the neck — shortens the bare-skin column and
     // reads as the jersey meeting the helmet, the way pads actually sit.
     const collarMid = {
-      x: P.neck.x + (P.head.x - P.neck.x) * 0.3,
-      y: P.neck.y + (P.head.y - P.neck.y) * 0.3,
+      x: P.neck.x + (P.head.x - P.neck.x) * 0.42,
+      y: P.neck.y + (P.head.y - P.neck.y) * 0.42,
     };
-    volume(ctx, P.neck, collarMid, u * 0.075, TAPER_IN, shade(style.jersey, -0.06), 0, light);
+    volume(ctx, P.neck, collarMid, u * 0.088, TAPER_IN, shade(style.jersey, -0.06), 0, light);
   }
 
   torsoPath(ctx, P.neck, P.sN, P.sF, P.hN, P.hF, u);
@@ -423,10 +432,36 @@ export function drawAthlete(
   }
   ctx.restore();
 
-  // Shoulder pads sit over the jersey and define the football silhouette.
+  // Far shoulder pad sits over the jersey (the near one is drawn after the
+  // near arm so the pad caps the deltoid, welding arm and torso together).
   if (style.sport === 'football') {
     shoulderPad(ctx, P.sF, P.neck, u, far(shade(style.jersey, -0.08)), 1.05);
-    shoulderPad(ctx, P.sN, P.neck, u, shade(style.jersey, 0.05), 1.15);
+  }
+
+  // Pants yoke: the hips belong to the pants. One shape over both hip
+  // joints welds the legs into the body instead of pinning them on.
+  {
+    const hipDx = P.hN.x - P.hF.x, hipDy = P.hN.y - P.hF.y;
+    const hipLen = Math.hypot(hipDx, hipDy) || 1;
+    ctx.save();
+    ctx.translate(P.pelvis.x, P.pelvis.y + 0.012 * u);
+    ctx.rotate(Math.atan2(hipDy, hipDx));
+    const yokeRx = hipLen / 2 + legW * 0.6;
+    const yokeRy = 0.078 * u;
+    const yg = ctx.createLinearGradient(0, -yokeRy, 0, yokeRy);
+    yg.addColorStop(0, shade(style.pants, 0.08));
+    yg.addColorStop(0.6, style.pants);
+    yg.addColorStop(1, shade(style.pants, -0.14));
+    ctx.beginPath();
+    ctx.ellipse(0, 0, yokeRx, yokeRy, 0, 0, Math.PI * 2);
+    ctx.fillStyle = yg;
+    ctx.fill();
+    // Belt.
+    ctx.beginPath();
+    ctx.ellipse(0, -yokeRy * 0.62, yokeRx * 0.94, yokeRy * 0.3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = shade(style.trim, -0.2);
+    ctx.fill();
+    ctx.restore();
   }
 
   // --- NEAR leg ---
@@ -483,6 +518,16 @@ export function drawAthlete(
 
   // --- NEAR arm, over everything ---
   volume(ctx, P.sN, P.eN, armW * 1.06, TAPER_IN, style.jersey, 0.07, light);
+  // Deltoid grows the arm out of the torso; the pad then caps the seam.
+  // Skipped when the arm is raised — the deltoid folds INTO the shoulder
+  // there, and a cap would read as a pasted-on blob.
+  const armRaised = P.eN.y < P.sN.y - 0.015 * u;
+  if (!armRaised) {
+    deltoidCap(ctx, P.sN, P.eN, u * (style.sport === 'football' ? 1 : 0.82), shade(style.jersey, 0.03), light);
+  }
+  if (style.sport === 'football') {
+    shoulderPad(ctx, P.sN, P.neck, u, shade(style.jersey, 0.05), 1.2);
+  }
   // Sleeve cuff: a trim ring ACROSS the arm, not a blob on it.
   const armAngle = Math.atan2(P.eN.y - P.sN.y, P.eN.x - P.sN.x);
   drawBand(
