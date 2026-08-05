@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "teams": {
+    "baseball:0": {
+      "city": "Arizona",
+      "nickname": "Diamondbacks",
+      "abbrev": "ARI",
+      "primary": "#a71930",
+      "secondary": "#e3d4ad"
+    },
+    "baseball:1": {
+      "city": "Atlanta",
+      "nickname": "Braves",
+      "abbrev": "ATL",
+      "primary": "#ce1141",
+      "secondary": "#13274f"
+    },
+    "baseball:2": {
+      "city": "Baltimore",
+      "nickname": "Orioles",
+      "abbrev": "BAL",
+      "primary": "#df4601",
+      "secondary": "#000000"
+    },
+    "baseball:3": {
+      "city": "Boston",
+      "nickname": "Red Sox",
+      "abbrev": "BOS",
+      "primary": "#bd3039",
+      "secondary": "#0c2340"
+    },
+    "baseball:4": {
+      "city": "Chicago",
+      "nickname": "Cubs",
+      "abbrev": "CHC",
+      "primary": "#0e3386",
+      "secondary": "#cc3433"
+    },
+    "baseball:5": {
+      "city": "Chicago",
+      "nickname": "White Sox",
+      "abbrev": "CWS",
+      "primary": "#27251f",
+      "secondary": "#c4ced4"
+    },
+    "baseball:6": {
+      "city": "Cincinnati",
+      "nickname": "Reds",
+      "abbrev": "CIN",
+      "primary": "#c6011f",
+      "secondary": "#000000"
+    },
+    "baseball:7": {
+      "city": "Cleveland",
+      "nickname": "Guardians",
+      "abbrev": "CLE",
+      "primary": "#00385d",
+      "secondary": "#e50022"
+    },
+    "baseball:8": {
+      "city": "Colorado",
+      "nickname": "Rockies",
+      "abbrev": "COL",
+      "primary": "#33006f",
+      "secondary": "#c4ced4"
+    },
+    "baseball:9": {
+      "city": "Detroit",
+      "nickname": "Tigers",
+      "abbrev": "DET",
+      "primary": "#0c2340",
+      "secondary": "#fa4616"
+    },
+    "baseball:10": {
+      "city": "Houston",
+      "nickname": "Astros",
+      "abbrev": "HOU",
+      "primary": "#002d62",
+      "secondary": "#eb6e1f"
+    },
+    "baseball:11": {
+      "city": "Kansas City",
+      "nickname": "Royals",
+      "abbrev": "KC",
+      "primary": "#004687",
+      "secondary": "#bd9b60"
+    },
+    "baseball:12": {
+      "city": "Los Angeles",
+      "nickname": "Angels",
+      "abbrev": "LAA",
+      "primary": "#ba0021",
+      "secondary": "#003263"
+    },
+    "baseball:13": {
+      "city": "Los Angeles",
+      "nickname": "Dodgers",
+      "abbrev": "LAD",
+      "primary": "#005a9c",
+      "secondary": "#ef3e42"
+    },
+    "baseball:14": {
+      "city": "Miami",
+      "nickname": "Marlins",
+      "abbrev": "MIA",
+      "primary": "#00a3e0",
+      "secondary": "#ef3340"
+    },
+    "baseball:15": {
+      "city": "Milwaukee",
+      "nickname": "Brewers",
+      "abbrev": "MIL",
+      "primary": "#12284b",
+      "secondary": "#ffc52f"
+    },
+    "baseball:16": {
+      "city": "Minnesota",
+      "nickname": "Twins",
+      "abbrev": "MIN",
+      "primary": "#002b5c",
+      "secondary": "#d31145"
+    },
+    "baseball:17": {
+      "city": "New York",
+      "nickname": "Mets",
+      "abbrev": "NYM",
+      "primary": "#002d72",
+      "secondary": "#ff5910"
+    },
+    "baseball:18": {
+      "city": "New York",
+      "nickname": "Yankees",
+      "abbrev": "NYY",
+      "primary": "#0c2340",
+      "secondary": "#c4ced3"
+    },
+    "baseball:19": {
+      "city": "Oakland",
+      "nickname": "Athletics",
+      "abbrev": "OAK",
+      "primary": "#003831",
+      "secondary": "#efb21e"
+    },
+    "baseball:20": {
+      "city": "Philadelphia",
+      "nickname": "Phillies",
+      "abbrev": "PHI",
+      "primary": "#e81828",
+      "secondary": "#002d72"
+    },
+    "baseball:21": {
+      "city": "Pittsburgh",
+      "nickname": "Pirates",
+      "abbrev": "PIT",
+      "primary": "#27251f",
+      "secondary": "#fdb827"
+    },
+    "baseball:22": {
+      "city": "San Diego",
+      "nickname": "Padres",
+      "abbrev": "SD",
+      "primary": "#2f241d",
+      "secondary": "#ffc425"
+    },
+    "baseball:23": {
+      "city": "San Francisco",
+      "nickname": "Giants",
+      "abbrev": "SF",
+      "primary": "#fd5a1e",
+      "secondary": "#27251f"
+    },
+    "baseball:24": {
+      "city": "Seattle",
+      "nickname": "Mariners",
+      "abbrev": "SEA",
+      "primary": "#0c2c56",
+      "secondary": "#005c5c"
+    },
+    "baseball:25": {
+      "city": "St. Louis",
+      "nickname": "Cardinals",
+      "abbrev": "STL",
+      "primary": "#c41e3a",
+      "secondary": "#0c2340"
+    },
+    "baseball:26": {
+      "city": "Tampa Bay",
+      "nickname": "Rays",
+      "abbrev": "TB",
+      "primary": "#092c5c",
+      "secondary": "#8fbce6"
+    },
+    "baseball:27": {
+      "city": "Texas",
+      "nickname": "Rangers",
+      "abbrev": "TEX",
+      "primary": "#003278",
+      "secondary": "#c0111f"
+    },
+    "baseball:28": {
+      "city": "Toronto",
+      "nickname": "Blue Jays",
+      "abbrev": "TOR",
+      "primary": "#134a8e",
+      "secondary": "#1d2d5c"
+    },
+    "baseball:29": {
+      "city": "Washington",
+      "nickname": "Nationals",
+      "abbrev": "WSH",
+      "primary": "#ab0003",
+      "secondary": "#14225a"
+    }
+  },
+  "players": {},
+  "series": {}
+}

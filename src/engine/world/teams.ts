@@ -55,6 +55,14 @@ const COLOR_PAIRS: [string, string][] = [
   ['#2d2d78', '#c81e3c'], // indigo / red
   ['#00553f', '#e87722'], // pine / orange
   ['#3d3d3d', '#9ad0ec'], // charcoal / ice
+  ['#1b3a2f', '#e8b04b'], // hunter / amber
+  ['#5a1d2e', '#d9c7a3'], // wine / bone
+  ['#0f3d56', '#f0663f'], // petrol / coral
+  ['#3f2a17', '#c9a227'], // umber / brass
+  ['#2b2f6b', '#8fd6c1'], // lapis / mint
+  ['#6b2312', '#e2d3b0'], // rust / sand
+  ['#14342b', '#c2e05a'], // moss / lime
+  ['#402045', '#f2a3c7'], // aubergine / blush
 ];
 
 const FOOTBALL_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OT', 'EDGE', 'LB', 'CB', 'S', 'DT'];
@@ -69,7 +77,9 @@ export function generateLeague(worldSeed: bigint, sport: Sport, foundedYear: num
   players: Player[];
 } {
   const rng = Rng.from(worldSeed, `league:${sport}`);
-  const teamCount = sport === 'football' ? 16 : 16;
+  // Real league sizes, so the world feels like a league and the importable
+  // name presets map cleanly onto team ids.
+  const teamCount = sport === 'football' ? 32 : 30;
   const teams: Team[] = [];
   const usedCities = new Set<string>();
   const usedNicks = new Set<string>();

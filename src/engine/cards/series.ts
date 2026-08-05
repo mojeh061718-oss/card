@@ -218,10 +218,10 @@ export interface ProductConfig {
  * `test/wax-ev.test.ts` holds these to that shape.
  */
 export const PRODUCTS: ProductConfig[] = [
-  { key: 'retailPack', name: 'Retail Pack', cardsPerPack: 8, packs: 1, guaranteedAutos: 0, guaranteedNumbered: 0, msrp: 18 },
-  { key: 'hobbyPack', name: 'Hobby Pack', cardsPerPack: 10, packs: 1, guaranteedAutos: 0, guaranteedNumbered: 0, msrp: 22 },
-  { key: 'hobbyBox', name: 'Hobby Box', cardsPerPack: 10, packs: 12, guaranteedAutos: 1, guaranteedNumbered: 3, msrp: 400 },
-  { key: 'case', name: 'Hobby Case', cardsPerPack: 10, packs: 144, guaranteedAutos: 12, guaranteedNumbered: 36, msrp: 5800 },
+  { key: 'retailPack', name: 'Retail Pack', cardsPerPack: 8, packs: 1, guaranteedAutos: 0, guaranteedNumbered: 0, msrp: 21 },
+  { key: 'hobbyPack', name: 'Hobby Pack', cardsPerPack: 10, packs: 1, guaranteedAutos: 0, guaranteedNumbered: 0, msrp: 26 },
+  { key: 'hobbyBox', name: 'Hobby Box', cardsPerPack: 10, packs: 12, guaranteedAutos: 1, guaranteedNumbered: 3, msrp: 540 },
+  { key: 'case', name: 'Hobby Case', cardsPerPack: 10, packs: 144, guaranteedAutos: 12, guaranteedNumbered: 36, msrp: 7600 },
 ];
 
 interface SlotClasses {

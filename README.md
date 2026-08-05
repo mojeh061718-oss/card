@@ -8,7 +8,7 @@ Built as an offline-first PWA for iPhone 16 Pro.
 ```bash
 npm install
 npm run dev          # play at localhost:5173
-npm test             # 55 engine tests
+npm test             # 76 engine tests
 npm run build
 node tools/e2e.mjs   # full loop + frame timing + memory, headless
 ```
@@ -88,10 +88,15 @@ Cards are drawn, not shipped. Each series gets its own Design DNA — layout
 archetype, pattern engine, palette, type pairing, foil behavior — so 2031
 Chromium genuinely doesn't look like 2029 Chromium.
 
-- **Athletes** are articulated figures: pose keyframes as joint angles, drawn
-  as tapered limbs over a solid torso, cel-shaded with a rim light, and cut
-  out behind a thick **white die-cut keyline** — the sticker outline premium
-  inserts use to lift a figure off a busy background.
+- **Athletes are built from muscle volumes, not tubes.** A limb swells over
+  the belly and necks into the joint; the torso is one closed silhouette
+  built on the spine axis with deltoids, a waist and hips. Cut out behind a
+  thick **white die-cut keyline** — the sticker outline premium inserts use
+  to lift a figure off a busy background.
+- **Poses come from real biomechanics**, not generic action shapes: the QB's
+  throwing elbow sits above the shoulder line with the hand at the ear; the
+  batter's back heel points to the sky while the front leg locks rigid as a
+  block; the pitcher's back leg trails with the toe scraping.
 - **Equipment is constructed, not suggested.** Football helmets get a shell
   with a center stripe, a face in the opening with real lighting, a chinstrap
   that anchors at the earhole, and a facemask cage with a metallic highlight.
@@ -147,8 +152,23 @@ src/
                    layers, glcard, slab, pack
   app/             screens, cardview, feel (audio + haptics)
   state/           world singleton + persisted collection
-tools/             screenshot harnesses, icon generator, e2e run
+presets/           importable real-league name files (not bundled into play)
+tools/             screenshot harnesses, icon generator, preset builder, e2e run
 ```
+
+## Renaming the world
+
+Every id in the game is numeric — populations, serials, saved cards, comps
+and Top 50 entries reference `playerId` and `teamId`, never names. So the
+**EDIT** tab is a display-layer override map: rename teams, players and
+product lines freely without touching a seed, a print run, or a card you
+already own. Talent, jersey numbers and team assignment are deliberately not
+editable, because those feed valuation and art.
+
+`presets/` holds importable name files mapped onto team ids (32 football,
+30 baseball). They are reference data you can load from the EDIT tab for
+private use — the generator itself stays fictional. Rebuild them with
+`node tools/make-presets.mjs`.
 
 ## Verification
 

@@ -65,7 +65,8 @@ describe('wax expected value', () => {
 
   it('but the tail is real — some boxes pay for the year', () => {
     const msrp = PRODUCTS.find(p => p.key === 'hobbyBox')!.msrp;
-    const s = stats(sampleProduct('hobbyBox', 300));
+    // A tail check needs enough samples to actually reach the tail.
+    const s = stats(sampleProduct('hobbyBox', 700));
     expect(s.max).toBeGreaterThan(msrp * 6);
     expect(s.p90).toBeGreaterThan(msrp * 0.9);
   });

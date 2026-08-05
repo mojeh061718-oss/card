@@ -31,25 +31,37 @@ const LAST_NAMES = [
   'Dansby', 'Eastman', 'Farrow', 'Godfrey', 'Hollis', 'Ingram', 'Judkins',
 ] as const;
 
+// Deep enough to fill a 32-team league without repeats, with room to spare.
 const CITIES = [
   'Ashland', 'Bridgeport', 'Cascade', 'Denton', 'Eastvale', 'Fairbanks',
   'Grandview', 'Harborside', 'Ironton', 'Jasper', 'Kingsport', 'Lakemont',
   'Meridian', 'Northgate', 'Oakhurst', 'Port Vale', 'Queensbury', 'Redstone',
   'Southport', 'Trenholm', 'Union Falls', 'Vantage', 'Westbrook', 'Yorkfield',
   'Zephyr Bay', 'Alton', 'Bayside', 'Crestline', 'Dockside', 'Elmwood',
-  'Foxhill', 'Galena',
+  'Foxhill', 'Galena', 'Halcyon', 'Inglewood', 'Juniper', 'Keystone',
+  'Larkspur', 'Marbury', 'Nokomis', 'Overton', 'Pinehurst', 'Quarry Hill',
+  'Rockford', 'Silverton', 'Thornbury', 'Ustica', 'Verdant', 'Wexford',
+  'Ymir', 'Zanesville', 'Bellcourt', 'Colter', 'Dunmore', 'Everest',
+  'Fairhaven', 'Glenview', 'Hollowbrook', 'Ivywood', 'Junction City',
+  'Kearny', 'Lyndon', 'Mossvale', 'Norwood', 'Ollinger', 'Prescott',
 ] as const;
 
 const FOOTBALL_NICKNAMES = [
   'Stampede', 'Ironhawks', 'Marauders', 'Nightwolves', 'Regiment', 'Sabercats',
   'Thunder', 'Vipers', 'Wardens', 'Bulldozers', 'Colossals', 'Dreadnoughts',
-  'Enforcers', 'Firebirds', 'Gladiators', 'Hammers',
+  'Enforcers', 'Firebirds', 'Gladiators', 'Hammers', 'Avalanche', 'Bruisers',
+  'Chargers', 'Dynamos', 'Express', 'Fury', 'Grizzlies', 'Havoc',
+  'Juggernauts', 'Kodiaks', 'Legion', 'Mustangs', 'Outlaws', 'Predators',
+  'Rampage', 'Sentinels', 'Titans', 'Vanguard', 'Warhawks', 'Wolfpack',
 ] as const;
 
 const BASEBALL_NICKNAMES = [
   'Aces', 'Barnstormers', 'Cannons', 'Drifters', 'Emperors', 'Foxes',
   'Grays', 'Herons', 'Islanders', 'Jackrabbits', 'Kings', 'Loggers',
-  'Mudcats', 'Nine', 'Otters', 'Pilots',
+  'Mudcats', 'Nine', 'Otters', 'Pilots', 'Quarrymen', 'Rivermen',
+  'Sandhogs', 'Threshers', 'Union', 'Voyagers', 'Whalers', 'Yardbirds',
+  'Anchors', 'Blues', 'Crushers', 'Dukes', 'Eagles', 'Flyers',
+  'Hornets', 'Ironsides',
 ] as const;
 
 export function playerName(rng: Rng): { first: string; last: string } {
