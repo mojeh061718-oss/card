@@ -165,11 +165,13 @@ describe('shipped presets', () => {
     const baseball = Object.keys(set.teams).filter(k => k.startsWith('baseball:'));
     expect(football).toHaveLength(32);
     expect(baseball).toHaveLength(30);
-    // 100 current + 50 legacy, no duplicates.
-    expect(set.rosterByRank.football).toHaveLength(150);
-    expect(set.rosterByRank.baseball).toHaveLength(150);
-    expect(new Set(set.rosterByRank.football).size).toBe(150);
-    expect(new Set(set.rosterByRank.baseball).size).toBe(150);
+    // Current stars + legends + prospect classes, no duplicates.
+    const fb = set.rosterByRank.football ?? [];
+    const bb = set.rosterByRank.baseball ?? [];
+    expect(fb.length).toBeGreaterThanOrEqual(150);
+    expect(bb.length).toBeGreaterThanOrEqual(150);
+    expect(new Set(fb).size).toBe(fb.length);
+    expect(new Set(bb).size).toBe(bb.length);
   });
 
   it('preset team ids are contiguous from zero, so none is orphaned', () => {
