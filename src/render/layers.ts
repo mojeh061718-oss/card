@@ -551,6 +551,64 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   ctx.fillText(spec.cardNumber, w * 0.95, fineY);
   ctx.restore();
 
+  // --- Team monogram chip beside the nameplate: the authenticity detail ---
+  {
+    const mr = w * 0.048;
+    const mx = dna.nameplate === 'chip' ? w * 0.115 : w * 0.905;
+    const my = npY + npH * 0.42;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(mx, my, mr, 0, Math.PI * 2);
+    ctx.fillStyle = shade(team.secondary, -0.05);
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, mr * 0.12);
+    ctx.strokeStyle = shade(team.primary, -0.18);
+    ctx.stroke();
+    ctx.font = `900 ${mr * 1.05}px "Arial Narrow", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = inkOn(team.secondary);
+    ctx.fillText(team.nickname[0], mx, my + mr * 0.05);
+    ctx.restore();
+  }
+
+  // --- Print grain: fine noise so surfaces read as printed stock, not flat ---
+  {
+    const gs = 96;
+    const grain = document.createElement('canvas');
+    grain.width = gs; grain.height = gs;
+    const gctx = grain.getContext('2d')!;
+    const img = gctx.createImageData(gs, gs);
+    const grng = new Rng(spec.artSeed ^ 0xfeedn);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = 118 + grng.int(20);
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    gctx.putImageData(img, 0, 0);
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.fillStyle = ctx.createPattern(grain, 'repeat')!;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  // --- Die-cut depth: hairline edge + soft inner shadow at the borders ---
+  ctx.save();
+  roundedCardPath(ctx, w, h, cornerR);
+  ctx.clip();
+  const innerShadow = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.62, w / 2, h / 2, Math.max(w, h) * 0.78);
+  innerShadow.addColorStop(0, 'rgba(0,0,0,0)');
+  innerShadow.addColorStop(1, 'rgba(0,0,0,0.22)');
+  ctx.fillStyle = innerShadow;
+  ctx.fillRect(0, 0, w, h);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  roundedCardPath(ctx, w, h, cornerR);
+  ctx.stroke();
+  ctx.restore();
+
   ctx.restore(); // die-cut clip
   return { print, foilMask, widthPx: w, heightPx: h };
 }

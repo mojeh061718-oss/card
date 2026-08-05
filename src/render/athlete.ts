@@ -198,7 +198,7 @@ export function drawAthlete(
   // Far hand (gloved in trim for football, skin for baseball).
   ctx.beginPath();
   ctx.arc(P.wF.x, P.wF.y, foreW * 0.48, 0, Math.PI * 2);
-  ctx.fillStyle = style.sport === 'football' ? far(shade(style.trim, -0.28)) : far(skinDark);
+  ctx.fillStyle = style.sport === 'football' ? far(shade(style.jersey, -0.2)) : far(skinDark);
   ctx.fill();
   limb(ctx, [P.hF, P.kF], legW, legW * 0.85, far(pantsDark));
   limb(
@@ -293,12 +293,17 @@ export function drawAthlete(
   ctx.translate(chest.x, chest.y);
   ctx.rotate(-lean * 0.6);
   if (style.wordmark) {
-    ctx.font = `700 ${0.033 * u}px "Arial Narrow", Arial, sans-serif`;
+    const word = style.wordmark.toUpperCase();
+    let px = 0.033 * u;
+    ctx.font = `700 ${px}px "Arial Narrow", Arial, sans-serif`;
+    const maxW = 0.19 * u;
+    const measured = ctx.measureText(word).width;
+    if (measured > maxW) px *= maxW / measured;
+    ctx.font = `700 ${px}px "Arial Narrow", Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.lineWidth = 0.008 * u;
+    ctx.lineWidth = px * 0.22;
     ctx.strokeStyle = shade(style.trim, -0.25);
-    const word = style.wordmark.toUpperCase().slice(0, 10);
     ctx.strokeText(word, 0, -0.075 * u);
     ctx.fillStyle = style.trim;
     ctx.fillText(word, 0, -0.075 * u);
@@ -374,6 +379,11 @@ export function drawAthlete(
     ctx.moveTo(P.head.x + dir * headR * 1.18, P.head.y + headR * 0.5);
     ctx.lineTo(P.head.x + dir * headR * 0.35, P.head.y + headR * 0.62);
     ctx.stroke();
+    // Earhole — the tiny real-helmet detail.
+    ctx.beginPath();
+    ctx.arc(P.head.x - dir * headR * 0.45, P.head.y + headR * 0.12, headR * 0.11, 0, Math.PI * 2);
+    ctx.fillStyle = shade(style.jersey, -0.3);
+    ctx.fill();
   } else {
     // Cap crown + brim facing motion.
     ctx.beginPath();
@@ -388,6 +398,20 @@ export function drawAthlete(
     );
     ctx.fillStyle = shade(style.jersey, -0.08);
     ctx.fill();
+    // Cap button + seam.
+    ctx.beginPath();
+    ctx.arc(P.head.x, P.head.y - headR * 1.08, headR * 0.1, 0, Math.PI * 2);
+    ctx.fillStyle = style.trim;
+    ctx.fill();
+    ctx.strokeStyle = withAlpha(shade(style.jersey, -0.25), 0.8);
+    ctx.lineWidth = headR * 0.07;
+    ctx.beginPath();
+    ctx.moveTo(P.head.x, P.head.y - headR * 1.05);
+    ctx.quadraticCurveTo(P.head.x + dir * headR * 0.3, P.head.y - headR * 0.7, P.head.x + dir * headR * 0.4, P.head.y - headR * 0.32);
+    ctx.stroke();
+    // Eye black under the leading eye.
+    ctx.fillStyle = 'rgba(20, 16, 12, 0.75)';
+    ctx.fillRect(P.head.x + dir * headR * 0.28, P.head.y + headR * 0.08, dir * headR * 0.38, headR * 0.14);
   }
 
   // --- NEAR arm (over everything) ---
