@@ -1,0 +1,367 @@
+/**
+ * Wax — buy sealed product, then rip it.
+ *
+ * Packs cost money, distributors ration hot product, and boxes carry real
+ * per-box guarantees, so "one box" and "twelve packs" are genuinely
+ * different bets. Sealed wax also appreciates as the population gets
+ * opened, which makes sitting on a case a strategy instead of a delay.
+ */
+
+import { useMemo, useRef, useState } from 'react';
+import type { PulledCard } from '../engine/cards/series';
+import { renderPackWrapper, renderCardBack } from '../render/pack';
+import { snapshotCard, LiveCard } from './cardview';
+import { world } from '../state/world';
+import { useCollection, type SealedItem } from '../state/collection';
+import { formatMoney } from '../engine/economy/valuation';
+import { sfx, unlockAudio, heatTier } from './feel';
+
+const PRODUCT_ICON: Record<string, string> = {
+  retailPack: '🧧', hobbyPack: '✉️', hobbyBox: '📦', case: '🗄️',
+};
+
+export function WaxScreen() {
+  const { cash, day, sealed, bought, buyWax, openSealed, addPulls, endDay } = useCollection();
+  const [session, setSession] = useState<{ item: SealedItem; packs: PulledCard[][] } | null>(null);
+
+  const shelf = useMemo(() => world.seriesIds.flatMap(seriesId =>
+    world.products.map(p => {
+      const price = world.waxPrice(seriesId, p.key, day);
+      const limit = world.allocation(seriesId, p.key, day);
+      const used = bought[`${p.key}:${seriesId}:${day}`] ?? 0;
+      return { seriesId, product: p, price, limit, used };
+    })), [day, bought]);
+
+  const buy = (seriesId: string, productKey: string, price: number) => {
+    unlockAudio();
+    const item = buyWax(seriesId, productKey, price);
+    if (item) sfx.cash();
+  };
+
+  const rip = (item: SealedItem) => {
+    unlockAudio();
+    const packs = world.openProduct(item.seriesId, item.productKey);
+    openSealed(item.id);
+    addPulls(packs.flat());
+    setSession({ item, packs });
+  };
+
+  const S = styles;
+  return (
+    <div style={S.root}>
+      <header style={S.header}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <div style={S.title}>WAX</div>
+          <div style={S.day}>DAY {day}</div>
+          <span style={{ flex: 1 }} />
+          <button style={S.endDay} onClick={() => { endDay(); sfx.tap(); }}>END DAY ▸</button>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <span style={S.moneyLabel}>CASH</span> <span style={S.cash}>{formatMoney(cash)}</span>
+        </div>
+      </header>
+
+      <div style={S.scroll}>
+        {sealed.length > 0 && (
+          <section style={S.section}>
+            <div style={S.sectionTitle}>YOUR SEALED WAX — tap to rip, or hold and let it appreciate</div>
+            {sealed.map(item => {
+              const p = world.product(item.productKey);
+              const now = world.waxPrice(item.seriesId, item.productKey, day);
+              const delta = now - item.pricePaid;
+              return (
+                <button key={item.id} style={S.sealedRow} onClick={() => rip(item)}>
+                  <div style={{ fontSize: 26 }}>{PRODUCT_ICON[item.productKey]}</div>
+                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <div style={S.sealedName}>{p.name}</div>
+                    <div style={S.sealedMeta}>{world.get(item.seriesId).def.name}</div>
+                    <div style={S.sealedMeta}>
+                      bought day {item.boughtDay} for {formatMoney(item.pricePaid)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ ...S.sealedValue, color: delta >= 0 ? '#8ee08e' : '#e08a6a' }}>
+                      {delta >= 0 ? '+' : ''}{formatMoney(delta)}
+                    </div>
+                    <div style={S.ripCta}>RIP IT ▸</div>
+                  </div>
+                </button>
+              );
+            })}
+          </section>
+        )}
+
+        <section style={S.section}>
+          <div style={S.sectionTitle}>THE SHELF — distributors ration the good stuff</div>
+          {shelf.map(({ seriesId, product, price, limit, used }) => {
+            const soldOut = used >= limit;
+            const affordable = cash >= price;
+            const def = world.get(seriesId).def;
+            return (
+              <button
+                key={`${seriesId}-${product.key}`}
+                style={{ ...S.shelfRow, opacity: soldOut ? 0.35 : affordable ? 1 : 0.55 }}
+                disabled={soldOut || !affordable}
+                onClick={() => buy(seriesId, product.key, price)}
+              >
+                <div style={{ fontSize: 24 }}>{PRODUCT_ICON[product.key]}</div>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <div style={S.shelfName}>{product.name}</div>
+                  <div style={S.shelfMeta}>{def.name}</div>
+                  <div style={S.shelfOdds}>
+                    {product.packs > 1
+                      ? `${product.packs} packs · guaranteed ${product.guaranteedAutos} auto${product.guaranteedAutos > 1 ? 's' : ''} + ${product.guaranteedNumbered} numbered`
+                      : `${product.cardsPerPack} cards · no guarantees`}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={S.shelfPrice}>{formatMoney(price)}</div>
+                  <div style={S.shelfStock}>
+                    {soldOut ? 'ALLOCATED OUT' : `${limit - used} left today`}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </section>
+
+        {sealed.length === 0 && (
+          <div style={S.tip}>
+            Buy a pack to get started. A box costs more than its packs but
+            guarantees hits — that's the whole decision.
+          </div>
+        )}
+      </div>
+
+      {session && (
+        <RipSession
+          item={session.item}
+          packs={session.packs}
+          onClose={() => setSession(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+type Phase = 'sealed' | 'stack' | 'takeover' | 'done';
+
+/** Rip one product: tear each pack, flip each card, then the tally. */
+function RipSession({ item, packs, onClose }: {
+  item: SealedItem; packs: PulledCard[][]; onClose: () => void;
+}) {
+  const rt = useMemo(() => world.get(item.seriesId), [item]);
+  const product = world.product(item.productKey);
+  const wrapperUrl = useMemo(() => renderPackWrapper(rt.def, 640, 900).toDataURL(), [rt]);
+  const backUrl = useMemo(() => renderCardBack(rt.def, 500).toDataURL(), [rt]);
+
+  const [packIdx, setPackIdx] = useState(0);
+  const [phase, setPhase] = useState<Phase>('sealed');
+  const [tear, setTear] = useState(0);
+  const [idx, setIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [stillUrl, setStillUrl] = useState<string | null>(null);
+  const tearing = useRef(false);
+
+  const cards = packs[packIdx] ?? [];
+  const current = idx < cards.length ? cards[idx] : null;
+  const heat = current ? world.heat(current) : 0;
+  const tier = heatTier(heat);
+  const glow = tier === 3 ? '#ffd75e' : tier === 2 ? '#d4a017' : tier === 1 ? '#a06bff'
+    : heat >= 2.2 ? '#4f9dde' : null;
+  const isOne = current?.numberedTo === 1;
+
+  const onTearMove = (e: React.PointerEvent) => {
+    if (!tearing.current) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    setTear(t => {
+      if (Math.floor(p * 12) > Math.floor(t * 12)) sfx.tear();
+      return Math.max(t, p);
+    });
+    if (p > 0.92) {
+      tearing.current = false;
+      setTimeout(() => { setPhase('stack'); setIdx(0); setFlipped(false); }, 380);
+    }
+  };
+
+  const reveal = () => {
+    if (!current || flipped) return;
+    if (tier > 0) sfx.riser(tier as 1 | 2 | 3);
+    setStillUrl(snapshotCard(world.specFor(current), 640));
+    setFlipped(true);
+    setTimeout(() => (tier > 0 ? sfx.hit(tier as 1 | 2 | 3) : sfx.flip()), tier > 0 ? 260 : 0);
+  };
+
+  const nextCard = () => {
+    if (!flipped) return;
+    if (isOne) { setPhase('takeover'); return; }
+    advance();
+  };
+
+  const advance = () => {
+    sfx.cardSlide();
+    setFlipped(false);
+    setStillUrl(null);
+    if (idx + 1 < cards.length) { setIdx(idx + 1); return; }
+    // Pack finished — next pack, or the box tally.
+    if (packIdx + 1 < packs.length) {
+      setPackIdx(packIdx + 1);
+      setTear(0);
+      setPhase('sealed');
+    } else {
+      setPhase('done');
+    }
+  };
+
+  /** Skip the ceremony: jump straight to the tally. */
+  const ripAll = () => {
+    sfx.gavel();
+    setPhase('done');
+  };
+
+  const all = packs.flat();
+  const best = useMemo(
+    () => [...all].sort((a, b) => world.heat(b) - world.heat(a)).slice(0, 12),
+    [all],
+  );
+  const totalValue = useMemo(
+    () => all.reduce((sum, c) => sum + world.valuation(c), 0),
+    [all],
+  );
+
+  const S = styles;
+  return (
+    <div style={S.overlay}>
+      {phase === 'sealed' && (
+        <div style={S.center}>
+          {packs.length > 1 && (
+            <div style={S.packCounter}>PACK {packIdx + 1} OF {packs.length}</div>
+          )}
+          <div
+            style={S.packWrap}
+            onPointerDown={() => { tearing.current = true; }}
+            onPointerMove={onTearMove}
+            onPointerUp={() => { tearing.current = false; }}
+          >
+            <div style={{
+              ...S.tearStrip,
+              backgroundImage: `url(${wrapperUrl})`,
+              transform: `translate(${tear * 130}%, ${-tear * 30}%) rotate(${tear * 18}deg)`,
+              opacity: tear > 0.92 ? 0 : 1,
+            }} />
+            <div style={{
+              ...S.packBody,
+              backgroundImage: `url(${wrapperUrl})`,
+              clipPath: tear > 0
+                ? `polygon(0 ${13 + Math.sin(tear * 20) * 1.2}%, 8% 12%, 20% 14%, 33% 11.5%, 47% 14%, 60% 12%, 74% 14.5%, 88% 12%, 100% 13.5%, 100% 100%, 0 100%)`
+                : 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+            }} />
+            {tear === 0 && <div style={S.tearHint}>drag across the top to rip ⟶</div>}
+          </div>
+          <div style={S.caption}>{rt.def.name} — {product.name}</div>
+          {packs.length > 1 && (
+            <button style={S.skip} onClick={ripAll}>SKIP TO RESULTS</button>
+          )}
+        </div>
+      )}
+
+      {phase === 'stack' && current && (
+        <div style={S.center} onClick={flipped ? nextCard : reveal}>
+          <div style={S.counter}>
+            {packs.length > 1 && `PACK ${packIdx + 1}/${packs.length} · `}
+            {idx + 1} / {cards.length}
+          </div>
+          <div style={{ ...S.flipScene, filter: glow && !flipped ? `drop-shadow(0 0 26px ${glow})` : undefined }}>
+            <div style={{ ...S.flipInner, transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+              <img src={backUrl} alt="card back" style={{ ...S.face, backfaceVisibility: 'hidden' }} />
+              {stillUrl && (
+                <img src={stillUrl} alt="card" style={{
+                  ...S.face, position: 'absolute', inset: 0,
+                  transform: 'rotateY(180deg)', backfaceVisibility: 'hidden',
+                }} />
+              )}
+            </div>
+          </div>
+          <div style={S.caption}>{flipped ? 'tap for next card' : 'tap to flip'}</div>
+        </div>
+      )}
+
+      {phase === 'takeover' && current && (
+        <div style={S.takeover} onClick={() => { setPhase('stack'); advance(); }}>
+          <div style={S.oneBanner}>ONE OF ONE</div>
+          <LiveCard spec={world.specFor(current)} width={300} />
+          <div style={S.oneSub}>{rt.def.name} · Superfractor · #{current.serial}/1</div>
+          <div style={{ ...S.caption, color: '#ffd75e' }}>tap to continue</div>
+        </div>
+      )}
+
+      {phase === 'done' && (
+        <div style={S.doneStage}>
+          <div style={S.counter}>{product.name.toUpperCase()} COMPLETE</div>
+          <div style={{
+            fontSize: 32, fontWeight: 900,
+            color: totalValue >= item.pricePaid ? '#8ee08e' : '#e08a6a',
+          }}>
+            {totalValue >= item.pricePaid ? '+' : ''}{formatMoney(totalValue - item.pricePaid)}
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.6 }}>
+            {all.length} cards worth {formatMoney(totalValue)} · paid {formatMoney(item.pricePaid)}
+          </div>
+          <div style={{ ...S.sectionTitle, marginTop: 14 }}>BEST OF THE BREAK</div>
+          <div style={S.grid}>
+            {best.map((p, i) => (
+              <img key={i} src={snapshotCard(world.specFor(p), 220)} alt=""
+                style={{ width: '100%', borderRadius: 7 }} />
+            ))}
+          </div>
+          <button style={S.button} onClick={onClose}>ADD TO COLLECTION</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  root: { height: '100%', display: 'flex', flexDirection: 'column', background: '#0c0c10' },
+  header: { padding: '14px 16px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
+  title: { fontSize: 16, fontWeight: 800, letterSpacing: 4 },
+  day: { fontSize: 11, color: '#e8c86a', letterSpacing: 2 },
+  endDay: { background: 'rgba(255,255,255,0.08)', color: '#e8c86a', border: '1px solid rgba(232,200,106,0.4)', borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 800, letterSpacing: 1 },
+  moneyLabel: { fontSize: 9, opacity: 0.45, letterSpacing: 1.5 },
+  cash: { fontSize: 15, fontWeight: 900, color: '#8ee08e' },
+  scroll: { flex: 1, overflowY: 'auto', padding: '12px 14px 30px' },
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 10, letterSpacing: 2, opacity: 0.5, marginBottom: 8, lineHeight: 1.5 },
+  sealedRow: { display: 'flex', gap: 12, alignItems: 'center', width: '100%', padding: 12, marginBottom: 8, background: 'rgba(212,160,23,0.07)', border: '1px solid rgba(212,160,23,0.3)', borderRadius: 12, color: '#f4f2ec' },
+  sealedName: { fontSize: 14, fontWeight: 800 },
+  sealedMeta: { fontSize: 10, opacity: 0.5, marginTop: 1 },
+  sealedValue: { fontSize: 13, fontWeight: 900 },
+  ripCta: { fontSize: 9, letterSpacing: 1, color: '#e8c86a', fontWeight: 800, marginTop: 2 },
+  shelfRow: { display: 'flex', gap: 12, alignItems: 'center', width: '100%', padding: 11, marginBottom: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, color: '#f4f2ec' },
+  shelfName: { fontSize: 13, fontWeight: 800 },
+  shelfMeta: { fontSize: 10, opacity: 0.5 },
+  shelfOdds: { fontSize: 9, opacity: 0.4, marginTop: 2 },
+  shelfPrice: { fontSize: 15, fontWeight: 900, color: '#e8c86a' },
+  shelfStock: { fontSize: 9, opacity: 0.45, marginTop: 2 },
+  tip: { fontSize: 11, opacity: 0.4, lineHeight: 1.6, textAlign: 'center', padding: '0 20px' },
+  overlay: { position: 'fixed', inset: 0, zIndex: 55, background: 'radial-gradient(120% 90% at 50% 0%, #16161f 0%, #0a0a0d 70%)', display: 'flex', flexDirection: 'column' },
+  center: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16 },
+  packCounter: { fontSize: 11, letterSpacing: 3, color: '#e8c86a' },
+  packWrap: { position: 'relative', width: 250, height: 352, touchAction: 'none' },
+  packBody: { position: 'absolute', inset: 0, backgroundSize: 'cover', borderRadius: 8, transition: 'clip-path 80ms linear', boxShadow: '0 24px 60px rgba(0,0,0,0.65)' },
+  tearStrip: { position: 'absolute', left: 0, right: 0, top: 0, height: '13%', backgroundSize: 'cover', borderRadius: '8px 8px 0 0', transition: 'transform 120ms linear, opacity 200ms', zIndex: 2 },
+  tearHint: { position: 'absolute', top: '15%', width: '100%', textAlign: 'center', fontSize: 12, letterSpacing: 1, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px #000' },
+  caption: { fontSize: 13, opacity: 0.6, letterSpacing: 1 },
+  counter: { fontSize: 12, letterSpacing: 3, opacity: 0.7 },
+  skip: { background: 'rgba(255,255,255,0.08)', color: 'rgba(244,242,236,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '7px 14px', fontSize: 10, letterSpacing: 1, fontWeight: 700 },
+  flipScene: { perspective: '1200px', width: 260, transition: 'filter 300ms' },
+  flipInner: { position: 'relative', width: '100%', transformStyle: 'preserve-3d', transition: 'transform 520ms cubic-bezier(0.2, 0.8, 0.25, 1)' },
+  face: { width: '100%', borderRadius: 12, display: 'block', boxShadow: '0 18px 50px rgba(0,0,0,0.6)' },
+  takeover: { position: 'fixed', inset: 0, background: '#050507', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 60 },
+  oneBanner: { fontSize: 26, fontWeight: 900, letterSpacing: 10, color: '#ffd75e', textShadow: '0 0 30px rgba(255, 215, 94, 0.5)' },
+  oneSub: { fontSize: 13, opacity: 0.75, letterSpacing: 1 },
+  doneStage: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 24, overflowY: 'auto', textAlign: 'center' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, width: '100%', maxWidth: 360 },
+  button: { marginTop: 18, background: '#d4a017', color: '#1a1405', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 13, fontWeight: 900, letterSpacing: 1 },
+};

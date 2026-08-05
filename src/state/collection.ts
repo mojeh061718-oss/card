@@ -48,6 +48,15 @@ export interface SaleRecord {
   auction?: AuctionResult;
 }
 
+/** Unopened wax you own. Rip it, or sit on it and let it appreciate. */
+export interface SealedItem {
+  id: number;
+  seriesId: string;
+  productKey: string;
+  boughtDay: number;
+  pricePaid: number;
+}
+
 export interface Submission {
   uids: number[];
   companyKey: string;
@@ -71,6 +80,10 @@ interface CollectionState {
   saleFeed: SaleRecord[];
   /** Lot offer ids already bought, so leads don't repeat. */
   dugLots: string[];
+  sealed: SealedItem[];
+  nextSealedId: number;
+  /** productKey:seriesId:day -> units bought, for daily allocation limits. */
+  bought: Record<string, number>;
   news: NewsItem[];
   /** Unread breaking story awaiting its takeover. */
   breaking: NewsItem | null;
@@ -88,6 +101,8 @@ interface CollectionState {
   pushNews(items: NewsItem[]): void;
   clearBreaking(): void;
   setShopName(name: string): void;
+  buyWax(seriesId: string, productKey: string, price: number): SealedItem | null;
+  openSealed(id: number): void;
   setCash(amount: number): void;
   startCareer(): void;
   listAtAuction(uid: number, days: number, reserve: number): void;
@@ -124,6 +139,9 @@ function scheduleSave(state: CollectionState): void {
         listings: state.listings,
         saleFeed: state.saleFeed,
         dugLots: state.dugLots,
+        sealed: state.sealed,
+        nextSealedId: state.nextSealedId,
+        bought: state.bought,
         news: state.news.slice(0, 60),
         shopName: state.shopName,
         careerStarted: state.careerStarted,
@@ -146,6 +164,9 @@ export const useCollection = create<CollectionState>((set, get) => ({
   listings: [],
   saleFeed: [],
   dugLots: [],
+  sealed: [],
+  nextSealedId: 1,
+  bought: {},
   news: [],
   breaking: null,
   shopName: 'Corner Store Cards',
@@ -319,6 +340,26 @@ export const useCollection = create<CollectionState>((set, get) => ({
     });
     scheduleSave(get());
   },
+  buyWax(seriesId, productKey, price) {
+    const { cash, day, sealed, nextSealedId, bought } = get();
+    if (price > cash) return null;
+    const key = `${productKey}:${seriesId}:${day}`;
+    const item: SealedItem = {
+      id: nextSealedId, seriesId, productKey, boughtDay: day, pricePaid: price,
+    };
+    set({
+      cash: cash - price,
+      sealed: [...sealed, item],
+      nextSealedId: nextSealedId + 1,
+      bought: { ...bought, [key]: (bought[key] ?? 0) + 1 },
+    });
+    scheduleSave(get());
+    return item;
+  },
+  openSealed(id) {
+    set({ sealed: get().sealed.filter(s => s.id !== id) });
+    scheduleSave(get());
+  },
   spendCash(amount) {
     set({ cash: Math.max(0, get().cash - amount) });
     scheduleSave(get());
@@ -373,6 +414,9 @@ export async function hydrateCollection(): Promise<void> {
         listings: save.listings ?? [],
         saleFeed: save.saleFeed ?? [],
         dugLots: save.dugLots ?? [],
+        sealed: save.sealed ?? [],
+        nextSealedId: save.nextSealedId ?? 1,
+        bought: save.bought ?? {},
         news: save.news ?? [],
         shopName: save.shopName ?? 'Corner Store Cards',
         careerStarted: save.careerStarted ?? false,

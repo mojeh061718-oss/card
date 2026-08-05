@@ -31,6 +31,8 @@ const server = createServer(async (req, res) => {
 await new Promise(r => server.listen(4181, r));
 
 const fails = [];
+/** Nav tabs share text with page headings — always click the nav button. */
+const nav = label => page.getByRole('button', { name: label, exact: true });
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
   if (!ok) fails.push(name);
@@ -55,8 +57,20 @@ await page.getByText('STOREFRONT').click();
 await page.getByText('OPEN FOR BUSINESS').click();
 await page.waitForTimeout(900);
 
-// --- 2. Rip a pack, measuring frame timing --------------------------------
-await page.getByText('RIP', { exact: true }).click();
+// --- 2. Buy wax, then rip it, measuring frame timing ----------------------
+await nav('WAX').click();
+await page.waitForTimeout(700);
+const cashText = () => page.evaluate(() =>
+  (document.body.textContent ?? '').match(/CASH\s*\$([\d.,KM]+)/)?.[1] ?? '');
+const cashBeforeWax = await cashText();
+await page.locator('button:has-text("Hobby Pack")').first().click();
+await page.waitForTimeout(500);
+const cashAfterWax = await cashText();
+check('buying wax costs money', cashBeforeWax !== cashAfterWax,
+  `${cashBeforeWax} -> ${cashAfterWax}`);
+check('sealed wax lands in inventory',
+  (await page.locator('button:has-text("RIP IT")').count()) > 0);
+await page.locator('button:has-text("RIP IT")').first().click();
 await page.waitForTimeout(700);
 await page.evaluate(() => {
   window.__frames = [];
@@ -85,6 +99,11 @@ for (let i = 0; i < 10; i++) {
   await page.mouse.click(201, 420);
   await page.waitForTimeout(200);
 }
+await page.waitForTimeout(600);
+if (await page.getByText('ADD TO COLLECTION').count()) {
+  await page.getByText('ADD TO COLLECTION').click();
+  await page.waitForTimeout(500);
+}
 const ripFrames = await page.evaluate(() => {
   cancelAnimationFrame(window.__raf);
   return window.__frames.slice(5);
@@ -94,7 +113,7 @@ check('pack rip holds frame budget', p95(ripFrames) < 34,
   `p95 ${p95(ripFrames).toFixed(1)}ms over ${ripFrames.length} frames`);
 
 // --- 3. Dig a lot ----------------------------------------------------------
-await page.getByText('HUNT', { exact: true }).click();
+await nav('HUNT').click();
 await page.waitForTimeout(600);
 const buyable = page.locator('button:has-text("BUY & DIG")').first();
 check('sourcing offers an affordable lead', await buyable.count() === 1);
@@ -106,13 +125,13 @@ await page.getByText('ADD TO COLLECTION').click();
 await page.waitForTimeout(700);
 
 // --- 4. Binder scroll frame timing ----------------------------------------
-await page.getByText('BOOK', { exact: true }).click();
+await nav('BOOK').click();
 await page.waitForTimeout(1800);
 const cardCount = await page.evaluate(() => {
   const el = [...document.querySelectorAll('div')].find(d => /\d+ cards/.test(d.textContent ?? ''));
   return Number((el?.textContent ?? '').match(/(\d+) cards/)?.[1] ?? 0);
 });
-check('binder holds the dug collection', cardCount > 50, `${cardCount} cards`);
+check('binder holds what was ripped and dug', cardCount > 50, `${cardCount} cards`);
 
 await page.evaluate(() => {
   window.__frames = [];
@@ -168,7 +187,7 @@ const scratchStable = await page.evaluate(async () => {
 check('canvas dimensions stay stable (no resize leak)', scratchStable);
 
 // --- 6. Grade a card, advance days, reveal the slab -----------------------
-await page.getByText('GRADE', { exact: true }).click();
+await nav('GRADE').click();
 await page.waitForTimeout(1600);
 const gradeCells = page.locator('div[style*="position: relative"] img[src^="data:"]');
 await gradeCells.nth(0).click();
@@ -194,7 +213,7 @@ await page.mouse.click(201, 430);
 await page.waitForTimeout(400);
 
 // --- 7. Auction a card, settle it, confirm it hits the wire ---------------
-await page.getByText('SELL', { exact: true }).click();
+await nav('SELL').click();
 await page.waitForTimeout(1600);
 const cashBefore = await page.evaluate(() => {
   const t = document.body.textContent ?? '';
@@ -215,7 +234,7 @@ check('auction settles into the results feed', results > 0, `cash before: ${cash
 await page.screenshot({ path: 'shots/e2e-market.png' });
 
 // --- 8. The wire and Top 50 ----------------------------------------------
-await page.getByText('WIRE', { exact: true }).click();
+await nav('WIRE').click();
 await page.waitForTimeout(1400);
 const neverFound = await page.getByText('NEVER FOUND').count();
 check('Top 50 tracks unfound grails', neverFound > 0, `${neverFound} still sealed`);
@@ -230,7 +249,7 @@ await page.reload();
 await page.waitForTimeout(1600);
 check('career persists across reload',
   (await page.getByText('OPEN FOR BUSINESS').count()) === 0);
-await page.getByText('BOOK', { exact: true }).click();
+await nav('BOOK').click();
 await page.waitForTimeout(1500);
 const cardsAfter = await page.evaluate(() => {
   const el = [...document.querySelectorAll('div')].find(d => /\d+ cards/.test(d.textContent ?? ''));
@@ -239,7 +258,7 @@ const cardsAfter = await page.evaluate(() => {
 check('collection survives reload', cardsAfter > 50, `${cardsAfter} cards`);
 
 // --- 10. WebGL context loss recovery --------------------------------------
-await page.getByText('BOOK', { exact: true }).click();
+await nav('BOOK').click();
 await page.waitForTimeout(1500);
 await page.locator('img[src^="data:"]').first().click();
 await page.waitForTimeout(900);

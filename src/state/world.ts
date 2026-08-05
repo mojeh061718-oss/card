@@ -10,8 +10,9 @@
 import { seedFromText, Rng, childSeed } from '../engine/rng';
 import { generateLeague, type Player, type Team, type Sport } from '../engine/world/teams';
 import {
-  buildSeries, makePopulation, classifySlots, openPack, renderInputs, rankOf, decodeSlot, slotOf,
-  type SeriesDef, type PulledCard,
+  buildSeries, makePopulation, classifySlots, openPack, openBox, renderInputs, rankOf,
+  decodeSlot, slotOf, PRODUCTS,
+  type SeriesDef, type PulledCard, type ProductConfig,
 } from '../engine/cards/series';
 import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/economy/lots';
 import { buildTop50, type Top50Entry } from '../engine/news/top50';
@@ -72,6 +73,67 @@ class World {
   ripPack(seriesId: string): PulledCard[] {
     const rt = this.get(seriesId);
     return openPack(rt.def, rt.pop, this.packRng, rt.classes, 10, []);
+  }
+
+  /**
+   * Open a sealed product. Boxes and cases carry real per-box guarantees —
+   * the factory seeds a guaranteed auto and numbered cards into specific
+   * packs, which is why buying a box is a different decision from buying
+   * twelve packs.
+   */
+  openProduct(seriesId: string, productKey: string): PulledCard[][] {
+    const rt = this.get(seriesId);
+    const product = PRODUCTS.find(p => p.key === productKey);
+    if (!product) throw new Error(`Unknown product ${productKey}`);
+    if (product.packs === 1) {
+      return [openPack(rt.def, rt.pop, this.packRng, rt.classes, product.cardsPerPack, [])];
+    }
+    return openBox(rt.def, rt.pop, this.packRng, product);
+  }
+
+  product(key: string): ProductConfig {
+    const p = PRODUCTS.find(x => x.key === key);
+    if (!p) throw new Error(`Unknown product ${key}`);
+    return p;
+  }
+
+  get products(): ProductConfig[] {
+    return PRODUCTS;
+  }
+
+  /**
+   * Shelf price. Hot product carries a premium over MSRP, and sealed wax
+   * appreciates as the population gets opened — which is what makes sitting
+   * on cases a real strategy rather than a waste of shelf space.
+   */
+  waxPrice(seriesId: string, productKey: string, day: number): number {
+    const rt = this.get(seriesId);
+    const product = this.product(productKey);
+    const openedFraction = 1 - rt.pop.totalRemaining / rt.pop.totalPrinted;
+    // Supply drying up lifts the price of what's left, superlinearly at the end.
+    const scarcityLift = 1 + Math.pow(openedFraction, 1.6) * 2.2;
+    // Gentle drift so shelf prices aren't frozen across a career.
+    const drift = 1 + Math.sin(day / 40 + Number(rt.def.seed % 100n) / 16) * 0.08;
+    return Math.round(product.msrp * scarcityLift * drift * 100) / 100;
+  }
+
+  /** How much of a series' print run is still sealed, 0..1. */
+  sealedFraction(seriesId: string): number {
+    const rt = this.get(seriesId);
+    return rt.pop.totalRemaining / rt.pop.totalPrinted;
+  }
+
+  /**
+   * Daily allocation. Distributors ration hot product, so you can't simply
+   * buy your way to every grail with a big bankroll.
+   */
+  allocation(seriesId: string, productKey: string, day: number): number {
+    const product = this.product(productKey);
+    const rt = this.get(seriesId);
+    const rng = Rng.from(rt.def.seed, `alloc:${productKey}:${day}`);
+    if (product.key === 'case') return rng.chance(0.45) ? 1 : 0;
+    if (product.key === 'hobbyBox') return rng.range(1, 3);
+    return rng.range(4, 12);
   }
 
   get seriesIds(): string[] {

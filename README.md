@@ -8,7 +8,7 @@ Built as an offline-first PWA for iPhone 16 Pro.
 ```bash
 npm install
 npm run dev          # play at localhost:5173
-npm test             # 47 engine tests
+npm test             # 52 engine tests
 npm run build
 node tools/e2e.mjs   # full loop + frame timing + memory, headless
 ```
@@ -40,6 +40,19 @@ universe fit inside iOS's storage limits.
 ---
 
 ## What's in it
+
+**Wax.** Buy sealed product with real money: retail packs, hobby packs,
+boxes, cases. Distributors ration hot product daily, and sealed wax
+appreciates as the population gets opened, so sitting on a case is a
+strategy. Boxes carry real per-box guarantees — the factory seeds a
+guaranteed auto and numbered cards into specific packs — which makes "one
+box" and "twelve packs" genuinely different bets.
+
+**Wax is -EV, on purpose.** Most boxes lose money and a few pay for the
+year. Profit comes from hitting above average, grading well, or buying
+cardboard somebody else mispriced — never from farming packs.
+`test/wax-ev.test.ts` holds pricing to that shape so a tuning change can't
+quietly turn ripping into a job.
 
 **Ripping.** Procedurally designed foil wrappers, drag-to-tear with a jagged
 tear path, card-back flips with a heat glow bleeding through. The escalation
@@ -131,7 +144,8 @@ exhausted population, population conservation, draw-frequency fidelity,
 save/restore round-trips, grading determinism and strictness ordering,
 auction bounds, and a **calibration suite** that pins the economy's shape to
 hobby intuition (commons under $2, star rookies in the tens, /99s in the
-hundreds, a superfractor rookie auto above $50K).
+hundreds, a superfractor rookie auto above $50K) and a **wax EV suite** that
+keeps sealed product priced above its own mean return.
 
 `node tools/e2e.mjs` drives the real loop headlessly at iPhone 16 Pro
 resolution — new career → rip → dig → grade → slab → auction → wire → reload
