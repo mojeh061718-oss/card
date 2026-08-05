@@ -207,6 +207,50 @@ function avgValue(set: (typeof TCG_SETS)[number], rarity: string): number {
   return cards.reduce((a, c) => a + c.value, 0) / cards.length;
 }
 
+describe('currency series', () => {
+  const money = TCG_SETS.find(s => s.id === 'tcg-currency')!;
+
+  it('ships 50 cards plus the 1 BTC redemption chase', () => {
+    expect(money.cards.length).toBe(51);
+    expect(money.size).toBe(50);
+    const chase = money.cards.find(c => c.rarity === 'chase')!;
+    expect(chase.name).toContain('1 BTC');
+    expect(chase.value).toBeGreaterThanOrEqual(90000);
+    expect(chase.printRun).toBeLessThanOrEqual(150);
+    // The signature and crypto holos the set is famous for.
+    expect(money.cards.some(c => c.name.includes('Franklin') && c.rarity === 'holo')).toBe(true);
+    expect(money.cards.some(c => c.name.includes('Bitcoin') && c.rarity === 'holo')).toBe(true);
+  });
+
+  it('boxes deliver prism foils and the redemption surfaces at 1:150', () => {
+    let chases = 0;
+    const holoCounts: number[] = [];
+    for (let b = 0; b < 40; b++) {
+      const pop = tcgPopulation(money, SEED);
+      const classes = tcgClasses(money);
+      const rng = new Rng(seedFromText(`money-box-${b}`));
+      const packs = openTcgBox(money, pop, classes, rng);
+      holoCounts.push(packs.filter(p =>
+        p.some(c => tcgCardOf(money, c.cardIndex).rarity === 'holo')).length);
+      chases += packs.flat().filter(c =>
+        tcgCardOf(money, c.cardIndex).rarity === 'chase').length;
+    }
+    expect(Math.min(...holoCounts)).toBeGreaterThanOrEqual(4);
+    expect(chases).toBeGreaterThan(2);
+    expect(chases).toBeLessThan(25);
+  });
+
+  it('every pull stays inside the currency set', () => {
+    const pop = tcgPopulation(money, SEED);
+    const classes = tcgClasses(money);
+    const rng = new Rng(seedFromText('money-sep'));
+    for (const pull of openTcgPack(money, pop, classes, rng)) {
+      expect(pull.seriesId).toBe('tcg-currency');
+      expect(pull.cardIndex).toBeLessThan(money.cards.length);
+    }
+  });
+});
+
 describe('tcg grading curve', () => {
   it('rewards gems and punishes damage', () => {
     expect(tcgGradeMultiplier(10, 1)).toBe(8.5);

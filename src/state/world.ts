@@ -151,15 +151,17 @@ class World {
     for (const set of TCG_SETS) {
       const seed = childSeed(WORLD_SEED, `tcg:${set.id}`);
       const isVintage = set.id === 'tcg-base';
+      const isCurrency = set.id === 'tcg-currency';
       const ladder: ParallelDef[] = TCG_RUNGS.map((r, i) => ({
         id: i,
-        name: r === 'holo' ? 'Holo Rare' : r === 'chase' ? 'Illustration Rare'
-          : r[0].toUpperCase() + r.slice(1),
+        name: r === 'holo' ? (isCurrency ? 'Prism Foil' : 'Holo Rare')
+          : r === 'chase' ? (isCurrency ? 'Redemption' : 'Illustration Rare')
+            : r[0].toUpperCase() + r.slice(1),
         numberedTo: null,
         printRun: r === 'common' ? 200000 : r === 'uncommon' ? 100000
           : r === 'rare' ? 50000 : r === 'holo' ? 20000 : 1500,
         finish: r === 'holo' ? (isVintage ? 'disco' : 'refractor')
-          : r === 'chase' ? 'refractor' : 'none',
+          : r === 'chase' ? (isCurrency ? 'superfractor' : 'refractor') : 'none',
         colorHex: null,
         desirability: 1,
       }));
@@ -180,13 +182,14 @@ class World {
       }));
       const teams: Team[] = [{
         id: 0, sport: 'football', city: set.name, nickname: 'TCG', abbrev: 'TCG',
-        primary: isVintage ? '#2a5caa' : '#c0392b', secondary: '#e8c86a',
+        primary: isVintage ? '#2a5caa' : isCurrency ? '#1e6e46' : '#c0392b',
+        secondary: '#e8c86a',
         logoSeed: seed,
       }];
       const def: SeriesDef = {
         id: set.id, seed, year: set.year,
-        brand: isVintage ? 'Base Set' : 'Pokemon',
-        line: isVintage ? '1st Edition' : '151',
+        brand: isVintage ? 'Base Set' : isCurrency ? 'Mint Works' : 'Pokemon',
+        line: isVintage ? '1st Edition' : isCurrency ? 'Currency' : '151',
         sport: 'football', name: set.name,
         archetype: LADDER_ARCHETYPES[0],
         ladder, checklist,
@@ -487,7 +490,8 @@ class World {
         insertName: null,
         artSeed: artSeedFor(rt.def.seed, pull.cardIndex),
         tcg: {
-          setKey: set.id === 'tcg-base' ? 'base' : '151',
+          setKey: set.id === 'tcg-base' ? 'base'
+            : set.id === 'tcg-currency' ? 'currency' : '151',
           chase: card.rarity === 'chase',
           poke: {
             name: card.name, type: card.type,

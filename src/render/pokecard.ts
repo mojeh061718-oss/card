@@ -22,7 +22,7 @@ export interface PokeCardSpec {
   type: string;          // fire | water | grass | lightning | psychic | fighting | colorless | trainer
   rarity: 'common' | 'uncommon' | 'rare' | 'holo';
   hp: number | null;
-  kind: 'creature' | 'trainer' | 'energy';
+  kind: 'creature' | 'trainer' | 'energy' | 'artifact';
   num: number;
   setName: string;
   setSize: number;

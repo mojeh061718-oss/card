@@ -22,6 +22,7 @@ import { drawSkyline, drawBase } from './skyline';
 import { INSERT_SETS } from '../engine/cards/series';
 import { heroPhoto, tcgScan } from './photodb';
 import { renderPokeCard, type PokeCardSpec } from './pokecard';
+import { renderCurrencyCard } from './currencycard';
 
 /**
  * REALISM CONCEPT hero: a real player photo takes the figure's place.
@@ -771,11 +772,14 @@ function renderScanCard(
 /** Render the complete card front at `widthPx` resolution. */
 export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayers {
   if (spec.tcg) {
-    // Imported real scan wins; otherwise the procedural TCG concept frame.
+    // Imported real scan wins; otherwise the set's own procedural frame
+    // (banknote engraving for Currency, concept frame for the others).
     const scan = tcgScan(spec.tcg.setKey, spec.tcg.poke.num);
     const holo = spec.tcg.chase || spec.tcg.poke.rarity === 'holo';
     if (scan) return renderScanCard(scan, holo, widthPx);
-    const l = renderPokeCard(spec.tcg.poke, widthPx);
+    const l = spec.tcg.setKey === 'currency'
+      ? renderCurrencyCard(spec.tcg.poke, widthPx)
+      : renderPokeCard(spec.tcg.poke, widthPx);
     return { print: l.print, foilMask: l.foilMask, widthPx: l.widthPx, heightPx: l.heightPx };
   }
   const w = widthPx;

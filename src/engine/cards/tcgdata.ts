@@ -11,7 +11,7 @@ export interface TcgCardData {
   name: string;
   type: string;
   rarity: 'common' | 'uncommon' | 'rare' | 'holo' | 'chase';
-  kind: 'creature' | 'trainer' | 'energy';
+  kind: 'creature' | 'trainer' | 'energy' | 'artifact';
   /** Raw near-mint market value, USD. */
   value: number;
   hp: number | null;
@@ -296,6 +296,65 @@ export const TCG_SETS: TcgSetData[] = [
   { num: 150, name: 'Mewtwo', type: 'psychic', rarity: 'holo', kind: 'creature', hp: null, value: 2.5, printRun: 40000 },
   { num: 151, name: 'Mew', type: 'psychic', rarity: 'holo', kind: 'creature', hp: null, value: 8.0, printRun: 2500 },
   { num: 199, name: 'Charizard ex', type: 'fire', rarity: 'chase', kind: 'creature', hp: null, value: 240.0, printRun: 900, outOf: 165 },
+    ],
+  },
+  {
+    // The money game: history's currency as chase cardboard. `type` carries
+    // the engraving subject class for the banknote renderer.
+    id: 'tcg-currency', name: 'Currency — Series 1', year: 2024, size: 50,
+    packPrice: 12, boxPrice: 220,
+    cards: [
+  { num: 1, name: 'One Dollar Bill', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1.5, printRun: 90000 },
+  { num: 2, name: 'Five Dollar Bill', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1.5, printRun: 90000 },
+  { num: 3, name: 'Ten Dollar Bill', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1.5, printRun: 90000 },
+  { num: 4, name: 'Twenty Dollar Bill', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 2, printRun: 90000 },
+  { num: 5, name: 'Fifty Dollar Bill', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 2, printRun: 90000 },
+  { num: 6, name: 'Hundred Dollar Bill', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 3, printRun: 90000 },
+  { num: 7, name: 'Japanese Yen', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1, printRun: 90000 },
+  { num: 8, name: 'British Pound', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1, printRun: 90000 },
+  { num: 9, name: 'Euro Note', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1, printRun: 90000 },
+  { num: 10, name: 'Swiss Franc', type: 'note', rarity: 'common', kind: 'artifact', hp: null, value: 1.5, printRun: 90000 },
+  { num: 11, name: 'Wheat Penny', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 1, printRun: 90000 },
+  { num: 12, name: 'Buffalo Nickel', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 1.5, printRun: 90000 },
+  { num: 13, name: 'Mercury Dime', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 1.5, printRun: 90000 },
+  { num: 14, name: 'Standing Liberty Quarter', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 2, printRun: 90000 },
+  { num: 15, name: 'Franklin Half Dollar', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 2, printRun: 90000 },
+  { num: 16, name: 'Eisenhower Dollar', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 2, printRun: 90000 },
+  { num: 17, name: 'Canadian Maple Leaf', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 2, printRun: 90000 },
+  { num: 18, name: 'Mexican Peso', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 1, printRun: 90000 },
+  { num: 19, name: 'Ancient Drachma', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 3, printRun: 90000 },
+  { num: 20, name: 'Roman Denarius', type: 'coin', rarity: 'common', kind: 'artifact', hp: null, value: 3, printRun: 90000 },
+  { num: 21, name: 'Two Dollar Bill', type: 'note', rarity: 'uncommon', kind: 'artifact', hp: null, value: 5, printRun: 45000 },
+  { num: 22, name: 'Silver Certificate', type: 'note', rarity: 'uncommon', kind: 'artifact', hp: null, value: 6, printRun: 45000 },
+  { num: 23, name: 'Morgan Silver Dollar', type: 'coin', rarity: 'uncommon', kind: 'artifact', hp: null, value: 8, printRun: 45000 },
+  { num: 24, name: 'Peace Dollar', type: 'coin', rarity: 'uncommon', kind: 'artifact', hp: null, value: 7, printRun: 45000 },
+  { num: 25, name: 'American Silver Eagle', type: 'coin', rarity: 'uncommon', kind: 'artifact', hp: null, value: 8, printRun: 45000 },
+  { num: 26, name: 'Gold Krugerrand', type: 'gold', rarity: 'uncommon', kind: 'artifact', hp: null, value: 12, printRun: 45000 },
+  { num: 27, name: 'Piece of Eight', type: 'coin', rarity: 'uncommon', kind: 'artifact', hp: null, value: 10, printRun: 45000 },
+  { num: 28, name: 'Spanish Doubloon', type: 'gold', rarity: 'uncommon', kind: 'artifact', hp: null, value: 12, printRun: 45000 },
+  { num: 29, name: 'Gold Bar — 400oz', type: 'gold', rarity: 'uncommon', kind: 'artifact', hp: null, value: 10, printRun: 45000 },
+  { num: 30, name: 'The Mint Press', type: 'vault', rarity: 'uncommon', kind: 'artifact', hp: null, value: 6, printRun: 45000 },
+  { num: 31, name: 'Wall Street Bull', type: 'figure', rarity: 'uncommon', kind: 'artifact', hp: null, value: 9, printRun: 45000 },
+  { num: 32, name: 'Ticker Tape 1929', type: 'note', rarity: 'uncommon', kind: 'artifact', hp: null, value: 8, printRun: 45000 },
+  { num: 33, name: 'Five Hundred Dollar Bill', type: 'note', rarity: 'rare', kind: 'artifact', hp: null, value: 25, printRun: 15000 },
+  { num: 34, name: 'One Thousand Dollar Bill', type: 'note', rarity: 'rare', kind: 'artifact', hp: null, value: 35, printRun: 15000 },
+  { num: 35, name: 'Ethereum — The Merge', type: 'crypto', rarity: 'rare', kind: 'artifact', hp: null, value: 30, printRun: 15000 },
+  { num: 36, name: 'Fort Knox', type: 'vault', rarity: 'rare', kind: 'artifact', hp: null, value: 22, printRun: 15000 },
+  { num: 37, name: '1804 Silver Dollar', type: 'coin', rarity: 'rare', kind: 'artifact', hp: null, value: 45, printRun: 15000 },
+  { num: 38, name: '1913 Liberty Nickel', type: 'coin', rarity: 'rare', kind: 'artifact', hp: null, value: 40, printRun: 15000 },
+  { num: 39, name: 'Brasher Doubloon', type: 'gold', rarity: 'rare', kind: 'artifact', hp: null, value: 50, printRun: 15000 },
+  { num: 40, name: 'The Emerald Vault', type: 'gem', rarity: 'rare', kind: 'artifact', hp: null, value: 35, printRun: 15000 },
+  { num: 41, name: 'The Sapphire Vault', type: 'gem', rarity: 'rare', kind: 'artifact', hp: null, value: 35, printRun: 15000 },
+  { num: 42, name: 'The Ruby Vault', type: 'gem', rarity: 'rare', kind: 'artifact', hp: null, value: 38, printRun: 15000 },
+  { num: 43, name: 'Ten Thousand Dollar Bill', type: 'note', rarity: 'holo', kind: 'artifact', hp: null, value: 180, printRun: 4000 },
+  { num: 44, name: 'One Hundred Thousand — Gold Certificate', type: 'note', rarity: 'holo', kind: 'artifact', hp: null, value: 350, printRun: 4000 },
+  { num: 45, name: '1933 Double Eagle', type: 'gold', rarity: 'holo', kind: 'artifact', hp: null, value: 600, printRun: 4000 },
+  { num: 46, name: 'Bitcoin — Genesis Block', type: 'crypto', rarity: 'holo', kind: 'artifact', hp: null, value: 450, printRun: 4000 },
+  { num: 47, name: 'Satoshi Nakamoto', type: 'figure', rarity: 'holo', kind: 'artifact', hp: null, value: 320, printRun: 4000 },
+  { num: 48, name: 'Benjamin Franklin — Cut Signature', type: 'signature', rarity: 'holo', kind: 'artifact', hp: null, value: 1400, printRun: 2500 },
+  { num: 49, name: 'Alexander Hamilton — Cut Signature', type: 'signature', rarity: 'holo', kind: 'artifact', hp: null, value: 900, printRun: 2500 },
+  { num: 50, name: 'The Diamond Vault', type: 'gem', rarity: 'holo', kind: 'artifact', hp: null, value: 500, printRun: 4000 },
+  { num: 51, name: '1 BTC — Redemption Vault', type: 'crypto', rarity: 'chase', kind: 'artifact', hp: null, value: 95000, printRun: 100, outOf: 50 },
     ],
   },
 ];

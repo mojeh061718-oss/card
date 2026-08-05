@@ -159,15 +159,17 @@ describe('shipped presets', () => {
     expect(sanitizeOverrides(set).set).toEqual(set);
   });
 
-  it('real-world.json covers both full leagues and 75 names per sport', () => {
+  it('real-world.json covers both full leagues and 150 names per sport', () => {
     const { set } = sanitizeOverrides(realWorld);
     const football = Object.keys(set.teams).filter(k => k.startsWith('football:'));
     const baseball = Object.keys(set.teams).filter(k => k.startsWith('baseball:'));
     expect(football).toHaveLength(32);
     expect(baseball).toHaveLength(30);
-    // 25 current + 50 legacy.
-    expect(set.rosterByRank.football).toHaveLength(75);
-    expect(set.rosterByRank.baseball).toHaveLength(75);
+    // 100 current + 50 legacy, no duplicates.
+    expect(set.rosterByRank.football).toHaveLength(150);
+    expect(set.rosterByRank.baseball).toHaveLength(150);
+    expect(new Set(set.rosterByRank.football).size).toBe(150);
+    expect(new Set(set.rosterByRank.baseball).size).toBe(150);
   });
 
   it('preset team ids are contiguous from zero, so none is orphaned', () => {
