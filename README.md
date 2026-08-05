@@ -8,7 +8,7 @@ Built as an offline-first PWA for iPhone 16 Pro.
 ```bash
 npm install
 npm run dev          # play at localhost:5173
-npm test             # 52 engine tests
+npm test             # 55 engine tests
 npm run build
 node tools/e2e.mjs   # full loop + frame timing + memory, headless
 ```
@@ -89,8 +89,20 @@ archetype, pattern engine, palette, type pairing, foil behavior — so 2031
 Chromium genuinely doesn't look like 2029 Chromium.
 
 - **Athletes** are articulated figures: pose keyframes as joint angles, drawn
-  as tapered limbs over a solid torso, cel-shaded with a rim light and a dark
-  contour keyline, with jersey wordmarks, numbers, pinstripes, and equipment.
+  as tapered limbs over a solid torso, cel-shaded with a rim light, and cut
+  out behind a thick **white die-cut keyline** — the sticker outline premium
+  inserts use to lift a figure off a busy background.
+- **Equipment is constructed, not suggested.** Football helmets get a shell
+  with a center stripe, a face in the opening with real lighting, a chinstrap
+  that anchors at the earhole, and a facemask cage with a metallic highlight.
+  Plus batting helmets with ear flaps, caps with panel seams, gloves with
+  finger seams, fielder's mitts with lacing, knee pads, wristbands, and
+  cleats with sole plates and studs.
+- **Downtown inserts** are the illustrated case hit: a procedural city
+  skyline generated from the team's seed (three depth bands, window grids,
+  spires, clouds), the figure standing on a light plinth measured to its own
+  foot line, and the signature bottom banner with the insert-name pill.
+  199 copies per card, roughly a 1-in-17-box pull.
 - **Foil** is one WebGL2 uber-shader covering nine finishes (refractor, prism,
   cracked ice, wave, pulsar, mojo, disco, shimmer, superfractor), driven by
   gyroscope or touch tilt. It's ink-gated by print luminance so the artwork
@@ -131,7 +143,8 @@ src/
     condition/     defects, press profiles, grading
     economy/       valuation, comps, auctions, lots
     news/          wire generators, Top 50
-  render/          color (OKLCH), dna, athlete, signature, layers, glcard, slab, pack
+  render/          color (OKLCH), dna, athlete, equipment, skyline, signature,
+                   layers, glcard, slab, pack
   app/             screens, cardview, feel (audio + haptics)
   state/           world singleton + persisted collection
 tools/             screenshot harnesses, icon generator, e2e run

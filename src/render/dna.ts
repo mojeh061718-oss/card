@@ -19,7 +19,7 @@ export type LayoutArchetype =
 
 export type PatternKind =
   | 'rays' | 'halftone' | 'pinstripe' | 'tessellation'
-  | 'wave' | 'circuit' | 'marble' | 'starburst';
+  | 'wave' | 'circuit' | 'marble' | 'starburst' | 'velocity';
 
 export type NameplateStyle = 'bar' | 'chip' | 'slant' | 'stacked' | 'outline';
 
@@ -47,7 +47,7 @@ export interface DesignDna {
 }
 
 const LAYOUTS: LayoutArchetype[] = ['fullBleed', 'framed', 'diagonalSplit', 'lowerThird', 'archWindow'];
-const PATTERNS: PatternKind[] = ['rays', 'halftone', 'pinstripe', 'tessellation', 'wave', 'circuit', 'marble', 'starburst'];
+const PATTERNS: PatternKind[] = ['rays', 'halftone', 'pinstripe', 'tessellation', 'wave', 'circuit', 'marble', 'starburst', 'velocity'];
 const NAMEPLATES: NameplateStyle[] = ['bar', 'chip', 'slant', 'stacked', 'outline'];
 
 /** Curated display/label pairings — system stacks tuned to look print-grade. */

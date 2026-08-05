@@ -13,11 +13,11 @@ type Route = 'hunt' | 'wax' | 'binder' | 'grade' | 'market' | 'news' | 'devlab';
 
 export function App() {
   const careerStarted = useCollection(s => s.careerStarted);
+  // The render lab is a dev tool — it skips career setup entirely.
+  const labMode = new URLSearchParams(location.search).has('lab');
   const [setupDone, setSetupDone] = useState(false);
-  const [route, setRoute] = useState<Route>(
-    new URLSearchParams(location.search).has('lab') ? 'devlab' : 'wax',
-  );
-  if (!careerStarted && !setupDone) {
+  const [route, setRoute] = useState<Route>(labMode ? 'devlab' : 'wax');
+  if (!careerStarted && !setupDone && !labMode) {
     return <CareerSetup onDone={() => setSetupDone(true)} />;
   }
 

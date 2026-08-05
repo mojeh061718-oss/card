@@ -18,7 +18,7 @@ import type { InkKind } from '../render/signature';
 
 const WORLD_SEED = seedFromText('devlab-world-1');
 const CARD_W = 300; // gallery still size
-const FOCUS_W = 360;
+const FOCUS_W = 420;
 
 interface GallerySpec {
   label: string;
@@ -50,6 +50,7 @@ function buildSpecs(): GallerySpec[] {
     label: string, sport: Sport, playerIdx: number, dna: typeof dnaA,
     parallel: ParallelDef, serial: number | null, rookie: boolean,
     auto: { ink: InkKind; sticker: boolean } | null, artIdx: number,
+    insertName: string | null = null,
   ) => {
     const { player, team } = pick(sport, playerIdx);
     specs.push({
@@ -60,6 +61,7 @@ function buildSpecs(): GallerySpec[] {
         cardNumber: `${dna === dnaA ? 'PC' : 'AP'}-${100 + playerIdx}`,
         isRookie: rookie,
         auto,
+        insertName,
         artSeed: artSeedFor(seriesSeed, artIdx),
       },
     });
@@ -76,13 +78,21 @@ function buildSpecs(): GallerySpec[] {
   mk('/25 Auto', 'football', 3, withPattern(dnaA, 'marble'), P(8), 9, true, { ink: inks[0], sticker: false }, 5);
   mk('/10', 'baseball', 2, withPattern(dnaB, 'rays'), P(9), 3, false, null, 6);
   mk('/5 Auto', 'football', 4, withPattern(dnaB, 'starburst', 'framed'), P(10), 2, true, { ink: inks[3], sticker: true }, 7);
+  mk('/5 Velocity', 'baseball', 5, withPattern(dnaB, 'velocity'), P(10), 4, false, null, 9);
   mk('SUPERFRACTOR 1/1', 'baseball', 0, withPattern(dnaA, 'starburst'), one, 1, true, { ink: inks[1], sticker: false }, 8);
+  // Illustrated case hits — their own layout entirely.
+  mk('DOWNTOWN /199', 'football', 0, dnaA, P(0), 42, true, null, 10, 'Downtown');
+  mk('DOWNTOWN /199', 'baseball', 1, dnaB, P(0), 7, false, null, 11, 'Downtown');
   return specs;
 }
 
 export function DevLab() {
   const [stills, setStills] = useState<{ label: string; url: string }[]>([]);
-  const [focusIdx, setFocusIdx] = useState(8);
+  // ?focus=N opens the lab on a specific card, which is how the screenshot
+  // harness inspects one treatment at full size.
+  const [focusIdx, setFocusIdx] = useState(
+    Number(new URLSearchParams(location.search).get('focus') ?? 8),
+  );
   const focusRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<CardGL | null>(null);
   const specsRef = useRef<GallerySpec[] | null>(null);

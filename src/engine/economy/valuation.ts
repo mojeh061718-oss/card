@@ -24,6 +24,8 @@ export interface ValuationInputs {
   grade?: { result: GradeResult; company: GradingCompany } | null;
   /** Error cards are their own collectible axis. */
   errorKind?: string | null;
+  /** Illustrated case-hit inserts carry their own premium. */
+  insert?: boolean;
 }
 
 /**
@@ -65,6 +67,7 @@ export function intrinsicValue(v: ValuationInputs): number {
   if (v.isAuto) value *= 4.2;
   value *= v.setFactor;
   if (v.grade) value *= gradeMultiplier(v.grade.result, v.grade.company);
+  if (v.insert) value *= 3.5;        // illustrated case hits are the chase
   if (v.errorKind) value *= 1.8;     // errors are their own chase
   return Math.max(0.25, value);
 }

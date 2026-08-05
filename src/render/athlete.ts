@@ -12,6 +12,10 @@
 import { Rng } from '../engine/rng';
 import type { Sport } from '../engine/world/teams';
 import { shade, withAlpha, mixHex } from './color';
+import {
+  drawFootballHelmet, drawBattingHelmet, drawCap, drawGlove, drawMitt,
+  drawCleat, drawKneePad, drawBand,
+} from './equipment';
 
 interface Pt { x: number; y: number }
 
@@ -195,17 +199,33 @@ export function drawAthlete(
   // --- FAR limbs (painter's order) ---
   limb(ctx, [P.sF, P.eF], armW * 1.05, armW * 0.85, far(jerseyDark));
   limb(ctx, [P.eF, P.wF], foreW, foreW * 0.8, far(skinDark));
-  // Far hand (gloved in trim for football, skin for baseball).
-  ctx.beginPath();
-  ctx.arc(P.wF.x, P.wF.y, foreW * 0.48, 0, Math.PI * 2);
-  ctx.fillStyle = style.sport === 'football' ? far(shade(style.jersey, -0.2)) : far(skinDark);
-  ctx.fill();
+  // Far hand: gloved for football, bare for baseball unless holding a mitt.
+  const farArmAngle = Math.atan2(P.wF.y - P.eF.y, P.wF.x - P.eF.x);
+  if (style.sport === 'football') {
+    drawGlove(
+      ctx, P.wF.x, P.wF.y, foreW * 1.15, farArmAngle,
+      far(shade(style.jersey, -0.18)), far(shade(style.trim, -0.1)),
+    );
+  } else {
+    ctx.beginPath();
+    ctx.arc(P.wF.x, P.wF.y, foreW * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = far(skinDark);
+    ctx.fill();
+  }
   limb(ctx, [P.hF, P.kF], legW, legW * 0.85, far(pantsDark));
-  limb(
-    ctx, [P.kF, P.aF], calfW, calfW * 0.75,
-    style.sport === 'football' ? far(pantsDark) : far('#d8d6cc'),
-  );
-  limb(ctx, [P.aF, P.tF], calfW * 0.85, calfW * 0.75, '#1c1c20');
+  limb(ctx, [P.kF, P.aF], calfW, calfW * 0.75, far(pantsDark));
+  if (style.sport === 'baseball') {
+    const midF = { x: (P.kF.x + P.aF.x) / 2, y: (P.kF.y + P.aF.y) / 2 };
+    limb(ctx, [midF, P.aF], calfW * 0.86, calfW * 0.7, far(style.jersey));
+  }
+  drawCleat(ctx, P.aF.x, P.aF.y, P.tF.x, P.tF.y, calfW * 1.05, '#26262c', far(style.trim));
+  if (style.sport === 'football') {
+    drawKneePad(
+      ctx, P.kF.x, P.kF.y, legW * 0.82,
+      Math.atan2(P.aF.y - P.hF.y, P.aF.x - P.hF.x) + Math.PI / 2,
+      far(shade(style.pants, -0.07)),
+    );
+  }
 
   // --- Torso: solid closed path neck→shoulders→hips ---
   const shoulderW = Math.hypot(P.sN.x - P.sF.x, P.sN.y - P.sF.y);
@@ -336,82 +356,54 @@ export function drawAthlete(
 
   // --- NEAR leg ---
   limb(ctx, [P.hN, P.kN], legW * 1.05, legW * 0.9, style.pants);
-  limb(
-    ctx, [P.kN, P.aN], calfW * 1.05, calfW * 0.8,
-    style.sport === 'football' ? style.pants : '#eceae2',
-  );
+  limb(ctx, [P.kN, P.aN], calfW * 1.05, calfW * 0.8, style.pants);
   if (style.sport === 'baseball') {
-    // Stirrup sock.
+    // Stirrup sock over the pant leg, in the team's color.
     const mid = { x: (P.kN.x + P.aN.x) / 2, y: (P.kN.y + P.aN.y) / 2 };
-    limb(ctx, [mid, P.aN], calfW * 0.85, calfW * 0.7, style.jersey);
+    limb(ctx, [mid, P.aN], calfW * 0.9, calfW * 0.72, style.jersey);
+    limb(
+      ctx,
+      [{ x: mid.x * 0.5 + P.kN.x * 0.5, y: mid.y * 0.5 + P.kN.y * 0.5 }, mid],
+      calfW * 0.94, calfW * 0.9, style.trim,
+    );
   }
-  limb(ctx, [P.aN, P.tN], calfW * 0.9, calfW * 0.8, '#232328');
+  drawCleat(ctx, P.aN.x, P.aN.y, P.tN.x, P.tN.y, calfW * 1.15, '#2b2b31', style.trim);
+  if (style.sport === 'football') {
+    drawKneePad(
+      ctx, P.kN.x, P.kN.y, legW * 0.86,
+      Math.atan2(P.aN.y - P.hN.y, P.aN.x - P.hN.x) + Math.PI / 2,
+      shade(style.pants, -0.06),
+    );
+  }
 
   // --- Head + headgear ---
-  const headR = 0.058 * u;
-  ctx.beginPath();
-  ctx.arc(P.head.x, P.head.y, headR, 0, Math.PI * 2);
-  ctx.fillStyle = style.skin;
-  ctx.fill();
+  const headR = 0.062 * u;
   const dir = pose.motion.x >= 0 ? 1 : -1;
   if (style.sport === 'football') {
-    // Helmet shell wraps the skull, open at the face (motion side).
-    ctx.beginPath();
-    ctx.arc(P.head.x, P.head.y, headR * 1.18, Math.PI * 0.55, Math.PI * 2.62);
-    ctx.closePath();
-    ctx.fillStyle = style.jersey;
-    ctx.fill();
-    // Shell stripe.
-    ctx.strokeStyle = style.trim;
-    ctx.lineWidth = headR * 0.24;
-    ctx.beginPath();
-    ctx.arc(P.head.x, P.head.y, headR * 1.06, Math.PI * 1.25, Math.PI * 1.75);
-    ctx.stroke();
-    // Facemask bars toward motion side.
-    ctx.strokeStyle = '#b9bec7';
-    ctx.lineWidth = headR * 0.13;
-    ctx.beginPath();
-    ctx.moveTo(P.head.x + dir * headR * 1.25, P.head.y + headR * 0.15);
-    ctx.quadraticCurveTo(
-      P.head.x + dir * headR * 0.7, P.head.y + headR * 0.85,
-      P.head.x - dir * headR * 0.2, P.head.y + headR * 0.9,
-    );
-    ctx.moveTo(P.head.x + dir * headR * 1.18, P.head.y + headR * 0.5);
-    ctx.lineTo(P.head.x + dir * headR * 0.35, P.head.y + headR * 0.62);
-    ctx.stroke();
-    // Earhole — the tiny real-helmet detail.
-    ctx.beginPath();
-    ctx.arc(P.head.x - dir * headR * 0.45, P.head.y + headR * 0.12, headR * 0.11, 0, Math.PI * 2);
-    ctx.fillStyle = shade(style.jersey, -0.3);
-    ctx.fill();
+    drawFootballHelmet(ctx, P.head.x, P.head.y, headR, dir, style.jersey, style.trim, style.skin);
   } else {
-    // Cap crown + brim facing motion.
+    // Bare head first, then the lid — batters wear flaps, fielders wear caps.
     ctx.beginPath();
-    ctx.arc(P.head.x, P.head.y - headR * 0.18, headR * 1.04, Math.PI * 1.02, Math.PI * 1.98);
-    ctx.closePath();
-    ctx.fillStyle = style.jersey;
+    ctx.arc(P.head.x, P.head.y, headR * 0.92, 0, Math.PI * 2);
+    ctx.fillStyle = style.skin;
+    ctx.fill();
+    if (pose.prop?.kind === 'bat') {
+      drawBattingHelmet(ctx, P.head.x, P.head.y, headR, dir, style.jersey, style.trim, style.skin);
+    } else {
+      drawCap(ctx, P.head.x, P.head.y, headR, dir, style.jersey, style.trim);
+    }
+    // Eyes, then eye black smudged beneath them.
+    ctx.fillStyle = 'rgba(27, 16, 8, 0.82)';
+    ctx.beginPath();
+    ctx.ellipse(P.head.x + dir * headR * 0.44, P.head.y + headR * 0.1, headR * 0.1, headR * 0.07, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(
-      P.head.x + dir * headR * 0.85, P.head.y - headR * 0.42,
-      headR * 0.72, headR * 0.2, dir * 0.18, 0, Math.PI * 2,
-    );
-    ctx.fillStyle = shade(style.jersey, -0.08);
+    ctx.ellipse(P.head.x + dir * headR * 0.02, P.head.y + headR * 0.14, headR * 0.09, headR * 0.065, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Cap button + seam.
+    ctx.fillStyle = 'rgba(24, 20, 16, 0.42)';
     ctx.beginPath();
-    ctx.arc(P.head.x, P.head.y - headR * 1.08, headR * 0.1, 0, Math.PI * 2);
-    ctx.fillStyle = style.trim;
+    ctx.ellipse(P.head.x + dir * headR * 0.44, P.head.y + headR * 0.3, headR * 0.16, headR * 0.07, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = withAlpha(shade(style.jersey, -0.25), 0.8);
-    ctx.lineWidth = headR * 0.07;
-    ctx.beginPath();
-    ctx.moveTo(P.head.x, P.head.y - headR * 1.05);
-    ctx.quadraticCurveTo(P.head.x + dir * headR * 0.3, P.head.y - headR * 0.7, P.head.x + dir * headR * 0.4, P.head.y - headR * 0.32);
-    ctx.stroke();
-    // Eye black under the leading eye.
-    ctx.fillStyle = 'rgba(20, 16, 12, 0.75)';
-    ctx.fillRect(P.head.x + dir * headR * 0.28, P.head.y + headR * 0.08, dir * headR * 0.38, headR * 0.14);
   }
 
   // --- NEAR arm (over everything) ---
@@ -427,11 +419,25 @@ export function drawAthlete(
     armW * 0.95, armW * 0.95, style.trim,
   );
   limb(ctx, [P.eN, P.wN], foreW * 1.05, foreW * 0.85, style.skin);
-  // Near hand.
-  ctx.beginPath();
-  ctx.arc(P.wN.x, P.wN.y, foreW * 0.52, 0, Math.PI * 2);
-  ctx.fillStyle = style.sport === 'football' ? shade(style.trim, -0.26) : style.skin;
-  ctx.fill();
+  const nearArmAngle = Math.atan2(P.wN.y - P.eN.y, P.wN.x - P.eN.x);
+  // Wristband just up the forearm from the hand.
+  drawBand(
+    ctx,
+    P.wN.x - Math.cos(nearArmAngle) * foreW * 0.9,
+    P.wN.y - Math.sin(nearArmAngle) * foreW * 0.9,
+    foreW * 1.05, nearArmAngle + Math.PI / 2, '#f0ede4',
+  );
+  if (style.sport === 'football') {
+    drawGlove(
+      ctx, P.wN.x, P.wN.y, foreW * 1.25, nearArmAngle,
+      shade(style.jersey, -0.14), style.trim,
+    );
+  } else {
+    ctx.beginPath();
+    ctx.arc(P.wN.x, P.wN.y, foreW * 0.54, 0, Math.PI * 2);
+    ctx.fillStyle = style.skin;
+    ctx.fill();
+  }
 
   // --- Prop ---
   if (pose.prop) {
@@ -490,12 +496,8 @@ export function drawAthlete(
         break;
       }
       case 'glove': {
-        const r = 0.048 * u;
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.arc(r * 0.5, -r * 0.5, r * 0.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#8a5a2b';
-        ctx.fill();
+        ctx.rotate(-pose.prop.angle);
+        drawMitt(ctx, 0, 0, 0.05 * u, pose.prop.angle);
         break;
       }
     }
@@ -570,29 +572,37 @@ export function renderAthleteLayer(
   rctx.globalCompositeOperation = 'destination-out';
   rctx.drawImage(off, lx * w * 0.014, ly * h * 0.014);
 
-  // Contour: a dark keyline around the whole silhouette — this is what makes
-  // the cutout read crisp and "printed" instead of floating soft.
-  const contour = document.createElement('canvas');
-  contour.width = off.width;
-  contour.height = off.height;
-  const cctx = contour.getContext('2d')!;
-  const cr = Math.max(1.5, w * 0.006);
-  for (let a = 0; a < 8; a++) {
-    const ang = (a / 8) * Math.PI * 2;
-    cctx.drawImage(off, Math.cos(ang) * cr, Math.sin(ang) * cr);
-  }
-  cctx.globalCompositeOperation = 'source-in';
-  cctx.fillStyle = '#101018';
-  cctx.fillRect(0, 0, contour.width, contour.height);
+  // Die-cut keyline. Premium inserts photoshop a thick WHITE sticker outline
+  // around the cutout — it separates the figure from any background far more
+  // aggressively than a dark line, and it's the single most recognizable
+  // trait of the style. A thin dark line outside it keeps the edge defined.
+  const keyline = (radius: number, color: string): HTMLCanvasElement => {
+    const c = document.createElement('canvas');
+    c.width = off.width;
+    c.height = off.height;
+    const kctx = c.getContext('2d')!;
+    for (let a = 0; a < 16; a++) {
+      const ang = (a / 16) * Math.PI * 2;
+      kctx.drawImage(off, Math.cos(ang) * radius, Math.sin(ang) * radius);
+    }
+    kctx.globalCompositeOperation = 'source-in';
+    kctx.fillStyle = color;
+    kctx.fillRect(0, 0, c.width, c.height);
+    return c;
+  };
+  const kr = Math.max(2, w * 0.0075);
+  const outline = keyline(kr * 1.5, 'rgba(18,18,26,0.55)');
+  const sticker = keyline(kr, '#f7f5ef');
 
-  // Blit: shadow → contour → figure → rim.
+  // Blit: shadow → dark edge → white sticker → figure → rim.
   target.save();
-  target.shadowColor = 'rgba(0,0,0,0.5)';
-  target.shadowBlur = Math.max(6, w * 0.035);
+  target.shadowColor = 'rgba(0,0,0,0.55)';
+  target.shadowBlur = Math.max(8, w * 0.04);
   target.shadowOffsetX = w * 0.014 * (mx >= 0 ? -1 : 1);
-  target.shadowOffsetY = h * 0.018;
-  target.drawImage(contour, x, y);
+  target.shadowOffsetY = h * 0.02;
+  target.drawImage(outline, x, y);
   target.restore();
+  target.drawImage(sticker, x, y);
   target.drawImage(off, x, y);
   target.save();
   target.globalAlpha = 0.65;

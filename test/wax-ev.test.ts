@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { seedFromText, Rng, childSeed } from '../src/engine/rng';
 import { generateLeague } from '../src/engine/world/teams';
 import {
-  buildSeries, makePopulation, openBox, renderInputs, PRODUCTS,
+  buildSeries, makePopulation, openBox, renderInputs, seriesSlots, PRODUCTS,
 } from '../src/engine/cards/series';
 import { intrinsicValue } from '../src/engine/economy/valuation';
 
@@ -89,5 +89,43 @@ describe('wax expected value', () => {
       expect(s.mean, `${product.key} mean $${s.mean.toFixed(0)} vs msrp $${product.msrp}`)
         .toBeLessThan(product.msrp);
     }
+  });
+});
+
+describe('illustrated inserts', () => {
+  it('are a genuine case hit, not a pack filler', () => {
+    const product = PRODUCTS.find(p => p.key === 'hobbyBox')!;
+    const pop = makePopulation(def);
+    const rng = new Rng(childSeed(SEED, 'insert-odds'));
+    let boxes = 0, withInsert = 0;
+    for (let i = 0; i < 400; i++) {
+      boxes++;
+      const hit = openBox(def, pop, rng, product)
+        .flat()
+        .some(c => def.checklist[c.cardIndex].insertName !== null);
+      if (hit) withInsert++;
+    }
+    // ~1:200 packs means roughly 1 in 17 boxes. Wide bounds, but it must be
+    // rare enough to matter and common enough to actually exist.
+    expect(withInsert / boxes).toBeGreaterThan(0.01);
+    expect(withInsert / boxes).toBeLessThan(0.25);
+  });
+
+  it('only headliners get the illustrated treatment', () => {
+    const inserts = def.checklist.filter(c => c.insertName !== null);
+    expect(inserts.length).toBeGreaterThan(0);
+    const talents = inserts.map(c => lg.players[c.playerId].talent);
+    const allTalents = [...lg.players].map(p => p.talent).sort((a, b) => b - a);
+    const cutoff = allTalents[40];
+    for (const t of talents) expect(t).toBeGreaterThanOrEqual(cutoff);
+  });
+
+  it('inserts carry a hard cap and no rainbow', () => {
+    const insert = def.checklist.find(c => c.insertName !== null)!;
+    const slots = seriesSlots(def)
+      .filter(s => Math.floor(s.slotId / def.ladder.length) === insert.index);
+    const printed = slots.filter(s => s.printed > 0);
+    expect(printed).toHaveLength(1);          // base rung only
+    expect(printed[0].printed).toBe(199);
   });
 });

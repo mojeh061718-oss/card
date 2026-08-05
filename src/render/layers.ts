@@ -18,6 +18,10 @@ import { shade, withAlpha, mixHex, inkOn } from './color';
 import { renderAthleteLayer, athleteStyle, posesFor } from './athlete';
 import { buildSignature, drawSignature, type InkKind } from './signature';
 import type { Condition } from '../engine/condition/condition';
+import { drawSkyline, drawBase } from './skyline';
+import { INSERT_SETS } from '../engine/cards/series';
+
+const INSERT_RUN = INSERT_SETS[0].printRun;
 
 export const CARD_ASPECT = 2.5 / 3.5;
 
@@ -35,6 +39,8 @@ export interface CardRenderSpec {
   artSeed: bigint;
   /** Physical copy condition; null renders a factory-fresh proof. */
   condition?: Condition | null;
+  /** Named illustrated insert — swaps in a bespoke layout. */
+  insertName?: string | null;
 }
 
 export interface CardLayers {
@@ -178,6 +184,37 @@ const patternPainters: Record<DesignDna['pattern'], Painter> = {
       ctx.stroke();
     }
   },
+  velocity(ctx, w, h, a, b, dna, rng) {
+    // Optic-style "velocity": ice shards radiating from a hot point, laid
+    // over a flat field. Shards are thin quads, not lines, so they read as
+    // cracked foil rather than scratches.
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, shade(a, -0.02));
+    g.addColorStop(1, shade(mixHex(a, b, 0.35), -0.12));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    const cx = w * 0.5, cy = h * 0.42;
+    const shards = Math.round(dna.patternScale * 5) + 40;
+    for (let i = 0; i < shards; i++) {
+      const ang = rng.float() * Math.PI * 2;
+      const r0 = Math.hypot(w, h) * (0.05 + rng.float() * 0.5);
+      const len = Math.hypot(w, h) * (0.06 + rng.float() * 0.26);
+      const wid = w * (0.002 + rng.float() * 0.007);
+      const x0 = cx + Math.cos(ang) * r0, y0 = cy + Math.sin(ang) * r0;
+      const x1 = x0 + Math.cos(ang) * len, y1 = y0 + Math.sin(ang) * len;
+      const nx = -Math.sin(ang) * wid, ny = Math.cos(ang) * wid;
+      ctx.beginPath();
+      ctx.moveTo(x0 + nx, y0 + ny);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x0 - nx, y0 - ny);
+      ctx.closePath();
+      ctx.fillStyle = withAlpha(
+        rng.chance(0.45) ? '#ffffff' : mixHex(b, '#ffffff', 0.5),
+        0.18 + rng.float() * 0.5,
+      );
+      ctx.fill();
+    }
+  },
   starburst(ctx, w, h, a, b, dna, rng) {
     ctx.fillStyle = shade(a, -0.06);
     ctx.fillRect(0, 0, w, h);
@@ -202,6 +239,92 @@ const patternPainters: Record<DesignDna['pattern'], Painter> = {
 function roundedCardPath(ctx: CanvasRenderingContext2D, w: number, h: number, r: number): void {
   ctx.beginPath();
   ctx.roundRect(0, 0, w, h, r);
+}
+
+/**
+ * Circular team badge — a generated geometric mark rather than a letter.
+ * Real cards carry a logo lockup in the corner; a monogram alone reads as a
+ * placeholder, so the mark is built from the team's own seed.
+ */
+function drawTeamBadge(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number,
+  primary: string, secondary: string, letter: string, seed: bigint,
+): void {
+  const rng = new Rng(seed);
+  ctx.save();
+  // Outer ring.
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = shade(primary, -0.2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.86, 0, Math.PI * 2);
+  ctx.fillStyle = secondary;
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  // Mark: one of a few franchise-looking devices.
+  const kind = rng.int(4);
+  ctx.fillStyle = shade(primary, -0.05);
+  if (kind === 0) {
+    // Chevron stack.
+    for (let i = 0; i < 3; i++) {
+      const o = r * (0.5 - i * 0.32);
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.62, cy + o);
+      ctx.lineTo(cx, cy + o - r * 0.42);
+      ctx.lineTo(cx + r * 0.62, cy + o);
+      ctx.lineTo(cx + r * 0.62, cy + o + r * 0.2);
+      ctx.lineTo(cx, cy + o - r * 0.22);
+      ctx.lineTo(cx - r * 0.62, cy + o + r * 0.2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (kind === 1) {
+    // Diagonal bar sweep.
+    ctx.rotate(0);
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx - r + i * r * 0.42, cy + r);
+      ctx.lineTo(cx - r * 0.4 + i * r * 0.42, cy - r);
+      ctx.lineTo(cx - r * 0.16 + i * r * 0.42, cy - r);
+      ctx.lineTo(cx - r * 0.76 + i * r * 0.42, cy + r);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (kind === 2) {
+    // Star.
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      const rad = i % 2 === 0 ? r * 0.72 : r * 0.3;
+      const px = cx + Math.cos(a) * rad, py = cy + Math.sin(a) * rad;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    // Shield block.
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.5, cy - r * 0.55);
+    ctx.lineTo(cx + r * 0.5, cy - r * 0.55);
+    ctx.lineTo(cx + r * 0.5, cy + r * 0.12);
+    ctx.quadraticCurveTo(cx, cy + r * 0.85, cx - r * 0.5, cy + r * 0.12);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  // Monogram over the mark.
+  ctx.font = `900 ${r * 0.92}px "Arial Narrow", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = r * 0.14;
+  ctx.strokeStyle = shade(primary, -0.28);
+  ctx.strokeText(letter, cx, cy + r * 0.04);
+  ctx.fillStyle = inkOn(secondary);
+  ctx.fillText(letter, cx, cy + r * 0.04);
+  ctx.restore();
 }
 
 /** Render the complete card front at `widthPx` resolution. */
@@ -246,11 +369,33 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     ? mixHex(accentBase, parallel.colorHex, 0.55)
     : accentBase;
 
+  const isDowntown = spec.insertName === 'Downtown';
+  const poses = posesFor(player.sport);
+  const pose = poses[Number(spec.artSeed % BigInt(poses.length))];
+  const figX = isDowntown ? w * 0.04 : w * 0.02;
+  const figY = isDowntown ? h * 0.045 : h * 0.06;
+  const figW = isDowntown ? w * 0.92 : w * 0.96;
+  const figH = isDowntown ? h * 0.84 : h * 0.78;
+  // Where the cleats actually land, in card space. Poses differ, so this is
+  // measured rather than assumed — otherwise the figure floats.
+  const footFrac = Math.max(
+    pose.toeNear.y, pose.toeFar.y, pose.ankleNear.y, pose.ankleFar.y,
+  );
+  const footY = figY + footFrac * figH;
+
+
   // --- Background art ---
-  patternPainters[dna.pattern](ctx, w, h, primary, accent, dna, rng);
+  if (isDowntown) {
+    // Illustrated insert: the city IS the design. No pattern engine, no
+    // vignette — a painted skyline the figure stands in front of.
+    drawSkyline(ctx, w, h, childSeedN(spec.artSeed, 4242), team.primary, 0.86);
+  } else {
+    patternPainters[dna.pattern](ctx, w, h, primary, accent, dna, rng);
+  }
 
   // Hero glow: a hot accent core behind the figure lifts the whole card and
   // separates the subject the way studio lighting does on real photography.
+  if (!isDowntown) {
   const glow = ctx.createRadialGradient(w / 2, h * 0.40, 0, w / 2, h * 0.40, w * 0.62);
   glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.45), 0.5));
   glow.addColorStop(0.55, withAlpha(accent, 0.16));
@@ -264,9 +409,13 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   vg.addColorStop(1, 'rgba(0,0,10,0.42)');
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, w, h);
+  }
 
   // Layout-specific background furniture.
-  if (dna.layout === 'diagonalSplit') {
+  if (isDowntown) {
+    // Plinth sits exactly on the measured foot line so the figure stands.
+    drawBase(ctx, w * 0.5, footY, w * 0.3, team.primary);
+  } else if (dna.layout === 'diagonalSplit') {
     ctx.beginPath();
     ctx.moveTo(0, h * 0.78);
     ctx.lineTo(w, h * 0.5);
@@ -304,14 +453,11 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     fctx.fillRect(0, 0, w, h);
   }
 
-  // --- Athlete ---
-  const poses = posesFor(player.sport);
-  const pose = poses[Number(spec.artSeed % BigInt(poses.length))];
+
   const style = athleteStyle(
     player.appearanceSeed, player.jersey, player.sport,
     team.primary, team.secondary, team.nickname,
   );
-  const figX = w * 0.02, figY = h * 0.06, figW = w * 0.96, figH = h * 0.78;
   renderAthleteLayer(ctx, pose, style, figX, figY, figW, figH, player.appearanceSeed, accent);
 
   // Figure cools the foil under it (ink blocks foil board).
@@ -327,7 +473,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
 
   // --- Frame ---
   const ink = inkOn(primary);
-  if (dna.borderFrac > 0) {
+  if (dna.borderFrac > 0 && !isDowntown) {
     const bw = w * dna.borderFrac;
     ctx.save();
     roundedCardPath(ctx, w, h, cornerR);
@@ -350,12 +496,80 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     fctx.restore();
   }
 
+  // Font families, parsed once — the DNA stacks carry a leading weight token
+  // that has to be stripped before they can be used in a canvas font string.
+  const famMatch = dna.displayFont.match(/"[^"]+".*$/)
+    ?? [dna.displayFont.replace(/^[\d ]+(italic )?/, '')];
+  const famLabel = dna.labelFont.match(/"[^"]+".*$/)
+    ?? [dna.labelFont.replace(/^[\d ]+/, '')];
+
+  // --- Downtown banner: pill + name, the insert's signature lockup ---
+  if (isDowntown) {
+    const barY = h * 0.885, barH = h * 0.072;
+    ctx.fillStyle = '#12241c';
+    ctx.fillRect(0, barY, w, barH);
+    ctx.strokeStyle = withAlpha('#ffffff', 0.5);
+    ctx.lineWidth = Math.max(1, w * 0.0035);
+    ctx.beginPath();
+    ctx.moveTo(0, barY + barH * 0.06);
+    ctx.lineTo(w, barY + barH * 0.06);
+    ctx.stroke();
+
+    // Insert-name pill on the left.
+    const pillW = w * 0.36, pillH = barH * 0.62;
+    const pillX = w * 0.035, pillY = barY + (barH - pillH) / 2;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillW, pillH, pillH * 0.28);
+    ctx.fillStyle = '#d8d5cc';
+    ctx.fill();
+    ctx.strokeStyle = '#0d1a14';
+    ctx.lineWidth = Math.max(1, w * 0.003);
+    ctx.stroke();
+    ctx.font = `700 ${pillH * 0.56}px Georgia, "Times New Roman", serif`;
+    ctx.fillStyle = '#12241c';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Downtown', pillX + pillW / 2, pillY + pillH * 0.54, pillW * 0.9);
+
+    // Serial first — it is fixed-width and must never be crowded out.
+    const rightEdge = w * 0.965;
+    let textLimit = rightEdge;
+    if (spec.serial !== null) {
+      const serialText = `${spec.serial}/${INSERT_RUN}`;
+      ctx.font = `900 ${barH * 0.3}px "Courier New", monospace`;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#e8c86a';
+      ctx.fillText(serialText, rightEdge, barY + barH * 0.52);
+      textLimit = rightEdge - ctx.measureText(serialText).width - w * 0.025;
+    }
+    // Player + team fill whatever space the serial left behind.
+    ctx.textAlign = 'left';
+    const nameX = pillX + pillW + w * 0.03;
+    const avail = Math.max(w * 0.1, textLimit - nameX);
+    ctx.font = `900 ${barH * 0.44}px "Arial Narrow", Arial, sans-serif`;
+    ctx.fillStyle = '#f6f4ee';
+    const dtName = `${player.first.toUpperCase()} ${player.last.toUpperCase()}`;
+    const nameW = Math.min(ctx.measureText(dtName).width, avail * 0.72);
+    ctx.fillText(dtName, nameX, barY + barH * 0.52, avail * 0.72);
+    ctx.font = `700 ${barH * 0.28}px Arial, sans-serif`;
+    ctx.fillStyle = withAlpha('#f6f4ee', 0.8);
+    ctx.fillText(
+      team.nickname, nameX + nameW + w * 0.014, barY + barH * 0.56,
+      Math.max(w * 0.04, avail - nameW - w * 0.014),
+    );
+
+    // The whole banner and the plinth burn on the foil layer.
+    fctx.fillStyle = 'rgba(255,255,255,0.8)';
+    fctx.fillRect(0, barY, w, barH);
+  }
+
   // --- Nameplate ---
   const npY = h * 0.855;
   const npH = h * 0.075;
   const displayPx = Math.round(npH * 0.62);
   const labelPx = Math.round(npH * 0.3);
   const nameText = `${player.first.toUpperCase()} ${player.last.toUpperCase()}`;
+  if (!isDowntown) {
   ctx.save();
   switch (dna.nameplate) {
     case 'bar': {
@@ -392,12 +606,6 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
       break; // text-only treatments
   }
   // Name text
-  ctx.font = `${dna.displayFont.replace(/^(\d+ ?)(italic ?)?/, (_m, wgt, it) => `${it ?? ''}${wgt}`)}`;
-  ctx.font = dna.displayFont.includes('italic')
-    ? `italic 900 ${displayPx}px ${dna.displayFont.split('"').slice(1).join('"').replace(/^[^,]*"?/, m => m)}`
-    : ctx.font;
-  // Simpler robust font assembly:
-  const famMatch = dna.displayFont.match(/"[^"]+".*$/) ?? [dna.displayFont.replace(/^[\d ]+(italic )?/, '')];
   ctx.font = `${dna.displayFont.includes('italic') ? 'italic ' : ''}900 ${displayPx}px ${famMatch[0]}`;
   ctx.textBaseline = 'middle';
   const centered = dna.nameplate === 'chip' || dna.nameplate === 'stacked';
@@ -414,7 +622,6 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
     ctx.fillText(nameText, nameX, npY + npH * 0.42, w * 0.9);
   }
   // Position • Team line
-  const famLabel = dna.labelFont.match(/"[^"]+".*$/) ?? [dna.labelFont.replace(/^[\d ]+/, '')];
   ctx.font = `600 ${labelPx}px ${famLabel[0]}`;
   ctx.fillStyle = withAlpha('#f4f2ec', 0.75);
   ctx.fillText(
@@ -432,6 +639,7 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   fctx.fillStyle = `rgba(255,255,255,${0.5 * dna.foilOnFrame})`;
   fctx.fillText(nameText, nameX, npY + npH * 0.42, w * 0.9);
   fctx.restore();
+  }
 
   // --- Rookie shield ---
   if (spec.isRookie) {
@@ -561,7 +769,8 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   // Framed layouts print the fine text inside the border band (real cards
   // run copyright lines through the border); full-bleed puts it at the foot.
   const bwFine = w * dna.borderFrac;
-  const fineY = dna.borderFrac > 0 ? h - bwFine * 0.95 : h * 0.968;
+  const fineY = isDowntown ? h * 0.972
+    : dna.borderFrac > 0 ? h - bwFine * 0.95 : h * 0.968;
   const finePx = dna.borderFrac > 0
     ? Math.max(9, Math.min(w * 0.024, bwFine * 0.85))
     : Math.round(w * 0.024);
@@ -575,25 +784,14 @@ export function renderCardLayers(spec: CardRenderSpec, widthPx = 750): CardLayer
   ctx.fillText(spec.cardNumber, w * 0.95, fineY);
   ctx.restore();
 
-  // --- Team monogram chip beside the nameplate: the authenticity detail ---
-  {
-    const mr = w * 0.048;
-    const mx = dna.nameplate === 'chip' ? w * 0.115 : w * 0.905;
-    const my = npY + npH * 0.42;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(mx, my, mr, 0, Math.PI * 2);
-    ctx.fillStyle = shade(team.secondary, -0.05);
-    ctx.fill();
-    ctx.lineWidth = Math.max(1.5, mr * 0.12);
-    ctx.strokeStyle = shade(team.primary, -0.18);
-    ctx.stroke();
-    ctx.font = `900 ${mr * 1.05}px "Arial Narrow", Arial, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = inkOn(team.secondary);
-    ctx.fillText(team.nickname[0], mx, my + mr * 0.05);
-    ctx.restore();
+  // --- Team badge: a real logo lockup, not a letter in a circle ---
+  if (!isDowntown) {
+    drawTeamBadge(
+      ctx,
+      dna.nameplate === 'chip' ? w * 0.115 : w * 0.9,
+      npY + npH * 0.42, w * 0.05,
+      team.primary, team.secondary, team.nickname[0], team.logoSeed,
+    );
   }
 
   // --- Print grain: fine noise so surfaces read as printed stock, not flat ---

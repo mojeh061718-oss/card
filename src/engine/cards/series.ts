@@ -24,6 +24,8 @@ export interface CardDef {
   isAuto: boolean;
   autoInk: InkKind | null;
   autoSticker: boolean;
+  /** Named illustrated insert (e.g. "Downtown"), or null for the base set. */
+  insertName: string | null;
 }
 
 export interface SeriesDef {
@@ -50,6 +52,15 @@ export interface PulledCard {
 }
 
 const AUTO_INKS: InkKind[] = ['blueSharpie', 'blueSharpie', 'blackSharpie', 'silverPaint', 'goldPaint'];
+
+/**
+ * Illustrated case-hit inserts. These are the cards that make a product
+ * famous — a short-printed, hand-drawn chase featuring only headliners.
+ * Print run is per card and deliberately brutal.
+ */
+export const INSERT_SETS = [
+  { name: 'Downtown', printRun: 199, cards: 20 },
+] as const;
 
 /** Build the series definition (pure; population state lives separately). */
 export function buildSeries(
@@ -83,6 +94,7 @@ export function buildSeries(
       isAuto: false,
       autoInk: null,
       autoSticker: false,
+      insertName: null,
     });
   }
   // Auto subset. Manufacturers sign a handful of headliners and then a pile
@@ -103,7 +115,25 @@ export function buildSeries(
       isAuto: true,
       autoInk: rng.pick(AUTO_INKS),
       autoSticker: !onCardSeries,
+      insertName: null,
     });
+  }
+
+  // Illustrated inserts: headliners only, hand-drawn treatment, case-hit odds.
+  for (const set of INSERT_SETS) {
+    for (let i = 0; i < set.cards; i++) {
+      const p = pool[i];
+      checklist.push({
+        index: checklist.length,
+        playerId: p.id,
+        cardNumber: `${set.name.slice(0, 2).toUpperCase()}-${i + 1}`,
+        isRookie: p.debutYear === year,
+        isAuto: false,
+        autoInk: null,
+        autoSticker: false,
+        insertName: set.name,
+      });
+    }
   }
 
   return {
@@ -124,7 +154,11 @@ export function seriesSlots(def: SeriesDef): PopulationSlot[] {
       // the chase suggests — the common rookie auto is a /999-ish card of
       // somebody who never made it. Numbered rungs keep their stamp size.
       let printed = par.printRun;
-      if (card.isAuto) {
+      if (card.insertName) {
+        // Inserts don't carry the rainbow — the insert IS the parallel.
+        const set = INSERT_SETS.find(s => s.name === card.insertName)!;
+        printed = par.id === 0 ? set.printRun : 0;
+      } else if (card.isAuto) {
         printed = par.numberedTo !== null
           ? par.printRun
           : Math.max(150, Math.round(par.printRun / 12));
@@ -195,14 +229,16 @@ interface SlotClasses {
   foil: number[];
   numbered: number[];
   autos: number[];
+  inserts: number[];
 }
 
 export function classifySlots(def: SeriesDef): SlotClasses {
-  const classes: SlotClasses = { base: [], foil: [], numbered: [], autos: [] };
+  const classes: SlotClasses = { base: [], foil: [], numbered: [], autos: [], inserts: [] };
   for (const card of def.checklist) {
     for (const par of def.ladder) {
       const slot = slotOf(def, card.index, par.id);
-      if (card.isAuto) classes.autos.push(slot);
+      if (card.insertName) { if (par.id === 0) classes.inserts.push(slot); }
+      else if (card.isAuto) classes.autos.push(slot);
       else if (par.id === 0) classes.base.push(slot);
       else if (par.numberedTo === null) classes.foil.push(slot);
       else classes.numbered.push(slot);
@@ -235,11 +271,14 @@ export function openPack(
   }
 
   // Remaining slots: mostly base; foil odds ~1:4 packs; numbered leaks in at
-  // population-proportional odds (the "loose" hit that makes retail fun).
+  // population-proportional odds (the "loose" hit that makes retail fun);
+  // illustrated inserts are a genuine case hit at roughly 1:220 packs.
   while (out.length < cardsInPack) {
     const roll = rng.float();
     let pulled: PulledCard | null = null;
-    if (roll < 0.94) {
+    if (roll < 0.0005) {
+      pulled = drawClass(classes.inserts) ?? drawClass(classes.base);
+    } else if (roll < 0.94) {
       pulled = drawClass(classes.base);
     } else if (roll < 0.985) {
       pulled = drawClass(classes.foil) ?? drawClass(classes.base);
@@ -259,6 +298,7 @@ export function rankOf(def: SeriesDef, c: PulledCard): number {
   const par = def.ladder[c.parallelId];
   const card = def.checklist[c.cardIndex];
   let r = Math.log2(1 + par.desirability);
+  if (card.insertName) r += 7.5;
   if (card.isAuto) r += 6;
   if (card.isRookie) r += 1.5;
   if (par.numberedTo === 1) r += 10;

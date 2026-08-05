@@ -11,7 +11,7 @@ import { seedFromText, Rng, childSeed } from '../engine/rng';
 import { generateLeague, type Player, type Team, type Sport } from '../engine/world/teams';
 import {
   buildSeries, makePopulation, classifySlots, openPack, openBox, renderInputs, rankOf,
-  decodeSlot, slotOf, PRODUCTS,
+  decodeSlot, slotOf, PRODUCTS, INSERT_SETS,
   type SeriesDef, type PulledCard, type ProductConfig,
 } from '../engine/cards/series';
 import { generateLotOffers, lotClassWeights, type LotOffer } from '../engine/economy/lots';
@@ -191,6 +191,7 @@ class World {
       cardNumber: card.cardNumber,
       isRookie: card.isRookie,
       auto: card.isAuto ? { ink: card.autoInk ?? 'blueSharpie', sticker: card.autoSticker } : null,
+      insertName: card.insertName,
       artSeed: artSeedFor(rt.def.seed, pull.cardIndex),
     };
   }
@@ -214,13 +215,17 @@ class World {
     const player = rt.players[card.playerId];
     const parallel = rt.def.ladder[pull.parallelId];
     const company = grade ? COMPANIES.find(c => c.key === grade.companyKey) : null;
+    const effective = card.insertName
+      ? { ...parallel, printRun: this.printRunOf(pull), desirability: parallel.desirability }
+      : parallel;
     return intrinsicValue({
-      player, parallel,
+      player, parallel: effective,
       isRookie: card.isRookie,
       isAuto: card.isAuto,
       setFactor: this.setFactor(rt),
       grade: grade && company ? { result: grade.result, company } : null,
       errorKind: this.conditionOf(pull).error,
+      insert: !!card.insertName,
     });
   }
 
@@ -252,7 +257,13 @@ class World {
   }
 
   printRunOf(pull: PulledCard): number {
-    return this.get(pull.seriesId).def.ladder[pull.parallelId].printRun;
+    const rt = this.get(pull.seriesId);
+    const card = rt.def.checklist[pull.cardIndex];
+    if (card.insertName) {
+      return INSERT_SETS.find(s => s.name === card.insertName)?.printRun
+        ?? rt.def.ladder[pull.parallelId].printRun;
+    }
+    return rt.def.ladder[pull.parallelId].printRun;
   }
 
   heat(pull: PulledCard): number {
@@ -265,9 +276,11 @@ class World {
     const card = rt.def.checklist[pull.cardIndex];
     const player = rt.players[card.playerId];
     const par = rt.def.ladder[pull.parallelId];
-    const tier = par.numberedTo !== null
-      ? `${par.name} #${pull.serial}/${par.numberedTo}`
-      : par.name;
+    const tier = card.insertName
+      ? `${card.insertName} #${pull.serial}/${this.printRunOf(pull)}`
+      : par.numberedTo !== null
+        ? `${par.name} #${pull.serial}/${par.numberedTo}`
+        : par.name;
     return {
       player: `${player.first} ${player.last}`,
       tier: `${card.isAuto ? 'AUTO · ' : ''}${tier}`,
@@ -288,7 +301,8 @@ class World {
         const out: { cardIndex: number; parallelId: number }[] = [];
         for (const card of rt.def.checklist) {
           for (const par of rt.def.ladder) {
-            if (par.printRun <= 199 || (card.isAuto && par.printRun <= 1500)) {
+            if (card.insertName ? par.id === 0
+              : par.printRun <= 199 || (card.isAuto && par.printRun <= 1500)) {
               out.push({ cardIndex: card.index, parallelId: par.id });
             }
           }
@@ -311,9 +325,13 @@ class World {
           player: `${player.first} ${player.last}`,
           team: `${team.city} ${team.nickname}`,
           seriesName: rt.def.name,
-          tierName: par.numberedTo === 1 ? 'Superfractor 1/1'
-            : par.numberedTo !== null ? `${par.name} /${par.numberedTo}` : par.name,
-          printRun: par.printRun,
+          tierName: card.insertName
+            ? `${card.insertName} /${INSERT_SETS.find(s => s.name === card.insertName)?.printRun ?? par.printRun}`
+            : par.numberedTo === 1 ? 'Superfractor 1/1'
+              : par.numberedTo !== null ? `${par.name} /${par.numberedTo}` : par.name,
+          printRun: card.insertName
+            ? INSERT_SETS.find(s => s.name === card.insertName)?.printRun ?? par.printRun
+            : par.printRun,
           isAuto: card.isAuto,
           isRookie: card.isRookie,
         };
