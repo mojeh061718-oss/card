@@ -140,8 +140,37 @@ function renderTcgWrapper(
 
 export function renderPackWrapper(
   def: SeriesDef, wPx: number, hPx: number, variant = 0,
-  cover?: { first: string; last: string; sport: string },
+  cover?: { first: string; last: string; sport: string }[],
 ): HTMLCanvasElement {
+  // A REAL sealed-pack photo (imported into the cache) beats everything:
+  // draw it full-bleed and it IS the pack.
+  if (def.id.startsWith('tcg-')) {
+    const wrapKey = `wrap-${def.id.replace('tcg-', '')}`;
+    const real = [variant % 3, 0, 1, 2]
+      .map(v => tcgScan(wrapKey, v))
+      .find(Boolean);
+    if (real) {
+      const c0 = document.createElement('canvas');
+      c0.width = wPx; c0.height = hPx;
+      const cctx = c0.getContext('2d')!;
+      cctx.imageSmoothingQuality = 'high';
+      const cov = Math.max(wPx / real.naturalWidth, hPx / real.naturalHeight);
+      cctx.drawImage(
+        real,
+        (wPx - real.naturalWidth * cov) / 2, (hPx - real.naturalHeight * cov) / 2,
+        real.naturalWidth * cov, real.naturalHeight * cov,
+      );
+      // Specular sheen so the photo reads as foil in-scene.
+      const sh = cctx.createLinearGradient(0, 0, wPx, hPx * 0.6);
+      sh.addColorStop(0.42, 'rgba(255,255,255,0)');
+      sh.addColorStop(0.5, 'rgba(255,255,255,0.16)');
+      sh.addColorStop(0.58, 'rgba(255,255,255,0)');
+      cctx.fillStyle = sh;
+      cctx.fillRect(0, 0, wPx, hPx);
+      return c0;
+    }
+  }
+
   // TCG wraps prefer the real scan art when the cache has it.
   const conf = WRAP_ART[def.id];
   if (conf) {
@@ -190,116 +219,219 @@ export function renderPackWrapper(
   }
   ctx.restore();
 
-  // --- Lockup: brand small, line big and metallic, spec line under -------
-  ctx.textAlign = 'center';
-  ctx.fillStyle = withAlpha('#ffffff', 0.85);
-  ctx.font = `800 ${wPx * 0.055}px Arial, sans-serif`;
-  ctx.fillText(def.brand.toUpperCase(), cx0, hPx * 0.135);
-  const metal = ctx.createLinearGradient(0, hPx * 0.155, 0, hPx * 0.235);
-  metal.addColorStop(0, mixHex(accent, '#ffffff', 0.7));
-  metal.addColorStop(0.5, accent);
-  metal.addColorStop(1, shade(accent, -0.3));
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.5)';
-  ctx.shadowBlur = wPx * 0.018;
-  ctx.shadowOffsetY = wPx * 0.006;
-  ctx.font = `900 italic ${wPx * 0.135}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
-  ctx.fillStyle = metal;
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  ctx.lineWidth = wPx * 0.01;
-  ctx.strokeText(def.line.toUpperCase(), cx0, hPx * 0.215);
-  ctx.fillText(def.line.toUpperCase(), cx0, hPx * 0.215);
-  ctx.restore();
-  ctx.font = `700 ${wPx * 0.04}px Arial, sans-serif`;
-  ctx.fillStyle = withAlpha('#ffffff', 0.7);
-  ctx.fillText(`${def.year} ${def.sport.toUpperCase()} · PREMIUM TRADING CARDS`, cx0, hPx * 0.262);
+  // =========================================================================
+  // Retail composition, reference: modern hobby packs — edge hash stripes,
+  // a bright inner art panel with thin white frame lines, TWO cover
+  // athletes breaking the frames, a big center product badge, corner
+  // league chips, and a bottom callout banner.
+  // =========================================================================
+  const lightPanel = mixHex(mixHex(hue, '#4fa3e0', 0.35), '#ffffff', 0.5);
 
-  // --- Cover athlete panel — the presentation IS the product -------------
-  const px2 = wPx * 0.09, py2 = hPx * 0.315, pw2 = wPx * 0.82, ph2 = hPx * 0.5;
-  const photo = cover ? heroPhoto(cover.sport, `${cover.first} ${cover.last}`) : null;
+  // Edge hash-stripe rails.
+  for (const [rx0, rw] of [[0, wPx * 0.075], [wPx * 0.925, wPx * 0.075]] as const) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rx0, 0, rw, hPx);
+    ctx.clip();
+    ctx.translate(rx0 + rw / 2, hPx / 2);
+    ctx.rotate(-0.65);
+    for (let i = -40; i < 40; i++) {
+      ctx.fillStyle = i % 2 ? withAlpha('#ffffff', 0.22) : withAlpha(shade(hue, 0.25), 0.3);
+      ctx.fillRect(-hPx, i * hPx * 0.028, hPx * 2, hPx * 0.012);
+    }
+    ctx.restore();
+  }
+
+  // Inner art panel: bright tint, rounded, with DOUBLE thin white frames.
+  const px2 = wPx * 0.1, py2 = hPx * 0.155, pw2 = wPx * 0.8, ph2 = hPx * 0.63;
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(px2, py2, pw2, ph2, wPx * 0.035);
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.55)';
-  ctx.shadowBlur = wPx * 0.04;
+  ctx.roundRect(px2, py2, pw2, ph2, wPx * 0.03);
   const panel = ctx.createLinearGradient(0, py2, 0, py2 + ph2);
-  panel.addColorStop(0, shade(hue, -0.25));
-  panel.addColorStop(1, shade(hue, -0.55));
+  panel.addColorStop(0, mixHex(lightPanel, '#ffffff', 0.25));
+  panel.addColorStop(1, lightPanel);
   ctx.fillStyle = panel;
   ctx.fill();
-  ctx.restore();
   ctx.clip();
-  if (photo) {
-    // Stage light behind the athlete.
-    const glow = ctx.createRadialGradient(cx0, py2 + ph2 * 0.42, 0, cx0, py2 + ph2 * 0.42, pw2 * 0.6);
-    glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.5), 0.5));
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(px2, py2, pw2, ph2);
-    ctx.imageSmoothingQuality = 'high';
-    const landscapeCutout = photo.naturalWidth > photo.naturalHeight;
-    if (landscapeCutout) {
-      // ESPN-style transparent bust: contain-fit, anchored to the panel foot.
-      const sc = Math.min((pw2 * 0.96) / photo.naturalWidth, (ph2 * 0.9) / photo.naturalHeight);
-      const dw = photo.naturalWidth * sc, dh = photo.naturalHeight * sc;
+  // Soft radial pop behind the athletes.
+  const pop = ctx.createRadialGradient(cx0, py2 + ph2 * 0.4, 0, cx0, py2 + ph2 * 0.4, pw2 * 0.65);
+  pop.addColorStop(0, withAlpha('#ffffff', 0.55));
+  pop.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = pop;
+  ctx.fillRect(px2, py2, pw2, ph2);
+
+  // The cover athletes — up to two, flanking, breaking past the frames.
+  const photos = (cover ?? [])
+    .map(cv => heroPhoto(cv.sport, `${cv.first} ${cv.last}`))
+    .filter((p): p is HTMLImageElement => !!p)
+    .slice(0, 2);
+  ctx.imageSmoothingQuality = 'high';
+  photos.forEach((photo, i) => {
+    const solo = photos.length === 1;
+    // Athletes FILL the panel — scale by height so busts run frame to
+    // frame like the reference, overlapping the middle where the badge sits.
+    const opaquePhoto = photo.naturalWidth <= photo.naturalHeight;
+    const targetH = ph2 * (solo ? 0.96 : opaquePhoto ? 0.72 : 0.9);
+    const sc = targetH / photo.naturalHeight;
+    const dw = photo.naturalWidth * sc, dh = photo.naturalHeight * sc;
+    const anchorX = solo ? cx0 : (i === 0 ? px2 + pw2 * 0.27 : px2 + pw2 * 0.73);
+    const anchorY = py2 + ph2 * (solo ? 0.99 : i === 0 ? 1.0 : 0.965);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = wPx * 0.03;
+    ctx.shadowOffsetY = hPx * 0.006;
+    if (opaquePhoto) {
+      // Studio headshot: rounded portrait chip with a bottom fade.
+      const cw = dw, ch = dh;
+      ctx.beginPath();
+      ctx.roundRect(anchorX - cw / 2, anchorY - ch, cw, ch, wPx * 0.02);
       ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur = wPx * 0.03;
-      ctx.drawImage(photo, cx0 - dw / 2, py2 + ph2 - dh, dw, dh);
+      ctx.clip();
+      ctx.drawImage(photo, anchorX - cw / 2, anchorY - ch, cw, ch);
+      const fd = ctx.createLinearGradient(0, anchorY - ch * 0.25, 0, anchorY);
+      fd.addColorStop(0, 'rgba(0,0,0,0)');
+      fd.addColorStop(1, withAlpha(lightPanel, 0.95));
+      ctx.fillStyle = fd;
+      ctx.fillRect(anchorX - cw / 2, anchorY - ch, cw, ch);
       ctx.restore();
     } else {
-      // Studio headshot: cover-crop, then dissolve into the panel foot.
-      const sc = Math.max(pw2 / photo.naturalWidth, ph2 / photo.naturalHeight);
-      const dw = photo.naturalWidth * sc, dh = photo.naturalHeight * sc;
-      ctx.drawImage(photo, cx0 - dw / 2, py2 + (ph2 - dh) * 0.2, dw, dh);
-      const fade = ctx.createLinearGradient(0, py2 + ph2 * 0.72, 0, py2 + ph2);
-      fade.addColorStop(0, 'rgba(0,0,0,0)');
-      fade.addColorStop(1, withAlpha(shade(hue, -0.55), 0.95));
-      ctx.fillStyle = fade;
-      ctx.fillRect(px2, py2, pw2, ph2);
+      ctx.drawImage(photo, anchorX - dw / 2, anchorY - dh, dw, dh);
     }
-  } else {
-    // Pre-import: clean embossed monogram — packaging, never a cartoon.
-    ctx.font = `900 italic ${pw2 * 0.42}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+    ctx.restore();
+  });
+  if (photos.length === 0) {
+    // Pre-import: clean embossed monogram inside the panel.
+    ctx.font = `900 italic ${pw2 * 0.5}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.strokeStyle = withAlpha(accent, 0.35);
-    ctx.lineWidth = wPx * 0.006;
-    ctx.strokeText(def.line[0].toUpperCase(), cx0, py2 + ph2 * 0.46);
-    ctx.fillStyle = withAlpha('#ffffff', 0.06);
-    ctx.fillText(def.line[0].toUpperCase(), cx0, py2 + ph2 * 0.46);
-    ctx.font = `700 ${wPx * 0.036}px Arial, sans-serif`;
+    ctx.strokeStyle = withAlpha(shade(hue, -0.2), 0.35);
+    ctx.lineWidth = wPx * 0.007;
+    ctx.strokeText(def.line[0].toUpperCase(), cx0, py2 + ph2 * 0.44);
+    ctx.fillStyle = withAlpha('#ffffff', 0.5);
+    ctx.fillText(def.line[0].toUpperCase(), cx0, py2 + ph2 * 0.44);
     ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = withAlpha('#ffffff', 0.45);
-    ctx.fillText('OFFICIAL SERIES', cx0, py2 + ph2 * 0.8);
   }
   ctx.restore();
-  // Panel keyline.
-  ctx.beginPath();
-  ctx.roundRect(px2, py2, pw2, ph2, wPx * 0.035);
-  ctx.strokeStyle = withAlpha(accent, 0.9);
-  ctx.lineWidth = Math.max(1.5, wPx * 0.008);
-  ctx.stroke();
 
-  // Crimped seams top and bottom.
-  ctx.fillStyle = withAlpha('#000000', 0.25);
-  for (const y of [0, hPx - hPx * 0.055]) {
-    ctx.fillRect(0, y, wPx, hPx * 0.055);
-    ctx.strokeStyle = withAlpha('#ffffff', 0.25);
-    ctx.lineWidth = 1.5;
-    for (let x = 0; x < wPx; x += 7) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 3.5, y + hPx * 0.055);
-      ctx.stroke();
-    }
+  // Double white frame lines over everything in the panel zone.
+  for (const inset of [0, wPx * 0.018]) {
+    ctx.beginPath();
+    ctx.roundRect(px2 + inset, py2 + inset, pw2 - inset * 2, ph2 - inset * 2, wPx * 0.028);
+    ctx.strokeStyle = withAlpha('#ffffff', inset === 0 ? 0.95 : 0.7);
+    ctx.lineWidth = Math.max(1.2, wPx * (inset === 0 ? 0.006 : 0.0035));
+    ctx.stroke();
   }
 
-  ctx.font = `600 ${wPx * 0.038}px Arial, sans-serif`;
-  ctx.fillStyle = withAlpha('#ffffff', 0.85);
+  // Top: brand plate (gold bar) + spec line + corner league chips.
+  const plateW = wPx * 0.34, plateH = hPx * 0.036;
+  ctx.beginPath();
+  ctx.roundRect(cx0 - plateW / 2, hPx * 0.062, plateW, plateH, plateH * 0.25);
+  ctx.fillStyle = '#e8c11c';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.font = `900 ${plateH * 0.62}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('10 CARDS PER PACK', cx0, hPx * 0.895);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1d1405';
+  ctx.fillText(def.brand.toUpperCase(), cx0, hPx * 0.062 + plateH * 0.55, plateW * 0.92);
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `800 ${wPx * 0.042}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  const specLine = def.id.startsWith('tcg-')
+    ? `${def.year} TRADING CARDS`
+    : `${def.year} ${def.sport === 'football' ? 'FOOTBALL' : 'BASEBALL'} TRADING CARDS`;
+  ctx.fillText(specLine, cx0, hPx * 0.128);
+  for (const [chipX, label] of [[wPx * 0.12, def.sport === 'football' ? 'FB' : 'BB'], [wPx * 0.88, 'PRO']] as const) {
+    const chipR = wPx * 0.048;
+    ctx.beginPath();
+    ctx.roundRect(chipX - chipR, hPx * 0.052 - chipR, chipR * 2, chipR * 2, chipR * 0.4);
+    ctx.fillStyle = 'rgba(8,8,14,0.8)';
+    ctx.fill();
+    ctx.strokeStyle = withAlpha('#ffffff', 0.6);
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.font = `900 ${chipR * 0.72}px Arial, sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, chipX, hPx * 0.052 + chipR * 0.06);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // Center product badge — the big rounded plate carrying the line mark.
+  const bw3 = wPx * 0.4, bh3 = hPx * 0.19;
+  const bx3 = cx0 - bw3 / 2, by3 = py2 + ph2 * 0.5;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = wPx * 0.03;
+  ctx.beginPath();
+  ctx.roundRect(bx3, by3, bw3, bh3, wPx * 0.035);
+  const badge = ctx.createLinearGradient(0, by3, 0, by3 + bh3);
+  badge.addColorStop(0, '#15151c');
+  badge.addColorStop(1, '#060609');
+  ctx.fillStyle = badge;
+  ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.roundRect(bx3, by3, bw3, bh3, wPx * 0.035);
+  ctx.strokeStyle = withAlpha('#ffffff', 0.85);
+  ctx.lineWidth = Math.max(1.5, wPx * 0.006);
+  ctx.stroke();
+  ctx.font = `800 ${bh3 * 0.16}px Arial, sans-serif`;
+  ctx.fillStyle = withAlpha('#ffffff', 0.85);
+  ctx.fillText(def.brand.toUpperCase(), cx0, by3 + bh3 * 0.22, bw3 * 0.85);
+  const mark = ctx.createLinearGradient(0, by3 + bh3 * 0.24, 0, by3 + bh3 * 0.78);
+  mark.addColorStop(0, '#ffffff');
+  mark.addColorStop(0.5, '#c9ccd4');
+  mark.addColorStop(1, '#82868f');
+  ctx.font = `900 italic ${bh3 * 0.52}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.fillStyle = mark;
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = bh3 * 0.03;
+  ctx.strokeText(def.line[0].toUpperCase(), cx0, by3 + bh3 * 0.62);
+  ctx.fillText(def.line[0].toUpperCase(), cx0, by3 + bh3 * 0.62);
+  // Line-name strip along the badge foot.
+  ctx.fillStyle = mixHex(accent, '#ffffff', 0.15);
+  ctx.fillRect(bx3 + bw3 * 0.06, by3 + bh3 * 0.72, bw3 * 0.88, bh3 * 0.17);
+  ctx.font = `900 ${bh3 * 0.12}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.fillStyle = '#0d0d12';
+  ctx.fillText(def.line.toUpperCase(), cx0, by3 + bh3 * 0.845, bw3 * 0.8);
+
+  // Card-count badge, bottom right of the panel.
+  const cbW = wPx * 0.16, cbH = hPx * 0.085;
+  const cbX = px2 + pw2 - cbW * 0.7, cbY = py2 + ph2 - cbH * 0.55;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur = wPx * 0.02;
+  ctx.beginPath();
+  ctx.roundRect(cbX, cbY, cbW, cbH, wPx * 0.02);
+  ctx.fillStyle = '#f4f2ec';
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.fillStyle = '#12121a';
+  ctx.font = `900 ${cbH * 0.44}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.fillText('10', cbX + cbW / 2, cbY + cbH * 0.44);
+  ctx.font = `800 ${cbH * 0.17}px Arial, sans-serif`;
+  ctx.fillText('CARDS', cbX + cbW / 2, cbY + cbH * 0.65);
+  ctx.fillText('PER PACK', cbX + cbW / 2, cbY + cbH * 0.84);
+
+  // Bottom callout banner.
+  const banY = hPx * 0.845, banH = hPx * 0.062;
+  ctx.fillStyle = 'rgba(8,8,12,0.92)';
+  ctx.fillRect(wPx * 0.06, banY, wPx * 0.88, banH);
+  ctx.strokeStyle = withAlpha('#ffffff', 0.3);
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(wPx * 0.06, banY, wPx * 0.88, banH);
+  ctx.font = `900 ${banH * 0.34}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.fillStyle = '#e8e02c';
+  ctx.fillText('LOOK FOR EXCLUSIVE ROOKIES', cx0, banY + banH * 0.42, wPx * 0.8);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('& REFRACTOR PARALLELS!', cx0, banY + banH * 0.8, wPx * 0.8);
+  ctx.textAlign = 'center';
   return c;
 }
 

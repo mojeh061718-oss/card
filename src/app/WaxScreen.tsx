@@ -24,12 +24,16 @@ import { sfx, unlockAudio, heatTier } from './feel';
  */
 const wrapThumbCache = new Map<string, string>();
 
-/** The wrapper's cover athlete: the player behind checklist card #1. */
-function coverFor(seriesId: string): { first: string; last: string; sport: string } | undefined {
+/** The wrapper's cover athletes: the players behind checklist #1 and #2. */
+function coverFor(seriesId: string): { first: string; last: string; sport: string }[] | undefined {
   if (world.isTcg(seriesId)) return undefined;
   const rt = world.get(seriesId);
-  const p = rt.players[rt.def.checklist[0]?.playerId ?? 0];
-  return p ? { first: p.first, last: p.last, sport: rt.def.sport } : undefined;
+  const out: { first: string; last: string; sport: string }[] = [];
+  for (const idx of [0, 1]) {
+    const p = rt.players[rt.def.checklist[idx]?.playerId ?? -1];
+    if (p) out.push({ first: p.first, last: p.last, sport: rt.def.sport });
+  }
+  return out.length ? out : undefined;
 }
 
 function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: string }) {

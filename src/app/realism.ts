@@ -117,6 +117,13 @@ export async function runRealismImport(
     for (const vs of (await import('../engine/cards/tcg')).VAULT_SETS) {
       for (const c of vs.cards) vaultCards.set(`${vs.id.replace('tcg-', '')}:${c.num}`, `${c.name} — ${c.type}`);
     }
+    // Sealed-pack photos ride the same manifest; give them ticker names.
+    const wrapNames: Record<string, string> = {
+      'wrap-base': 'Base Set sealed booster', 'wrap-151': '151 sealed booster',
+      'wrap-currency': 'Currency S5 sealed pack',
+    };
+    for (const [wk, label] of Object.entries(wrapNames))
+      for (let n = 0; n < 3; n++) vaultCards.set(`${wk}:${n}`, label);
     void w2;
     const vr = await importVaultArt(vault.sets ?? {}, (done, failed, total, lastKey) => {
       onProgress(`3/4 — THE VAULT… ${done + failed}/${total}`);

@@ -136,23 +136,54 @@ export async function loadCachedScans(): Promise<number> {
  * on some hosts, so failures are tolerated — whatever lands is cached
  * forever and works offline.
  */
+/** A manifest entry: a bare URL, or a URL plus the fractional [x, y, w, h]
+ *  window holding the subject (pack photos come with table around them —
+ *  only the pack itself should land in the cache). */
+export type VaultArtEntry = string | { url: string; crop?: [number, number, number, number] };
+
+async function cropBlob(blob: Blob, [fx, fy, fw, fh]: [number, number, number, number]): Promise<Blob> {
+  const img = new Image();
+  img.src = URL.createObjectURL(blob);
+  try {
+    await img.decode();
+    const sx = img.naturalWidth * fx, sy = img.naturalHeight * fy;
+    const sw = img.naturalWidth * fw, sh = img.naturalHeight * fh;
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(sw));
+    c.height = Math.max(1, Math.round(sh));
+    const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    const out = await new Promise<Blob | null>(res => c.toBlob(res, 'image/jpeg', 0.92));
+    return out ?? blob;
+  } catch {
+    return blob;
+  } finally {
+    URL.revokeObjectURL(img.src);
+  }
+}
+
 export async function importVaultArt(
-  sets: Record<string, Record<string, string>>,
+  sets: Record<string, Record<string, VaultArtEntry>>,
   onProgress: (done: number, failed: number, total: number, lastKey?: string) => void,
 ): Promise<{ done: number; failed: number }> {
   const db = await pokeDb();
   const jobs = Object.entries(sets).flatMap(([setKey, nums]) =>
-    Object.entries(nums).map(([num, url]) => ({ key: `${setKey}:${num}`, url })));
+    Object.entries(nums).map(([num, entry]) => ({ key: `${setKey}:${num}`, entry })));
   let done = 0, failed = 0;
   const WORKERS = 6;
   await Promise.all(Array.from({ length: WORKERS }, async (_, w) => {
     for (let i = w; i < jobs.length; i += WORKERS) {
-      const { key, url } = jobs[i];
+      const { key, entry } = jobs[i];
       try {
         if (await db.get('img', key) === undefined) {
+          const url = typeof entry === 'string' ? entry : entry.url;
+          const crop = typeof entry === 'string' ? undefined : entry.crop;
           const res = await fetch(url);
           if (!res.ok) throw new Error(String(res.status));
-          await db.put('img', await res.blob(), key);
+          let blob = await res.blob();
+          if (crop) blob = await cropBlob(blob, crop);
+          await db.put('img', blob, key);
         }
         done++;
         onProgress(done, failed, jobs.length, key);

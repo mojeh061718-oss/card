@@ -187,6 +187,66 @@
    "119": "https://i.ebayimg.com/images/g/HfEAAeSw1KlqYkZt/s-l1600.jpg",
    "120": "https://i.ebayimg.com/images/g/inUAAeSwI6Fpn5v4/s-l1600.jpg",
    "121": "https://i.ebayimg.com/images/g/8ygAAeSwT3hqIj3J/s-l1600.jpg"
+  },
+  "wrap-base": {
+   "0": {
+    "url": "https://i.ebayimg.com/images/g/SsAAAOSw3RlgPvo5/s-l1600.jpg",
+    "crop": [
+     0.2,
+     0.06,
+     0.61,
+     0.9
+    ]
+   },
+   "1": {
+    "url": "https://i.ebayimg.com/images/g/2noAAOSwhkdfsWg3/s-l1600.jpg",
+    "crop": [
+     0.2,
+     0.17,
+     0.58,
+     0.72
+    ]
+   },
+   "2": {
+    "url": "https://i.ebayimg.com/images/g/THcAAOSwepdnYYgK/s-l1600.jpg",
+    "crop": [
+     0.1,
+     0.05,
+     0.81,
+     0.91
+    ]
+   }
+  },
+  "wrap-151": {
+   "0": {
+    "url": "https://i.ebayimg.com/images/g/FvMAAeSwlXFps2QS/s-l1600.jpg",
+    "crop": [
+     0.12,
+     0.04,
+     0.77,
+     0.93
+    ]
+   },
+   "1": {
+    "url": "https://i.ebayimg.com/images/g/pIcAAeSwjb1pzZqT/s-l1600.jpg",
+    "crop": [
+     0.29,
+     0.23,
+     0.43,
+     0.58
+    ]
+   }
+  },
+  "wrap-currency": {
+   "0": {
+    "url": "https://i.ebayimg.com/images/g/qmoAAeSw1H1pDqNi/s-l1600.jpg",
+    "crop": [
+     0.29,
+     0.27,
+     0.525,
+     0.59
+    ]
+   }
   }
  }
 }
