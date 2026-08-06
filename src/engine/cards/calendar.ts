@@ -38,9 +38,10 @@ export function releaseAt(worldSeed: bigint, k: number): Release {
   const releaseDay = 1 + k * SPACING_DAYS;
   const year = 2027 + Math.floor((releaseDay - 1) / 360);
   const sport: Sport = k % 2 === 0 ? 'football' : 'baseball';
-  // Launch pair is pinned — same ids, same shelf days as the original build.
-  if (k === 0) return { index: 0, year: 2027, brand: 'Pinnacle Press', line: 'Chromium', sport, archetypeKey: 'chromium', releaseDay };
-  if (k === 1) return { index: 1, year: 2027, brand: 'Apex', line: 'Prizmatic', sport, archetypeKey: 'prizmatic', releaseDay };
+  // Launch pair is pinned to day 1 — BOTH sports must be on the shelf from
+  // the first morning, not football-only for 45 days.
+  if (k === 0) return { index: 0, year: 2027, brand: 'Pinnacle Press', line: 'Chromium', sport, archetypeKey: 'chromium', releaseDay: 1 };
+  if (k === 1) return { index: 1, year: 2027, brand: 'Apex', line: 'Prizmatic', sport: 'baseball', archetypeKey: 'prizmatic', releaseDay: 1 };
 
   // Brand/line walk is jitter-free so (year, brand, line, sport) — the
   // series id — cannot collide: the combo cycle is 10 sport-slots (~2.5

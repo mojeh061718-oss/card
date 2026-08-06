@@ -21,7 +21,7 @@ describe('release calendar', () => {
     const r0 = releaseAt(SEED, 0);
     const r1 = releaseAt(SEED, 1);
     expect(r0).toMatchObject({ year: 2027, brand: 'Pinnacle Press', line: 'Chromium', sport: 'football', releaseDay: 1 });
-    expect(r1).toMatchObject({ year: 2027, brand: 'Apex', line: 'Prizmatic', sport: 'baseball', releaseDay: 46 });
+    expect(r1).toMatchObject({ year: 2027, brand: 'Apex', line: 'Prizmatic', sport: 'baseball', releaseDay: 1 });
   });
 
   it('produces collision-free series identities across a decade', () => {

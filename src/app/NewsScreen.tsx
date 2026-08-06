@@ -11,10 +11,49 @@ import { useCollection } from '../state/collection';
 import { world } from '../state/world';
 import { formatMoney } from '../engine/economy/valuation';
 import type { NewsItem } from '../engine/news/wire';
+import type { Top50Entry } from '../engine/news/top50';
+import { snapshotCard } from './cardview';
+
+/** Tap a board row, see the card itself — the poster on the shop wall. */
+function Top50CardView({ entry, onClose }: { entry: Top50Entry; onClose: () => void }) {
+  const S = styles;
+  const url = useMemo(() => {
+    const pull = {
+      seriesId: entry.seriesId, cardIndex: entry.cardIndex, parallelId: entry.parallelId,
+      serial: 1, numberedTo: entry.printRun <= 2500 ? entry.printRun : null,
+    };
+    try {
+      return snapshotCard(world.specFor(pull), Math.min(1080, Math.round(346 * Math.min(3, window.devicePixelRatio || 2))));
+    } catch {
+      return null;
+    }
+  }, [entry]);
+  return (
+    <div style={S.viewOverlay} onClick={onClose}>
+      <div style={S.viewRank}>Nº {entry.rank} · THE TOP 50</div>
+      {url && <img src={url} alt="" style={S.viewCard} />}
+      <div style={S.viewName}>
+        {entry.player}
+        {entry.isRookie && <span style={S.rcTag}>RC</span>}
+        {entry.isAuto && <span style={S.autoTag}>AUTO</span>}
+      </div>
+      <div style={S.viewTier}>{entry.tierName} · {entry.seriesName}</div>
+      <div style={S.viewMeta}>
+        <span style={{ color: '#8ee08e', fontWeight: 900 }}>{formatMoney(entry.value)}</span>
+        <span style={{ color: entry.surfaced === 0 ? '#e8c86a' : 'rgba(244,242,236,0.55)' }}>
+          {entry.surfaced === 0 ? 'NEVER FOUND' : `${entry.surfaced}/${entry.printRun} surfaced`}
+        </span>
+      </div>
+      {entry.owned && <div style={{ ...S.ownedTag, fontSize: 11, marginTop: 10 }}>YOU OWN THIS</div>}
+      <div style={{ fontSize: 11, opacity: 0.45, marginTop: 18 }}>tap anywhere to close</div>
+    </div>
+  );
+}
 
 export function NewsScreen() {
   const { cards, news, day, endDay } = useCollection();
   const [tab, setTab] = useState<'wire' | 'top50'>('top50');
+  const [viewing, setViewing] = useState<Top50Entry | null>(null);
 
   const ownedKeys = useMemo(
     () => new Set(cards.map(c => `${c.seriesId}:${c.cardIndex}:${c.parallelId}`)),
@@ -50,8 +89,9 @@ export function NewsScreen() {
               that has left a pack anywhere in the world.
             </div>
             {board.map(e => (
-              <div key={`${e.seriesId}-${e.cardIndex}-${e.parallelId}`}
-                style={{ ...S.row, ...(e.owned ? S.rowOwned : {}) }}>
+              <button key={`${e.seriesId}-${e.cardIndex}-${e.parallelId}`}
+                onClick={() => setViewing(e)}
+                style={{ ...S.row, width: '100%', color: '#f4f2ec', textAlign: 'left', ...(e.owned ? S.rowOwned : {}) }}>
                 <div style={S.rank}>{e.rank}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={S.rowPlayer}>
@@ -74,7 +114,7 @@ export function NewsScreen() {
                   </div>
                   {e.owned && <div style={S.ownedTag}>YOU OWN THIS</div>}
                 </div>
-              </div>
+              </button>
             ))}
           </>
         ) : (
@@ -86,6 +126,8 @@ export function NewsScreen() {
           </>
         )}
       </div>
+
+      {viewing && <Top50CardView entry={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }
@@ -149,4 +191,10 @@ const styles: Record<string, React.CSSProperties> = {
   breakingBanner: { fontSize: 13, letterSpacing: 8, color: '#ffd75e', fontWeight: 900, marginBottom: 16, textShadow: '0 0 24px rgba(255,215,94,0.5)' },
   breakingHead: { fontSize: 24, fontWeight: 900, lineHeight: 1.25 },
   breakingBody: { fontSize: 13, opacity: 0.7, lineHeight: 1.7, marginTop: 14, maxWidth: 330 },
+  viewOverlay: { position: 'fixed', inset: 0, background: 'rgba(5,5,8,0.97)', zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 'calc(20px + env(safe-area-inset-top))', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))', textAlign: 'center' },
+  viewRank: { fontSize: 11, letterSpacing: 4, color: '#e8c86a', fontWeight: 900, marginBottom: 14 },
+  viewCard: { width: '86%', maxWidth: 346, borderRadius: 14, boxShadow: '0 24px 70px rgba(0,0,0,0.75)' },
+  viewName: { fontSize: 18, fontWeight: 900, marginTop: 16, display: 'flex', alignItems: 'center', gap: 6 },
+  viewTier: { fontSize: 12, color: '#e8c86a', fontWeight: 700, marginTop: 4 },
+  viewMeta: { display: 'flex', gap: 14, fontSize: 12, marginTop: 8, letterSpacing: 0.5 },
 };

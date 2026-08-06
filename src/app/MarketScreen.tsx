@@ -34,10 +34,27 @@ function HypeChip({ pull }: { pull: PulledCard }) {
   return null;
 }
 
+/** One inventory pocket: a card (possibly a stack of identical copies). */
+function StackCell({ stack, onOpen }: {
+  stack: { key: string; card: CardInstance; value: number; count: number };
+  onOpen: () => void;
+}) {
+  const S = styles;
+  return (
+    <button data-testid="inventory-card" style={S.cell} onClick={onOpen}>
+      <div style={{ position: 'relative' }}>
+        <img src={cachedSnapshot(world.specFor(stack.card), world.identityKey(stack.card), 180)} alt="" style={S.cellImg} />
+        {stack.count > 1 && <div style={S.stackBadge}>×{stack.count}</div>}
+      </div>
+      <div style={S.cellValue}>{formatMoney(stack.value)}</div>
+    </button>
+  );
+}
+
 export function MarketScreen() {
   const {
     cards, cash, day, listings, saleFeed, marketFinds,
-    quickSell, listAtAuction, dismissSale, endDay, buyFind,
+    quickSell, bulkSell, listAtAuction, dismissSale, endDay, buyFind,
   } = useCollection();
   const [selected, setSelected] = useState<CardInstance | null>(null);
   // Two-tap buys: first tap arms, second tap (on the same listing) spends.
@@ -45,14 +62,31 @@ export function MarketScreen() {
   const [armedBuy, setArmedBuy] = useState<string | null>(null);
 
   const listedUids = useMemo(() => new Set(listings.map(l => l.uid)), [listings]);
-  const sellable = useMemo(
-    () => cards
-      .filter(c => !listedUids.has(c.uid))
-      .map(c => ({ card: c, value: world.valuation(c, c.grade) }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 60),
-    [cards, listedUids],
-  );
+  // Inventory reads as a dealer's case: identical copies collapse into one
+  // stack with a count, and stacks sort into value tiers so the hits are
+  // never buried under base commons.
+  const tiers = useMemo(() => {
+    const stacks = new Map<string, {
+      key: string; card: CardInstance; value: number; total: number; count: number; uids: number[];
+    }>();
+    for (const card of cards) {
+      if (listedUids.has(card.uid)) continue;
+      const value = world.valuation(card, card.grade);
+      const k = `${card.seriesId}:${card.cardIndex}:${card.parallelId}:${card.grade ?? 'raw'}`;
+      const s = stacks.get(k);
+      if (s) { s.count++; s.total += value; s.uids.push(card.uid); }
+      else stacks.set(k, { key: k, card, value, total: value, count: 1, uids: [card.uid] });
+    }
+    const all = [...stacks.values()].sort((a, b) => b.value - a.value);
+    return {
+      hits: all.filter(s => s.value >= 25),
+      mid: all.filter(s => s.value >= 2 && s.value < 25),
+      bulk: all.filter(s => s.value < 2),
+    };
+  }, [cards, listedUids]);
+  const bulkUids = useMemo(() => tiers.bulk.flatMap(s => s.uids), [tiers]);
+  const bulkBook = useMemo(() => tiers.bulk.reduce((a, s) => a + s.total, 0), [tiers]);
+  const [armedBulk, setArmedBulk] = useState(false);
   const bookValue = useMemo(
     () => cards.reduce((sum, c) => sum + world.valuation(c, c.grade), 0),
     [cards],
@@ -177,22 +211,61 @@ export function MarketScreen() {
         )}
 
         <section style={S.section}>
-          <div style={S.sectionTitle}>
-            YOUR INVENTORY — tap a card to price it
-            {cards.length > 60 ? ` · showing top 60 of ${cards.length} by value` : ''}
-          </div>
-          <div style={S.grid}>
-            {sellable.map(({ card, value }) => (
-              <button key={card.uid} data-testid="inventory-card" style={S.cell}
-                onClick={() => setSelected(card)}>
-                <img src={cachedSnapshot(world.specFor(card), world.identityKey(card), 180)} alt="" style={S.cellImg} />
-                <div style={S.cellValue}>{formatMoney(value)}</div>
+          <div style={S.sectionTitle}>YOUR INVENTORY — tap a card to price it</div>
+          {tiers.hits.length > 0 && (
+            <>
+              <div style={S.tierTitle}>HITS <span style={S.tierSub}>$25 and up</span></div>
+              <div style={S.grid}>
+                {tiers.hits.map(s => <StackCell key={s.key} stack={s} onOpen={() => setSelected(s.card)} />)}
+              </div>
+            </>
+          )}
+          {tiers.mid.length > 0 && (
+            <>
+              <div style={S.tierTitle}>MIDRANGE <span style={S.tierSub}>$2–$25</span></div>
+              <div style={S.grid}>
+                {tiers.mid.slice(0, 48).map(s => <StackCell key={s.key} stack={s} onOpen={() => setSelected(s.card)} />)}
+              </div>
+              {tiers.mid.length > 48 && (
+                <div style={S.moreNote}>+ {tiers.mid.length - 48} more midrange stacks (sell some to see the rest)</div>
+              )}
+            </>
+          )}
+          {tiers.bulk.length > 0 && (
+            <>
+              <div style={S.tierTitle}>BULK <span style={S.tierSub}>under $2 — dealers buy these by the pile</span></div>
+              <button
+                style={{ ...S.bulkRow, ...(armedBulk ? { borderColor: '#8ee08e', background: 'rgba(142,224,142,0.1)' } : {}) }}
+                onClick={() => {
+                  if (!armedBulk) { setArmedBulk(true); return; }
+                  setArmedBulk(false);
+                  const r = bulkSell(bulkUids);
+                  if (r.count > 0) sfx.cash();
+                }}
+              >
+                <div style={S.bulkStack}>
+                  {tiers.bulk.slice(0, 3).map((s, i) => (
+                    <img key={s.key} src={cachedSnapshot(world.specFor(s.card), world.identityKey(s.card), 120)} alt=""
+                      style={{ ...S.bulkThumb, left: i * 9, top: i * -2, transform: `rotate(${(i - 1) * 7}deg)`, zIndex: 3 - i }} />
+                  ))}
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, fontWeight: 800 }}>
+                    {bulkUids.length} commons · book {formatMoney(bulkBook)}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.55 }}>
+                    {armedBulk ? 'tap again to confirm the buyout' : 'one tap sells the whole pile at dealer prices'}
+                  </div>
+                </div>
+                <div style={{ ...S.bulkCta, color: armedBulk ? '#8ee08e' : '#e8c86a' }}>
+                  {armedBulk ? 'CONFIRM' : 'SELL ALL'}
+                </div>
               </button>
-            ))}
-            {sellable.length === 0 && (
-              <div style={S.empty}>Nothing to sell yet — rip some packs.</div>
-            )}
-          </div>
+            </>
+          )}
+          {tiers.hits.length + tiers.mid.length + tiers.bulk.length === 0 && (
+            <div style={S.empty}>Nothing to sell yet — rip some packs.</div>
+          )}
         </section>
       </div>
 
@@ -358,6 +431,14 @@ const styles: Record<string, React.CSSProperties> = {
   cellImg: { width: '100%', borderRadius: 6, display: 'block' },
   cellValue: { fontSize: 10, fontWeight: 800, color: '#8ee08e', marginTop: 3 },
   empty: { opacity: 0.5, fontSize: 12, gridColumn: '1 / -1', padding: 20, textAlign: 'center' },
+  tierTitle: { fontSize: 11, fontWeight: 900, letterSpacing: 2, color: '#e8c86a', margin: '14px 0 8px', display: 'flex', alignItems: 'baseline', gap: 8 },
+  tierSub: { fontSize: 9, fontWeight: 600, letterSpacing: 0.5, color: 'rgba(244,242,236,0.4)' },
+  stackBadge: { position: 'absolute', top: 4, right: 4, background: 'rgba(8,8,12,0.85)', border: '1px solid rgba(232,200,106,0.6)', color: '#ffd75e', fontSize: 10, fontWeight: 900, borderRadius: 6, padding: '1px 5px' },
+  moreNote: { fontSize: 10, opacity: 0.4, textAlign: 'center', padding: '8px 0 2px' },
+  bulkRow: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, color: '#f4f2ec' },
+  bulkStack: { position: 'relative', width: 52, height: 48, flexShrink: 0 },
+  bulkThumb: { position: 'absolute', width: 30, borderRadius: 3, boxShadow: '0 2px 5px rgba(0,0,0,0.5)' },
+  bulkCta: { fontSize: 12, fontWeight: 900, letterSpacing: 1 },
   queueRow: { display: 'flex', gap: 8, alignItems: 'center', fontSize: 11, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, marginBottom: 6 },
   findRow: {
     display: 'flex', gap: 10, alignItems: 'center', width: '100%', padding: '7px 10px',

@@ -131,6 +131,8 @@ interface CollectionState {
   /** Reveal one returned slab: applies the grade, returns the instance. */
   revealReturn(uid: number): CardInstance | null;
   quickSell(uid: number): SaleRecord | null;
+  /** Dealer buyout: sell a pile of commons in one transaction. */
+  bulkSell(uids: number[]): { count: number; total: number };
   spendCash(amount: number): void;
   markLotDug(id: string): void;
   pushNews(items: NewsItem[]): void;
@@ -512,6 +514,36 @@ export const useCollection = create<CollectionState>((set, get) => ({
     });
     scheduleSave(get());
     return record;
+  },
+  bulkSell(uids) {
+    const { cards, cash, day, saleFeed, submissions, returns, listings } = get();
+    const blocked = new Set([
+      ...submissions.flatMap(s => s.uids),
+      ...returns,
+      ...listings.map(l => l.uid),
+    ]);
+    const pile = cards.filter(c => uids.includes(c.uid) && !blocked.has(c.uid));
+    if (pile.length === 0) return { count: 0, total: 0 };
+    let total = 0;
+    for (const card of pile) {
+      const intrinsic = world.valuation(card, card.grade);
+      const { comps } = world.comps(card, day, card.grade);
+      const rng = new Rng(childSeedN(hashString(world.identityKey(card)), day));
+      total += dealerOffer(intrinsic, comps.length, rng);
+    }
+    total = Math.round(total * 100) / 100;
+    const sold = new Set(pile.map(c => c.uid));
+    const record: SaleRecord = {
+      uid: pile[0].uid, player: `${pile.length} commons — dealer buyout`,
+      tier: 'BULK', price: total, net: total, day, kind: 'dealer',
+    };
+    set({
+      cards: cards.filter(c => !sold.has(c.uid)),
+      cash: cash + total,
+      saleFeed: [record, ...saleFeed].slice(0, 40),
+    });
+    scheduleSave(get());
+    return { count: pile.length, total };
   },
   listAtAuction(uid, days, reserve) {
     const { listings, day, cards, submissions, returns } = get();
