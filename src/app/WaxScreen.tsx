@@ -367,34 +367,18 @@ function RipSession({ session, onClose }: {
   // One wrapper thumb per pack (TCG wraps rotate their featured art),
   // rendered at DEVICE pixels for the width the mat will display them at —
   // a fixed small canvas CSS-stretched across the mat reads as mush.
-  const packThumbs = useMemo(() => {
-    const n = packs.length;
-    const wPct = n <= 1 ? 46 : n <= 4 ? 34 : n <= 12 ? 26 : 14.5;
+  // The table presents ONE pack at a time — the next unopened one — with
+  // the rest waiting as a dimmed stack behind it and a remaining count.
+  const currentIdx = useMemo(() => {
+    for (let i = 0; i < packs.length; i++) if (!opened.has(i)) return i;
+    return Math.max(0, packs.length - 1);
+  }, [packs.length, opened]);
+  const packThumb = useMemo(() => {
     const dpr = Math.min(3, window.devicePixelRatio || 2);
-    const wPx = Math.min(720, Math.round(window.innerWidth * (wPct / 100) * dpr));
-    return packs.map((_, i) =>
-      renderPackWrapper(rt.def, wPx, Math.round(wPx * 1.4), i, coverFor(session.seriesId)).toDataURL());
+    const wPx = Math.min(720, Math.round(window.innerWidth * 0.46 * dpr));
+    return renderPackWrapper(rt.def, wPx, Math.round(wPx * 1.4), currentIdx, coverFor(session.seriesId)).toDataURL();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rt, packs.length, world.namesRevision]);
-  // Deterministic scatter: grid with jitter and a lazy rotation, like packs
-  // tossed on the mat rather than machine-aligned.
-  const layout = useMemo(() => {
-    const n = packs.length;
-    const cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 12 ? 3 : 6;
-    const rows = Math.ceil(n / cols);
-    return packs.map((_, i) => {
-      const cx = (i % cols + 0.5) / cols;
-      const cy = (Math.floor(i / cols) + 0.5) / rows;
-      const j1 = Math.sin(i * 12.9898) * 0.5;
-      const j2 = Math.sin(i * 78.233) * 0.5;
-      return {
-        left: 8 + cx * 84 + j1 * (cols > 1 ? 3 : 0),
-        top: 20 + cy * 56 + j2 * (rows > 1 ? 2.5 : 0),
-        rot: j1 * 14,
-        w: n <= 1 ? 46 : n <= 4 ? 34 : n <= 12 ? 26 : 14.5,
-      };
-    });
-  }, [packs.length]);
+  }, [rt, currentIdx, world.namesRevision]);
 
   const grabPack = (i: number) => {
     if (opened.has(i) || grabbed !== null) return;
@@ -601,55 +585,69 @@ function RipSession({ session, onClose }: {
   const S = styles;
   return (
     <div style={S.overlay}>
-      {phase === 'table' && (
-        <div style={S.tableWrap}>
-          <img src={tableUrl} alt="" style={S.tableBg} />
-          <div style={S.tableTitle}>
-            {rt.def.name}
-            <span style={S.tableCount}> · {packs.length - opened.size} of {packs.length} sealed</span>
-          </div>
-          <div style={S.tableHint}>
-            {grabbed !== null ? '' : 'grab a pack off the mat'}
-          </div>
-          {packs.map((_, i) => {
-            const L = layout[i];
-            const isOpen = opened.has(i);
-            const isGrabbed = grabbed === i;
-            return (
+      {phase === 'table' && (() => {
+        const remaining = packs.length - opened.size;
+        const isGrabbed = grabbed === currentIdx;
+        const rot = Math.sin(currentIdx * 12.9898) * 4;
+        return (
+          <div style={S.tableWrap}>
+            <img src={tableUrl} alt="" style={S.tableBg} />
+            <div style={S.tableTitle}>{rt.def.name}</div>
+            <div style={S.tableHint}>
+              {grabbed !== null ? '' : remaining === 1 ? 'last pack — grab it' : 'grab the next pack'}
+            </div>
+            {/* The waiting stack, dimmed behind the live pack. */}
+            {[2, 1].filter(k => k < remaining).map(k => (
               <img
-                key={i}
-                data-table-pack={isOpen ? undefined : i}
-                src={packThumbs[i]}
+                key={`stack-${k}`}
+                src={packThumb}
                 alt=""
-                onClick={() => grabPack(i)}
                 style={{
-                  position: 'absolute',
-                  left: `${L.left}%`, top: `${L.top}%`,
-                  width: `${L.w}%`,
-                  transform: isGrabbed
-                    ? 'translate(-50%, -50%) scale(2.6) rotate(0deg)'
-                    : `translate(-50%, -50%) rotate(${L.rot}deg)${isOpen ? ' scale(0.94)' : ''}`,
-                  ...(isGrabbed ? { left: '50%', top: '42%' } : {}),
-                  transition: 'transform 380ms cubic-bezier(0.3, 1.2, 0.4, 1), left 380ms ease, top 380ms ease, filter 300ms',
-                  filter: isOpen
-                    ? 'grayscale(0.85) brightness(0.45)'
-                    : isGrabbed
-                      ? 'drop-shadow(0 26px 30px rgba(0,0,0,0.7)) brightness(1.08)'
-                      : 'drop-shadow(0 7px 9px rgba(0,0,0,0.6))',
-                  zIndex: isGrabbed ? 6 : isOpen ? 1 : 2,
-                  borderRadius: 6,
-                  touchAction: 'manipulation',
+                  position: 'absolute', left: `${50 + k * 2.4}%`, top: `${46 - k * 2.2}%`,
+                  width: '46%',
+                  transform: `translate(-50%, -50%) rotate(${rot + k * 5}deg)`,
+                  filter: 'brightness(0.55) saturate(0.75) drop-shadow(0 5px 7px rgba(0,0,0,0.5))',
+                  zIndex: 1, borderRadius: 6,
                 }}
               />
-            );
-          })}
-          {packs.length > 1 && (
-            <button style={{ ...S.skip, position: 'absolute', bottom: '4%', left: '50%', transform: 'translateX(-50%)' }} onClick={ripAll}>
-              SKIP TO RESULTS
-            </button>
-          )}
-        </div>
-      )}
+            ))}
+            {/* The pack in play. */}
+            <img
+              data-table-pack={currentIdx}
+              src={packThumb}
+              alt=""
+              onClick={() => grabPack(currentIdx)}
+              style={{
+                position: 'absolute',
+                left: '50%', top: isGrabbed ? '41%' : '46%',
+                width: '46%',
+                transform: isGrabbed
+                  ? 'translate(-50%, -50%) scale(1.42) rotate(0deg)'
+                  : `translate(-50%, -50%) rotate(${rot}deg)`,
+                transition: 'transform 380ms cubic-bezier(0.3, 1.2, 0.4, 1), top 380ms ease, filter 300ms',
+                filter: isGrabbed
+                  ? 'drop-shadow(0 26px 30px rgba(0,0,0,0.7)) brightness(1.08)'
+                  : 'drop-shadow(0 10px 12px rgba(0,0,0,0.6))',
+                zIndex: 6,
+                borderRadius: 6,
+                touchAction: 'manipulation',
+              }}
+            />
+            {/* Packs-remaining symbol: a mini pack + count. */}
+            {packs.length > 1 && (
+              <div style={S.remainChip}>
+                <img src={packThumb} alt="" style={S.remainGlyph} />
+                <span>× {remaining}</span>
+              </div>
+            )}
+            {packs.length > 1 && (
+              <button style={{ ...S.skip, position: 'absolute', bottom: '4%', left: '50%', transform: 'translateX(-50%)' }} onClick={ripAll}>
+                SKIP TO RESULTS
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {phase === 'sealed' && (
         <div style={S.center}>
@@ -821,7 +819,15 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'absolute', top: '4.5%', left: 0, right: 0, textAlign: 'center',
     fontSize: 15, fontWeight: 900, letterSpacing: 0.5, textShadow: '0 2px 8px rgba(0,0,0,0.8)',
   },
-  tableCount: { fontWeight: 700, fontSize: 12, color: '#e8c86a' },
+  remainChip: {
+    position: 'absolute', top: '14.5%', right: '8%', zIndex: 7,
+    display: 'flex', alignItems: 'center', gap: 7,
+    background: 'rgba(8, 10, 8, 0.72)', border: '1px solid rgba(212,160,23,0.5)',
+    borderRadius: 20, padding: '5px 12px 5px 7px',
+    fontSize: 14, fontWeight: 800, letterSpacing: 1, color: '#ffd75e',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.45)',
+  },
+  remainGlyph: { width: 15, borderRadius: 2, display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' },
   tableHint: {
     position: 'absolute', top: '11.8%', left: 0, right: 0, textAlign: 'center',
     fontSize: 12, color: 'rgba(244,242,236,0.75)', letterSpacing: 1,
