@@ -24,6 +24,14 @@ import { sfx, unlockAudio, heatTier } from './feel';
  */
 const wrapThumbCache = new Map<string, string>();
 
+/** The wrapper's cover athlete: the player behind checklist card #1. */
+function coverFor(seriesId: string): { first: string; last: string; sport: string } | undefined {
+  if (world.isTcg(seriesId)) return undefined;
+  const rt = world.get(seriesId);
+  const p = rt.players[rt.def.checklist[0]?.playerId ?? 0];
+  return p ? { first: p.first, last: p.last, sport: rt.def.sport } : undefined;
+}
+
 function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: string }) {
   const rev = world.namesRevision;
   const url = useMemo(() => {
@@ -31,7 +39,7 @@ function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: st
     let u = wrapThumbCache.get(key);
     if (!u) {
       if (wrapThumbCache.size > 24) wrapThumbCache.clear();
-      u = renderPackWrapper(world.get(seriesId).def, 96, 136).toDataURL();
+      u = renderPackWrapper(world.get(seriesId).def, 96, 136, 0, coverFor(seriesId)).toDataURL();
       wrapThumbCache.set(key, u);
     }
     return u;
@@ -351,7 +359,7 @@ function RipSession({ session, onClose }: {
   }, [session.seriesId]);
   // One wrapper thumb per pack (TCG wraps rotate their featured art).
   const packThumbs = useMemo(
-    () => packs.map((_, i) => renderPackWrapper(rt.def, 128, 180, i).toDataURL()),
+    () => packs.map((_, i) => renderPackWrapper(rt.def, 128, 180, i, coverFor(session.seriesId)).toDataURL()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rt, packs.length, world.namesRevision],
   );
@@ -390,7 +398,7 @@ function RipSession({ session, onClose }: {
   };
   // TCG wraps rotate their featured art per pack in a box.
   const wrapperUrl = useMemo(
-    () => renderPackWrapper(rt.def, 640, 900, packIdx).toDataURL(),
+    () => renderPackWrapper(rt.def, 640, 900, packIdx, coverFor(session.seriesId)).toDataURL(),
     [rt, packIdx],
   );
   const [phase, setPhase] = useState<Phase>('table');

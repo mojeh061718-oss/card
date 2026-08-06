@@ -7,7 +7,7 @@
 import { Rng } from '../engine/rng';
 import type { SeriesDef } from '../engine/cards/series';
 import { shade, withAlpha, mixHex } from './color';
-import { tcgScan } from './photodb';
+import { tcgScan, heroPhoto } from './photodb';
 
 /**
  * TCG booster wrap composed from the CACHED OFFICIAL SCANS: the featured
@@ -138,7 +138,10 @@ function renderTcgWrapper(
   return c;
 }
 
-export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number, variant = 0): HTMLCanvasElement {
+export function renderPackWrapper(
+  def: SeriesDef, wPx: number, hPx: number, variant = 0,
+  cover?: { first: string; last: string; sport: string },
+): HTMLCanvasElement {
   // TCG wraps prefer the real scan art when the cache has it.
   const conf = WRAP_ART[def.id];
   if (conf) {
@@ -164,40 +167,120 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number, vari
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, wPx, hPx);
 
-  // Diagonal energy streaks.
-  ctx.save();
-  ctx.globalAlpha = 0.2;
-  ctx.rotate(-0.35);
-  for (let i = -4; i < 14; i++) {
-    ctx.fillStyle = i % 2 ? accent : '#ffffff';
-    ctx.fillRect(-wPx, i * hPx * 0.12, wPx * 3, hPx * 0.018);
-  }
-  ctx.restore();
-
   // Specular sweep — the hot mirror band that makes mylar look like mylar.
   const sweep = ctx.createLinearGradient(0, 0, wPx, hPx * 0.6);
   sweep.addColorStop(0, 'rgba(255,255,255,0)');
   sweep.addColorStop(0.42, 'rgba(255,255,255,0)');
-  sweep.addColorStop(0.5, 'rgba(255,255,255,0.34)');
+  sweep.addColorStop(0.5, 'rgba(255,255,255,0.3)');
   sweep.addColorStop(0.58, 'rgba(255,255,255,0)');
   sweep.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = sweep;
   ctx.fillRect(0, 0, wPx, hPx);
 
-  // Starburst radiating from behind the brand block.
+  // Fine vertical brushing — packaging texture, not decoration.
   ctx.save();
-  ctx.translate(cx0, hPx * 0.42);
-  ctx.globalAlpha = 0.16;
-  for (let i = 0; i < 22; i++) {
-    const a0 = (i / 22) * Math.PI * 2;
+  ctx.globalAlpha = 0.05;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < wPx; x += 5) {
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, wPx * 1.1, a0, a0 + 0.07);
-    ctx.closePath();
-    ctx.fillStyle = i % 2 ? '#ffffff' : accent;
-    ctx.fill();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, hPx);
+    ctx.stroke();
   }
   ctx.restore();
+
+  // --- Lockup: brand small, line big and metallic, spec line under -------
+  ctx.textAlign = 'center';
+  ctx.fillStyle = withAlpha('#ffffff', 0.85);
+  ctx.font = `800 ${wPx * 0.055}px Arial, sans-serif`;
+  ctx.fillText(def.brand.toUpperCase(), cx0, hPx * 0.135);
+  const metal = ctx.createLinearGradient(0, hPx * 0.155, 0, hPx * 0.235);
+  metal.addColorStop(0, mixHex(accent, '#ffffff', 0.7));
+  metal.addColorStop(0.5, accent);
+  metal.addColorStop(1, shade(accent, -0.3));
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = wPx * 0.018;
+  ctx.shadowOffsetY = wPx * 0.006;
+  ctx.font = `900 italic ${wPx * 0.135}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+  ctx.fillStyle = metal;
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = wPx * 0.01;
+  ctx.strokeText(def.line.toUpperCase(), cx0, hPx * 0.215);
+  ctx.fillText(def.line.toUpperCase(), cx0, hPx * 0.215);
+  ctx.restore();
+  ctx.font = `700 ${wPx * 0.04}px Arial, sans-serif`;
+  ctx.fillStyle = withAlpha('#ffffff', 0.7);
+  ctx.fillText(`${def.year} ${def.sport.toUpperCase()} · PREMIUM TRADING CARDS`, cx0, hPx * 0.262);
+
+  // --- Cover athlete panel — the presentation IS the product -------------
+  const px2 = wPx * 0.09, py2 = hPx * 0.315, pw2 = wPx * 0.82, ph2 = hPx * 0.5;
+  const photo = cover ? heroPhoto(cover.sport, `${cover.first} ${cover.last}`) : null;
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(px2, py2, pw2, ph2, wPx * 0.035);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = wPx * 0.04;
+  const panel = ctx.createLinearGradient(0, py2, 0, py2 + ph2);
+  panel.addColorStop(0, shade(hue, -0.25));
+  panel.addColorStop(1, shade(hue, -0.55));
+  ctx.fillStyle = panel;
+  ctx.fill();
+  ctx.restore();
+  ctx.clip();
+  if (photo) {
+    // Stage light behind the athlete.
+    const glow = ctx.createRadialGradient(cx0, py2 + ph2 * 0.42, 0, cx0, py2 + ph2 * 0.42, pw2 * 0.6);
+    glow.addColorStop(0, withAlpha(mixHex(accent, '#ffffff', 0.5), 0.5));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(px2, py2, pw2, ph2);
+    ctx.imageSmoothingQuality = 'high';
+    const landscapeCutout = photo.naturalWidth > photo.naturalHeight;
+    if (landscapeCutout) {
+      // ESPN-style transparent bust: contain-fit, anchored to the panel foot.
+      const sc = Math.min((pw2 * 0.96) / photo.naturalWidth, (ph2 * 0.9) / photo.naturalHeight);
+      const dw = photo.naturalWidth * sc, dh = photo.naturalHeight * sc;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = wPx * 0.03;
+      ctx.drawImage(photo, cx0 - dw / 2, py2 + ph2 - dh, dw, dh);
+      ctx.restore();
+    } else {
+      // Studio headshot: cover-crop, then dissolve into the panel foot.
+      const sc = Math.max(pw2 / photo.naturalWidth, ph2 / photo.naturalHeight);
+      const dw = photo.naturalWidth * sc, dh = photo.naturalHeight * sc;
+      ctx.drawImage(photo, cx0 - dw / 2, py2 + (ph2 - dh) * 0.2, dw, dh);
+      const fade = ctx.createLinearGradient(0, py2 + ph2 * 0.72, 0, py2 + ph2);
+      fade.addColorStop(0, 'rgba(0,0,0,0)');
+      fade.addColorStop(1, withAlpha(shade(hue, -0.55), 0.95));
+      ctx.fillStyle = fade;
+      ctx.fillRect(px2, py2, pw2, ph2);
+    }
+  } else {
+    // Pre-import: clean embossed monogram — packaging, never a cartoon.
+    ctx.font = `900 italic ${pw2 * 0.42}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = withAlpha(accent, 0.35);
+    ctx.lineWidth = wPx * 0.006;
+    ctx.strokeText(def.line[0].toUpperCase(), cx0, py2 + ph2 * 0.46);
+    ctx.fillStyle = withAlpha('#ffffff', 0.06);
+    ctx.fillText(def.line[0].toUpperCase(), cx0, py2 + ph2 * 0.46);
+    ctx.font = `700 ${wPx * 0.036}px Arial, sans-serif`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = withAlpha('#ffffff', 0.45);
+    ctx.fillText('OFFICIAL SERIES', cx0, py2 + ph2 * 0.8);
+  }
+  ctx.restore();
+  // Panel keyline.
+  ctx.beginPath();
+  ctx.roundRect(px2, py2, pw2, ph2, wPx * 0.035);
+  ctx.strokeStyle = withAlpha(accent, 0.9);
+  ctx.lineWidth = Math.max(1.5, wPx * 0.008);
+  ctx.stroke();
 
   // Crimped seams top and bottom.
   ctx.fillStyle = withAlpha('#000000', 0.25);
@@ -213,72 +296,10 @@ export function renderPackWrapper(def: SeriesDef, wPx: number, hPx: number, vari
     }
   }
 
-  // Brand block.
-  const cx = wPx / 2;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = withAlpha('#000000', 0.5);
-  ctx.font = `900 ${wPx * 0.09}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
-  ctx.lineWidth = wPx * 0.012;
-  ctx.strokeText(def.brand.toUpperCase(), cx, hPx * 0.30);
-  ctx.fillText(def.brand.toUpperCase(), cx, hPx * 0.30);
-  ctx.font = `900 italic ${wPx * 0.16}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
-  // Metallic fill on the line name: bright crown, dark base, like stamped foil.
-  const metal = ctx.createLinearGradient(0, hPx * 0.38, 0, hPx * 0.46);
-  metal.addColorStop(0, mixHex(accent, '#ffffff', 0.65));
-  metal.addColorStop(0.5, accent);
-  metal.addColorStop(1, shade(accent, -0.22));
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.45)';
-  ctx.shadowBlur = wPx * 0.02;
-  ctx.shadowOffsetY = wPx * 0.008;
-  ctx.fillStyle = metal;
-  ctx.strokeText(def.line.toUpperCase(), cx, hPx * 0.45);
-  ctx.fillText(def.line.toUpperCase(), cx, hPx * 0.45);
-  ctx.restore();
-  ctx.font = `700 ${wPx * 0.05}px Arial, sans-serif`;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(`${def.year} ${def.id.startsWith('tcg-') ? 'TRADING CARDS' : def.sport.toUpperCase()}`, cx, hPx * 0.53);
-
-  // Sport ball mark.
-  ctx.save();
-  ctx.translate(cx, hPx * 0.70);
-  if (def.id.startsWith('tcg-')) {
-    // TCG wrapper mark: a simple energy orb.
-    ctx.beginPath();
-    ctx.arc(0, 0, wPx * 0.09, 0, Math.PI * 2);
-    ctx.fillStyle = accent;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(-wPx * 0.025, -wPx * 0.025, wPx * 0.032, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fill();
-  } else if (def.sport === 'football') {
-    ctx.rotate(-0.5);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, wPx * 0.16, wPx * 0.1, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#6b3a1f';
-    ctx.fill();
-    ctx.strokeStyle = '#f0ede4';
-    ctx.lineWidth = wPx * 0.014;
-    ctx.beginPath();
-    ctx.moveTo(-wPx * 0.06, 0); ctx.lineTo(wPx * 0.06, 0);
-    ctx.stroke();
-  } else {
-    ctx.beginPath();
-    ctx.arc(0, 0, wPx * 0.12, 0, Math.PI * 2);
-    ctx.fillStyle = '#f3f1e8';
-    ctx.fill();
-    ctx.strokeStyle = '#c0392b';
-    ctx.lineWidth = wPx * 0.02;
-    ctx.beginPath(); ctx.arc(-wPx * 0.05, 0, wPx * 0.1, -1, 1); ctx.stroke();
-    ctx.beginPath(); ctx.arc(wPx * 0.05, 0, wPx * 0.1, Math.PI - 1, Math.PI + 1); ctx.stroke();
-  }
-  ctx.restore();
-
   ctx.font = `600 ${wPx * 0.038}px Arial, sans-serif`;
   ctx.fillStyle = withAlpha('#ffffff', 0.85);
-  ctx.fillText(`${def.id.startsWith('tcg-') ? 11 : 10} CARDS PER PACK`, cx, hPx * 0.87);
+  ctx.textAlign = 'center';
+  ctx.fillText('10 CARDS PER PACK', cx0, hPx * 0.895);
   return c;
 }
 
