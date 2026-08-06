@@ -256,15 +256,21 @@ async function decodeInto(key: string, blob: Blob): Promise<void> {
   }
 }
 
-/** Load every cached photo into memory at boot. Returns how many. */
+/**
+ * Load every cached photo into memory at boot. Full-league caches hold
+ * ~1,700 photos — decode in parallel batches, not one await at a time.
+ */
 export async function loadCachedPhotos(): Promise<number> {
   const db = await photoDb();
-  const keys = await db.getAllKeys('img');
-  for (const key of keys) {
-    const k = String(key);
-    if (k.startsWith('__') || photoMap.has(k)) continue; // skip meta records
-    const blob = await db.get('img', key);
-    if (blob instanceof Blob) await decodeInto(k, blob);
+  const keys = (await db.getAllKeys('img'))
+    .map(String)
+    .filter(k => !k.startsWith('__') && !photoMap.has(k)); // skip meta records
+  const BATCH = 24;
+  for (let i = 0; i < keys.length; i += BATCH) {
+    await Promise.all(keys.slice(i, i + BATCH).map(async k => {
+      const blob = await db.get('img', k);
+      if (blob instanceof Blob) await decodeInto(k, blob);
+    }));
   }
   return photoMap.size;
 }
@@ -309,6 +315,8 @@ export interface PhotoRoster { sport: 'football' | 'baseball'; names: string[] }
 export async function importRealPhotos(
   rosters: PhotoRoster[],
   onProgress: (done: number, failed: number, total: number, lastName?: string) => void,
+  /** Known photo URLs keyed `${sport}:${name}` — skips the search APIs. */
+  direct?: Map<string, string>,
 ): Promise<{ done: number; failed: number }> {
   const db = await photoDb();
   // Stale-generation cache (older, lower-res URLs): wipe and refetch sharp.
@@ -326,9 +334,9 @@ export async function importRealPhotos(
       try {
         let blob = await db.get('img', key) as Blob | undefined;
         if (!blob) {
-          const url = sport === 'football'
+          const url = direct?.get(key) ?? (sport === 'football'
             ? await resolveNflPhoto(name)
-            : await resolveMlbPhoto(name);
+            : await resolveMlbPhoto(name));
           if (!url) throw new Error('no match');
           const res = await fetch(url);
           if (!res.ok) throw new Error(String(res.status));

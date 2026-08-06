@@ -43,27 +43,107 @@ export function realismCached(): { photos: number; scans: number } {
 
 const STAGES = ['League offices', 'Player photos', 'Vintage vault', 'Unlocking'];
 
+/**
+ * Full-league rosters from the public league APIs, with each player's
+ * headshot URL where the payload carries one. The curated ranked list in
+ * the preset stays the head (it encodes who the STARS are); these fill
+ * every remaining checklist slot so no card is left with an invented name.
+ * Failures return empty lists — offline imports keep the curated head.
+ */
+async function fetchLeagueRosters(): Promise<{
+  football: { name: string; photo: string | null }[];
+  baseball: { name: string; photo: string | null }[];
+}> {
+  const football: { name: string; photo: string | null }[] = [];
+  const baseball: { name: string; photo: string | null }[] = [];
+  try {
+    const teams = await fetch('https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams')
+      .then(r => r.json());
+    const ids: string[] = (teams.sports?.[0]?.leagues?.[0]?.teams ?? [])
+      .map((t: { team: { id: string } }) => t.team.id);
+    // Kickers, punters, snappers and interior linemen don't get cards.
+    const EXCLUDE = new Set(['G', 'C', 'OG', 'OC', 'K', 'PK', 'P', 'LS', 'FB']);
+    const perTeam = await Promise.all(ids.map(async id => {
+      try {
+        const d = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams/${id}/roster`)
+          .then(r => r.json());
+        const out: { name: string; photo: string | null }[] = [];
+        for (const g of d.athletes ?? []) {
+          for (const a of g.items ?? []) {
+            if (!a.displayName || EXCLUDE.has(a.position?.abbreviation ?? '')) continue;
+            out.push({ name: a.displayName as string, photo: (a.headshot?.href as string) ?? null });
+          }
+        }
+        return out;
+      } catch { return []; }
+    }));
+    // Round-robin across teams so the depth tail mixes franchises.
+    for (let i = 0; perTeam.some(t => i < t.length); i++) {
+      for (const t of perTeam) if (i < t.length) football.push(t[i]);
+    }
+  } catch { /* tolerated */ }
+  try {
+    const teams = await fetch('https://statsapi.mlb.com/api/v1/teams?sportId=1').then(r => r.json());
+    const ids: number[] = (teams.teams ?? []).map((t: { id: number }) => t.id);
+    const perTeam = await Promise.all(ids.map(async id => {
+      try {
+        const d = await fetch(`https://statsapi.mlb.com/api/v1/teams/${id}/roster?rosterType=40Man`)
+          .then(r => r.json());
+        return ((d.roster ?? []) as { person: { id: number; fullName: string } }[]).map(r2 => ({
+          name: r2.person.fullName,
+          photo: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_640,q_auto:best/v1/people/${r2.person.id}/headshot/67/current`,
+        }));
+      } catch { return []; }
+    }));
+    for (let i = 0; perTeam.some(t => i < t.length); i++) {
+      for (const t of perTeam) if (i < t.length) baseball.push(t[i]);
+    }
+  } catch { /* tolerated */ }
+  return { football, baseball };
+}
+
 export async function runRealismImport(
   onProgress: (message: string) => void,
   onEvent?: (e: RealismEvent) => void,
 ): Promise<RealismSummary> {
   const emit = (e: RealismEvent) => onEvent?.(e);
 
-  // 1. Names + colors for every team and 150 players per sport.
+  // 1. Names + colors for every team, and a real name for EVERY player
+  // slot: curated stars at the head, live league rosters filling the rest.
   onProgress('1/4 — signing the leagues…');
   emit({ stage: 1, stageName: STAGES[0], done: 0, total: 1 });
   const raw = await fetch('presets/real-world.json').then(r => r.json());
+  const live = await fetchLeagueRosters();
+  const directPhoto = new Map<string, string>();
+  raw.rosterByRank = raw.rosterByRank ?? {};
+  for (const sport of ['football', 'baseball'] as const) {
+    const slots = world.leagues[sport].players.length;
+    const curated: string[] = raw.rosterByRank[sport] ?? [];
+    const seen = new Set(curated.map(n => n.toLowerCase()));
+    const ext = [...curated];
+    for (const p of live[sport]) {
+      if (ext.length >= slots) break;
+      const k = p.name.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      ext.push(p.name);
+      if (p.photo) directPhoto.set(`${sport}:${p.name}`, p.photo);
+    }
+    raw.rosterByRank[sport] = ext;
+  }
   const clean = sanitizeOverrides(raw).set;
   useCollection.getState().setOverrides(clean);
+  const signed = (clean.rosterByRank.football?.length ?? 0) + (clean.rosterByRank.baseball?.length ?? 0);
   emit({
     stage: 1, stageName: STAGES[0], done: 1, total: 1,
-    highlight: { label: '62 teams · 300 players signed', hot: false },
+    highlight: { label: `62 teams · ${signed} players signed`, hot: false },
   });
 
-  // 2. Player photos, resolved by name via the public search APIs. The
-  // top of each ranked roster is marquee — those get ticker moments.
-  const fbNames = (raw.rosterByRank?.football ?? []) as string[];
-  const bbNames = (raw.rosterByRank?.baseball ?? []) as string[];
+  // 2. Player photos: the curated head resolves through the search APIs
+  // (best-quality picks); the league tail fetches its roster headshots
+  // directly. The top of each list is marquee — those get ticker moments.
+  const fbNames = (clean.rosterByRank.football ?? []) as string[];
+  const bbNames = (clean.rosterByRank.baseball ?? []) as string[];
   const marquee = new Set([...fbNames.slice(0, 10), ...bbNames.slice(0, 10)]);
   const rosters = [
     { sport: 'football' as const, names: fbNames },
@@ -76,7 +156,7 @@ export async function runRealismImport(
       highlight: lastName && marquee.has(lastName)
         ? { label: `${lastName} — photo secured`, hot: true } : undefined,
     });
-  });
+  }, directPhoto);
 
   // 3. Official card scans — EVERY card at the CDN's high-resolution
   // variant. No shortcuts on graphics: commons deserve device pixels too.
