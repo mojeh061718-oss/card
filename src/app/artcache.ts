@@ -196,6 +196,34 @@ export async function importVaultArt(
   return { done, failed };
 }
 
+/**
+ * Players who ran the realism import before sealed-pack photography shipped
+ * should get the wraps quietly on the next online launch — no re-run of the
+ * ceremony. Checks a few anchor keys before touching the network; failures
+ * (offline, manifest missing) cost nothing.
+ */
+export async function ensureWrapArt(): Promise<number> {
+  try {
+    const db = await pokeDb();
+    const anchors = ['wrap-base:0', 'wrap-151:0', 'wrap-currency:0'];
+    let need = false;
+    for (const a of anchors) {
+      if (await db.get('img', a) === undefined) { need = true; break; }
+    }
+    if (!need) return 0;
+    const manifest = await fetch('presets/vault-art.json').then(r => r.json());
+    const sets: Record<string, Record<string, VaultArtEntry>> = {};
+    for (const [k, nums] of Object.entries((manifest.sets ?? {}) as Record<string, Record<string, VaultArtEntry>>)) {
+      if (k.startsWith('wrap-')) sets[k] = nums;
+    }
+    if (Object.keys(sets).length === 0) return 0;
+    const { done } = await importVaultArt(sets, () => {});
+    return done;
+  } catch {
+    return 0;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Real player photos
 // ---------------------------------------------------------------------------

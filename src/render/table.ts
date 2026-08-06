@@ -112,9 +112,10 @@ export function renderBreakTable(wPx: number, hPx: number, seedText: string): HT
   ctx.fillText('CARDBOARD BREAKS', mx + mw - wPx * 0.04, my + mh - wPx * 0.034);
   ctx.restore();
 
-  // --- Box cutter, resting above the mat ----------------------------------
+  // --- Box cutter, resting beside the mat's top edge (the HTML title bar
+  // overlays the very top of the scene, so keep the cutter below it) ------
   ctx.save();
-  ctx.translate(wPx * 0.8, hPx * 0.082);
+  ctx.translate(wPx * 0.84, hPx * 0.135);
   ctx.rotate(0.22);
   ctx.shadowColor = 'rgba(0,0,0,0.5)';
   ctx.shadowBlur = wPx * 0.012;

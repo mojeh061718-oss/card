@@ -357,16 +357,23 @@ function RipSession({ session, onClose }: {
 
   // The break table: a top-down desk the packs physically sit on.
   const tableUrl = useMemo(() => {
-    const w = Math.min(1000, window.innerWidth * 2);
+    const dpr = Math.min(3, window.devicePixelRatio || 2);
+    const w = Math.min(1400, Math.round(window.innerWidth * dpr));
     const h = Math.round(w * ((window.innerHeight - 100) / window.innerWidth));
     return renderBreakTable(w, h, session.seriesId).toDataURL();
   }, [session.seriesId]);
-  // One wrapper thumb per pack (TCG wraps rotate their featured art).
-  const packThumbs = useMemo(
-    () => packs.map((_, i) => renderPackWrapper(rt.def, 128, 180, i, coverFor(session.seriesId)).toDataURL()),
+  // One wrapper thumb per pack (TCG wraps rotate their featured art),
+  // rendered at DEVICE pixels for the width the mat will display them at —
+  // a fixed small canvas CSS-stretched across the mat reads as mush.
+  const packThumbs = useMemo(() => {
+    const n = packs.length;
+    const wPct = n <= 1 ? 46 : n <= 4 ? 34 : n <= 12 ? 26 : 14.5;
+    const dpr = Math.min(3, window.devicePixelRatio || 2);
+    const wPx = Math.min(720, Math.round(window.innerWidth * (wPct / 100) * dpr));
+    return packs.map((_, i) =>
+      renderPackWrapper(rt.def, wPx, Math.round(wPx * 1.4), i, coverFor(session.seriesId)).toDataURL());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rt, packs.length, world.namesRevision],
-  );
+  }, [rt, packs.length, world.namesRevision]);
   // Deterministic scatter: grid with jitter and a lazy rotation, like packs
   // tossed on the mat rather than machine-aligned.
   const layout = useMemo(() => {
@@ -400,11 +407,13 @@ function RipSession({ session, onClose }: {
     setGrabbed(i);
     setTimeout(() => { setGrabbed(null); setPhase('sealed'); }, 420);
   };
-  // TCG wraps rotate their featured art per pack in a box.
-  const wrapperUrl = useMemo(
-    () => renderPackWrapper(rt.def, 640, 900, packIdx, coverFor(session.seriesId)).toDataURL(),
-    [rt, packIdx],
-  );
+  // TCG wraps rotate their featured art per pack in a box. Held-pack size:
+  // full device resolution for the ~86vw the sealed view displays it at.
+  const wrapperUrl = useMemo(() => {
+    const dpr = Math.min(3, window.devicePixelRatio || 2);
+    const ww = Math.round(250 * dpr); // S.packWrap is 250×352 CSS px
+    return renderPackWrapper(rt.def, ww, Math.round(ww * 1.408), packIdx, coverFor(session.seriesId)).toDataURL();
+  }, [rt, packIdx]);
   const [phase, setPhase] = useState<Phase>('table');
   const [tear, setTear] = useState(0);
   const [idx, setIdx] = useState(0);
@@ -822,7 +831,7 @@ const styles: Record<string, React.CSSProperties> = {
   packWrap: { position: 'relative', width: 250, height: 352, touchAction: 'none' },
   packBody: { position: 'absolute', inset: 0, backgroundSize: 'cover', borderRadius: 8, transition: 'clip-path 80ms linear', boxShadow: '0 24px 60px rgba(0,0,0,0.65)' },
   tearStrip: { position: 'absolute', left: 0, right: 0, top: 0, height: '13%', backgroundSize: 'cover', borderRadius: '8px 8px 0 0', transition: 'transform 120ms linear, opacity 200ms', zIndex: 2 },
-  tearHint: { position: 'absolute', top: '4.5%', width: '100%', textAlign: 'center', fontSize: 12, letterSpacing: 1, color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px #000' },
+  tearHint: { position: 'absolute', top: '4.5%', width: '100%', textAlign: 'center', fontSize: 12, letterSpacing: 1, color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px #000', zIndex: 3, pointerEvents: 'none' },
   caption: { fontSize: 13, opacity: 0.6, letterSpacing: 1 },
   counter: { fontSize: 12, letterSpacing: 3, opacity: 0.7 },
   skip: { background: 'rgba(255,255,255,0.08)', color: 'rgba(244,242,236,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '7px 14px', fontSize: 10, letterSpacing: 1, fontWeight: 700 },

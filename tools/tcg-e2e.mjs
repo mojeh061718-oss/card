@@ -172,7 +172,9 @@ for (let d = 0; d < 12 && !revealed; d++) {
 }
 check('slab came back and revealed', revealed);
 
-const errs = pageErrors.filter(e => !/favicon|manifest|sw\.js|ServiceWorker/i.test(e));
+// "Failed to load resource" is the tolerated-failure path of the art
+// importers (no network in the sandbox) — not an app error.
+const errs = pageErrors.filter(e => !/favicon|manifest|sw\.js|ServiceWorker|Failed to load resource/i.test(e));
 check('no uncaught page errors', errs.length === 0, errs.slice(0, 2).join(' | '));
 
 await browser.close();

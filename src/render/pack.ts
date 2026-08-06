@@ -4,10 +4,11 @@
  * like its own retail object.
  */
 
-import { Rng } from '../engine/rng';
+import { Rng, hashString } from '../engine/rng';
 import type { SeriesDef } from '../engine/cards/series';
 import { shade, withAlpha, mixHex } from './color';
 import { tcgScan, heroPhoto } from './photodb';
+import { athleteStyle, posesFor, renderAthleteLayer } from './athlete';
 
 /**
  * TCG booster wrap composed from the CACHED OFFICIAL SCANS: the featured
@@ -299,8 +300,25 @@ export function renderPackWrapper(
     }
     ctx.restore();
   });
-  if (photos.length === 0) {
-    // Pre-import: clean embossed monogram inside the panel.
+  if (photos.length === 0 && (def.sport === 'football' || def.sport === 'baseball')) {
+    // Pre-import: the same painted athletes the cards use, two of them
+    // flanking the panel — a retail pack has players on it, not a logo.
+    const poses = posesFor(def.sport);
+    for (let i = 0; i < 2; i++) {
+      const aSeed = hashString(`${def.seed}:wrap-athlete:${variant + i}`);
+      const aRng = new Rng(aSeed);
+      const pose = poses[(Math.abs(variant) + i * 3 + aRng.int(poses.length)) % poses.length];
+      const style = athleteStyle(
+        aSeed, 1 + aRng.int(98), def.sport,
+        i === 0 ? hue : shade(hue, -0.18), accent,
+      );
+      const figH = ph2 * 0.88;
+      const figW = figH * 0.66;
+      const figX = (i === 0 ? px2 + pw2 * 0.26 : px2 + pw2 * 0.74) - figW / 2;
+      renderAthleteLayer(ctx, pose, style, figX, py2 + ph2 * 0.97 - figH, figW, figH, aSeed, accent);
+    }
+  } else if (photos.length === 0) {
+    // Non-sport product with no art cached: embossed monogram.
     ctx.font = `900 italic ${pw2 * 0.5}px "Avenir Next Condensed", "Arial Narrow", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

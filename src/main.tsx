@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { hydrateCollection, useCollection } from './state/collection';
 import { world } from './state/world';
-import { loadCachedPhotos, loadCachedScans, photoFor, scanFor } from './app/artcache';
+import { ensureWrapArt, loadCachedPhotos, loadCachedScans, photoFor, scanFor } from './app/artcache';
 
 async function boot() {
   await hydrateCollection();
@@ -10,8 +10,14 @@ async function boot() {
   // REALISM CONCEPT: photos and card scans imported in an earlier session
   // live in local IndexedDB — decode them before first render so cards come
   // up real (and offline), and refresh any art rendered before they landed.
-  void Promise.all([loadCachedPhotos(), loadCachedScans()]).then(([p, s]) => {
+  void Promise.all([loadCachedPhotos(), loadCachedScans()]).then(async ([p, s]) => {
     if (p + s > 0) world.applyOverrides(world.currentOverrides);
+    // Backfill real sealed-pack photos for saves that imported before the
+    // wraps existed; decode and re-render only if something new landed.
+    if (useCollection.getState().tcgEnabled && (await ensureWrapArt()) > 0) {
+      await loadCachedScans();
+      world.applyOverrides(world.currentOverrides);
+    }
   });
 
   // Ask the browser to keep the save: installed web apps get far better
