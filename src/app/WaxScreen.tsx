@@ -43,7 +43,9 @@ function ProductArt({ seriesId, productKey }: { seriesId: string; productKey: st
     let u = wrapThumbCache.get(key);
     if (!u) {
       if (wrapThumbCache.size > 24) wrapThumbCache.clear();
-      u = renderPackWrapper(world.get(seriesId).def, 96, 136, 0, coverFor(seriesId)).toDataURL();
+      // Device pixels for the 38×54 slot (stacked copies scale to ~1.1x).
+      const dpr = Math.min(3, window.devicePixelRatio || 2);
+      u = renderPackWrapper(world.get(seriesId).def, Math.round(42 * dpr), Math.round(60 * dpr), 0, coverFor(seriesId)).toDataURL();
       wrapThumbCache.set(key, u);
     }
     return u;

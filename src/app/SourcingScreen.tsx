@@ -15,15 +15,19 @@ import { formatMoney } from '../engine/economy/valuation';
 import type { LotOffer } from '../engine/economy/lots';
 import type { PulledCard } from '../engine/cards/series';
 import { sfx, unlockAudio, heatTier } from './feel';
+import { renderLotArt } from '../render/lot';
 
-/** Lot type badge — a colored monogram chip, not an emoji. */
-const LOT_BADGE: Record<string, { label: string; color: string }> = {
-  shoebox: { label: 'SB', color: '#b06a3c' },
-  garageSale: { label: 'GS', color: '#5b8a4a' },
-  estate: { label: 'ES', color: '#7a5aa8' },
-  storageUnit: { label: 'SU', color: '#4a7a9a' },
-  dealerTable: { label: 'DT', color: '#c0392b' },
-};
+/** Drawn lot object thumbnails, rendered once per kind at device pixels. */
+const lotArtCache = new Map<string, string>();
+function lotArtUrl(kind: string): string {
+  let u = lotArtCache.get(kind);
+  if (!u) {
+    const dpr = Math.min(3, window.devicePixelRatio || 2);
+    u = renderLotArt(kind, Math.round(56 * dpr), kind).toDataURL();
+    lotArtCache.set(kind, u);
+  }
+  return u;
+}
 
 export function SourcingScreen() {
   const { cash, day, addPulls, releaseBreaking, spendCash, endDay, dugLots, markLotDug } = useCollection();
@@ -74,13 +78,7 @@ export function SourcingScreen() {
               disabled={dug || !affordable}
               onClick={() => buy(offer)}
             >
-              <div style={{
-                ...S.lotIcon,
-                background: `linear-gradient(160deg, ${LOT_BADGE[offer.kind]?.color ?? '#666'} 0%, rgba(0,0,0,0.55) 130%)`,
-                color: '#f4f2ec', fontSize: 13, fontWeight: 900, letterSpacing: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: 9, border: '1px solid rgba(255,255,255,0.18)',
-              }}>{LOT_BADGE[offer.kind]?.label ?? '??'}</div>
+              <img src={lotArtUrl(offer.kind)} alt="" style={S.lotIcon} />
               <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                 <div style={S.lotLabel}>{offer.label}</div>
                 <div style={S.lotBlurb}>"{offer.blurb}"</div>
@@ -245,7 +243,7 @@ const styles: Record<string, React.CSSProperties> = {
   scroll: { flex: 1, overflowY: 'auto', padding: '12px 14px 30px' },
   sectionTitle: { fontSize: 10, letterSpacing: 2, opacity: 0.5, marginBottom: 10, lineHeight: 1.5 },
   lot: { display: 'flex', gap: 12, alignItems: 'center', width: '100%', padding: 12, marginBottom: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, color: '#f4f2ec' },
-  lotIcon: { fontSize: 30 },
+  lotIcon: { width: 56, height: 56, flexShrink: 0 },
   lotLabel: { fontSize: 14, fontWeight: 800 },
   lotBlurb: { fontSize: 11, opacity: 0.6, fontStyle: 'italic', margin: '2px 0' },
   lotMeta: { fontSize: 10, opacity: 0.4 },

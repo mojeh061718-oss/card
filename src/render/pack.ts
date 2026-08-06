@@ -300,7 +300,8 @@ export function renderPackWrapper(
     }
     ctx.restore();
   });
-  if (photos.length === 0 && (def.sport === 'football' || def.sport === 'baseball')) {
+  if (photos.length === 0 && !def.id.startsWith('tcg-')
+    && (def.sport === 'football' || def.sport === 'baseball')) {
     // Pre-import: the same painted athletes the cards use, two of them
     // flanking the panel — a retail pack has players on it, not a logo.
     const poses = posesFor(def.sport);
